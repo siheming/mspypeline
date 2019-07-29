@@ -1,0 +1,39 @@
+# ##### MAIN SETTINGS ########
+# settings that effect which results will be created
+
+experiments: false
+# list of experiment names in the max quant file
+# if false it will try to infer the experiments automatically
+# TODO naming convention
+# otherwise might look something like:
+# - Urea_Urea_Pellet_0
+# - RIPA_SDS_0
+
+venn_results: true
+# should venn diagrams be created
+# can be "true" or "false"
+venn_intensity_col: "Intensity "
+# which intensity columns should be considered for venn plots
+# trailing space (" ") is important!
+
+descriptive_plots: true
+# should descriptive plots be created
+# can be "true" or "false"
+descriptive_intensity_col: "Intensity "
+# which intensity columns should be considered for descriptive plots
+# trailing space (" ") is important!
+
+vulcano_plots: false
+# should vulcano plots be created
+# can be "true" or "false"
+
+buffer_score: true
+# TODO explain score?
+# should a score for the buffer be calculated
+# can be "true" or "false"
+
+use_protein_id: false
+# should the protein id be used, or TODO
+# can be "true" or "false"
+
+# ##### IMAGE SETTINGS ########
