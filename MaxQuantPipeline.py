@@ -30,7 +30,7 @@ VENN_SUBSET_LABEL_FONT_SIZE = 14
 def get_number_rows_cols_for_fig(obj):
     if isinstance(obj, Sized):
         obj = len(obj)
-    n_rows, n_cols = 1, 1
+    n_rows, n_cols = 0, 0
     while n_rows * n_cols < obj:
         if n_cols <= n_rows:
             n_cols += 1
@@ -120,6 +120,7 @@ class MaxQuantPipeline(Logger):
 
         self.script_loc = os.path.dirname(os.path.realpath(__file__))
         self.path_pipeline_config = os.path.join(self.script_loc, "config")
+        self.logger.debug(self._replicates)
 
         # make sure to be on the right level and set starting dir
         if dir_.endswith("txt"):
@@ -838,7 +839,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     args_dict = vars(args)
-    args.dir = "/media/heming/Elements/max_quant_txt_results/xaiomeng_combined_buffers_no_isoform/"
+    # args.dir = "/media/heming/Elements/max_quant_txt_results/xaiomeng_combined_buffers_no_isoform/"
     # print(args)
     # if no dir was specified ask for one
     if args.dir is None:
