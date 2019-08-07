@@ -23,8 +23,8 @@ descriptive_intensity_col: "Intensity "
 # which intensity columns should be considered for descriptive plots
 # trailing space (" ") is important!
 
-vulcano_plots: false
-# should vulcano plots be created
+go_analysis: true
+# should go analysis be performed
 # can be "true" or "false"
 
 buffer_score: true
