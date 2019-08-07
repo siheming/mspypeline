@@ -17,8 +17,7 @@ from collections.abc import Sized
 
 # plt.style.use('ggplot')
 
-# TODO result format. png, pdf etc?
-# TODO replace usages with yaml file
+FIG_FORMAT = ".pdf"
 # Venn diagram settings
 # TODO figsize
 VENN_TITLE_FONT_SIZE = 20
@@ -121,6 +120,10 @@ class MaxQuantPipeline(Logger):
         self.script_loc = os.path.dirname(os.path.realpath(__file__))
         self.path_pipeline_config = os.path.join(self.script_loc, "config")
 
+        self.yml_file_name_tmp = "config_tmp.yml"
+        self.yml_file_name = "config.yml"
+        self.default_yml_name = "ms_analysis_default.yml"
+
         # make sure to be on the right level and set starting dir
         if os.path.split(os.path.split(dir_)[0])[-1] == "txt":
             self.logger.debug("Removing txt ending from path")
@@ -156,26 +159,6 @@ class MaxQuantPipeline(Logger):
         # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")
         self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()
-
-        # create all results according to configs
-        if self.configs.get("venn_results", False):
-            self.create_venn_results()
-
-        if self.configs.get("descriptive_plots", False):
-            self.create_descriptive_plots()
-
-        if self.configs.get("go_analysis", False):
-            self.create_go_analysis()
-
-        if self.configs.get("vulcano_plots", False):
-            pass
-            # TODO are vulcano plots needed? what do we want to see / show?
-            # TODO: self.create_vulcano_plots
-        if self.configs.get("buffer_score", False):
-            pass
-
-        # create report summarizing the analysis results
-        self.create_report()
 
     @property
     def replicates(self):
@@ -220,9 +203,8 @@ class MaxQuantPipeline(Logger):
 
     def get_default_yml_path(self):
         self.logger.debug(f"Loading default yml file from: {self.script_loc}, since no file was selected")
-        default_yml_name = "ms_analysis_default.yml"
-        if default_yml_name in os.listdir(self.path_pipeline_config):
-            yaml_file = os.path.join(self.path_pipeline_config, default_yml_name)
+        if self.default_yml_name in os.listdir(self.path_pipeline_config):
+            yaml_file = os.path.join(self.path_pipeline_config, self.default_yml_name)
         else:
             raise ValueError("Could not find default yaml file. Please select one.")
         return yaml_file
@@ -242,9 +224,9 @@ class MaxQuantPipeline(Logger):
         if "config" in os.listdir(self.start_dir):
             self.logger.debug("Found config dir")
             config_dir = os.path.join(self.start_dir, "config")
-            if "config.yml" in os.listdir(config_dir):
+            if self.yml_file_name in os.listdir(config_dir):
                 self.logger.debug("Found config.yml file in config dir")
-                yaml_file = os.path.join(config_dir, "config.yml")
+                yaml_file = os.path.join(config_dir, self.yml_file_name)
             else:
                 yaml_file = yml_file_dialog()
         else:
@@ -370,6 +352,22 @@ class MaxQuantPipeline(Logger):
         df_go = pd.read_excel(go_path)
         return df_to_dict(df_protein), df_to_dict(df_receptor), df_to_dict(df_go)
 
+    def create_results(self):
+        # create all results according to configs
+        if self.configs.get("venn_results", False):
+            self.create_venn_results()
+
+        if self.configs.get("descriptive_plots", False):
+            self.create_descriptive_plots()
+
+        if self.configs.get("go_analysis", False):
+            self.create_go_analysis()
+
+        if self.configs.get("buffer_score", False):
+            pass
+        # create report summarizing the analysis results
+        self.create_report()
+
     def create_venn_results(self):
         def save_venn(ex: str, sets, set_names):
             creates_figure = True
@@ -393,7 +391,7 @@ class MaxQuantPipeline(Logger):
             # if a figure was created, do some further configuration and save it
             if creates_figure:
                 res_path = os.path.join(
-                    file_dir_venn, f"venn_replicate_{self.replicate_representation[ex].replace(' ', '_')}.png"
+                    file_dir_venn, f"venn_replicate_{self.replicate_representation[ex].replace(' ', '_')}" + FIG_FORMAT
                 )
 
                 for text in venn.set_labels:
@@ -411,11 +409,8 @@ class MaxQuantPipeline(Logger):
 
         def save_bar_venn(ex: str, named_sets):
             plt.close("all")
-            # initial figure setup
-            fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(14, 7))
-            fig.suptitle(self.replicate_representation[ex], fontsize=20)
-            ax1.set_title("size")
-            ax2.set_title("selected samples")
+            # ax1.set_title("size")
+            # ax2.set_title("selected samples")
 
             # create a mapping from name to a y coordinate
             y_mappings = {name: i for i, name in enumerate(named_sets)}
@@ -428,6 +423,13 @@ class MaxQuantPipeline(Logger):
                 x.append(i)
                 ys.append([y_mappings[x] for x in intersected])
 
+            # initial figure setup
+            fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
+            try:
+                name = self.replicate_representation[ex]
+            except KeyError:
+                name = ex
+            fig.suptitle(name, fontsize=20)
             # create the bar plot
             ax1.bar(x, heights)
             # add text to the bar plot
@@ -437,14 +439,14 @@ class MaxQuantPipeline(Logger):
             # create the line plots
             for x_level, y in zip(x, ys):
                 # we just want to draw a straight line every time so we repeat x as often as needed
-                ax2.plot([x_level] * len(y), y, "b.-")
+                ax2.plot([x_level] * len(y), y, linestyle="-", color="gray", marker=".")
             # replace the yticks with the names of the samples
             ax2.set_yticks([i for i in range(len(y_mappings))])
             ax2.set_yticklabels(y_mappings)
 
             # save the result with the according name
             res_path = os.path.join(
-                file_dir_venn, f"venn_bar_{self.replicate_representation[ex].replace(' ', '_')}.png"
+                file_dir_venn, f"venn_bar_{name.replace(' ', '_')}" + FIG_FORMAT
             )
             plt.savefig(res_path, dpi=200, bbox_inches="tight")
             plt.close("all")
@@ -506,6 +508,10 @@ class MaxQuantPipeline(Logger):
             save_bar_venn(ex, protein_ids[ex])
         # create venn diagrams comparing all pellets with supernatants
         # create venn diagrams comparing all experiments
+        experiment_sets = {exp: set.intersection(*(protein_ids[exp][rep] for rep in protein_ids[exp])) for exp in protein_ids}
+        save_bar_venn("All experiments intersection", experiment_sets)
+        experiment_sets = {exp: set.union(*(protein_ids[exp][rep] for rep in protein_ids[exp])) for exp in protein_ids}
+        save_bar_venn("All experiments union", experiment_sets)
 
     def create_descriptive_plots(self):
         self.logger.info("Creating descriptive plots")
@@ -519,7 +525,7 @@ class MaxQuantPipeline(Logger):
         # plot showing the amount of proteins that were detected x amount of times
         n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig([x for l in self.replicates.values() for x in l])
 
-        fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, sharex=True, squeeze=True, figsize=(14, 7))
+        fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, sharex=True, squeeze=True, figsize=(5 * n_rows_experiment, 3 * n_cols_experiment))
         fig.suptitle("Detection counts")
         fig1, axarr1 = plt.subplots(n_rows_experiment, n_cols_experiment, figsize=(14, 7))
         fig1.suptitle("Number of detected proteins")
@@ -571,17 +577,18 @@ class MaxQuantPipeline(Logger):
             # plot 2
             # how many proteins were detected per replicate and in total
             heights = [len(counts), 0]
-            labels = ["Total", ""]
+            labels = ["Total", " "]
             for col in intensities:
                 h = len(intensities[col][intensities[col] > 0])
                 heights.append(h)
                 labels.append(col)
             mean_height = np.mean(heights[2:])
+            self.logger.debug(labels)
             ax1.bar([x for x in range(len(heights))], heights)
             ax1.text(1, mean_height * 1.01, f"{mean_height:.2f}", horizontalalignment='center')
             ax1.set_title(f"{experiment}")
-            ax1.axhline(mean_height, linestyle="--", color="black")
-            ax1.set_xticklabels(labels, rotation=45)
+            ax1.axhline(mean_height, linestyle="--", color="black", alpha=0.6)
+            # ax1.set_xticklabels(labels, rotation=45)
             ax1.set_ylabel("Counts")
             #ax1.tick_params(rotation=70)
 
@@ -601,7 +608,7 @@ class MaxQuantPipeline(Logger):
             fig3.legend()
 
             res3_path = os.path.join(file_dir_descriptive,
-                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_scatter.png")
+                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_scatter" + FIG_FORMAT)
             # TODO add r2
             fig3.savefig(res3_path, dpi=200, bbox_inches="tight")
 
@@ -626,7 +633,7 @@ class MaxQuantPipeline(Logger):
             ax4.set_ylabel("Raw intensity mean")
 
             res4_path = os.path.join(file_dir_descriptive,
-                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rank.png")
+                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rank" + FIG_FORMAT)
             fig4.savefig(res4_path, dpi=200, bbox_inches="tight")
 
             # plot 5
@@ -654,7 +661,7 @@ class MaxQuantPipeline(Logger):
             ax5.axhline(30, color=cm[2])
 
             res5_path = os.path.join(file_dir_descriptive,
-                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std.png")
+                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std" + FIG_FORMAT)
             fig5.savefig(res5_path, dpi=200, bbox_inches="tight")
 
             for col in intensities:
@@ -673,13 +680,13 @@ class MaxQuantPipeline(Logger):
                 ax7.set_xscale('log')
                 fig7_index += 1
 
-        res_path = os.path.join(file_dir_descriptive, f"detected_counts.png")
+        res_path = os.path.join(file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-        res1_path = os.path.join(file_dir_descriptive, "detection_per_replicate.png")
+        res1_path = os.path.join(file_dir_descriptive, "detection_per_replicate" + FIG_FORMAT)
         fig1.savefig(res1_path, dpi=200, bbox_inches="tight")
 
-        res7_path = os.path.join(file_dir_descriptive, "intensity_histograms.png")
+        res7_path = os.path.join(file_dir_descriptive, "intensity_histograms" + FIG_FORMAT)
         fig7.savefig(res7_path, dpi=200, bbox_inches="tight")
 
         experiment_proportion = ddict(lambda: ddict(int))
@@ -703,7 +710,7 @@ class MaxQuantPipeline(Logger):
                 ax8.text(j, height, df_total_counts.iloc[i, j], horizontalalignment="center")
         # fig8.xticks(rotation=45)
         fig8.legend()
-        res8_path = os.path.join(file_dir_descriptive, "pathway_proportions.png")
+        res8_path = os.path.join(file_dir_descriptive, "pathway_proportions" + FIG_FORMAT)
         fig8.savefig(res8_path, dpi=200, bbox_inches="tight")
 
         for pathway in pathway_colors:
@@ -712,8 +719,7 @@ class MaxQuantPipeline(Logger):
             found_proteins &= set(all_intensities.index)
             found_proteins = sorted(list(found_proteins))
             n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
-            fig, axarr = plt.subplots(n_rows, n_cols, figsize=(4 * n_rows if n_rows > 0 else 1,
-                                                               4 * n_cols if n_cols > 0 else 1))
+            fig, axarr = plt.subplots(n_rows, n_cols, figsize=(4 * n_rows, 4 * n_cols))
             fig.suptitle(pathway)
             for protein, ax in zip(found_proteins, axarr.flat):
                 ax.set_title(protein)
@@ -749,7 +755,7 @@ class MaxQuantPipeline(Logger):
                                                   heights, dh=0.05 + 0.1 * n_annotations)
                         n_annotations += 1
 
-            res_path = os.path.join(file_dir_descriptive, f"pathway_analysis_{pathway}.png")
+            res_path = os.path.join(file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
         for ex1, ex2 in combinations(self.replicates, 2):
@@ -777,7 +783,7 @@ class MaxQuantPipeline(Logger):
 
             # TODO add r2
             res_path = os.path.join(file_dir_descriptive,
-                                    f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_intersection.png")
+                                    f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_intersection" + FIG_FORMAT)
             fig6.savefig(res_path, dpi=200, bbox_inches="tight")
             plt.close("all")
             # combine total
@@ -795,7 +801,7 @@ class MaxQuantPipeline(Logger):
             ax9.set_ylabel(ex2)
             # TODO add r2
             res_path = os.path.join(file_dir_descriptive,
-                                    f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_total.png")
+                                    f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_total" + FIG_FORMAT)
             plt.savefig(res_path, dpi=200, bbox_inches="tight")
             plt.close("all")
             # sys.exit(0)
@@ -869,21 +875,18 @@ class MaxQuantPipeline(Logger):
         # replace the y ticks with the compartiment names
         ax.set_yticklabels([x for x in self.go_analysis_gene_names])
         plt.legend()
-        res_path = os.path.join(file_dir_go_analysis, "go_analysis.png")
+        res_path = os.path.join(file_dir_go_analysis, "go_analysis" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     def update_config_file(self):
-        yml_file_name_tmp = "config_tmp.yml"
-        yml_file_name = "config.yml"
-
         # store the config file as tmp
-        yml_file_loc_tmp = os.path.join(self.path_config, yml_file_name_tmp)
+        yml_file_loc_tmp = os.path.join(self.path_config, self.yml_file_name_tmp)
         with open(yml_file_loc_tmp, "w") as outfile:
             self.yaml.dump(self.configs, outfile)
 
         # delete non tmp if exists
-        yml_file_loc = os.path.join(self.path_config, yml_file_name)
-        if "config.yml" in os.listdir(self.path_config):
+        yml_file_loc = os.path.join(self.path_config, self.yml_file_name)
+        if self.yml_file_name in os.listdir(self.path_config):
             os.remove(yml_file_loc)
 
         # rename to non tmp
@@ -912,15 +915,15 @@ if __name__ == "__main__":
     args_dict = vars(args)
     # args.dir = "/media/b200-linux/Elements/max_quant_txt_results/xaiomeng_combined_buffers_no_isoform/"
     # print(args)
+    # disable most ui things
+    root = tk.Tk()
+    root.withdraw()
     # if no dir was specified ask for one
     if args.dir is None:
-        # disable most ui things
-        root = tk.Tk()
-        root.withdraw()
-
         start_dir = filedialog.askdirectory()
         if not start_dir:
             raise ValueError("Please select a directory")
     else:
         start_dir = args.dir
     mxpipeline = MaxQuantPipeline(start_dir, args.yml_file)
+    mxpipeline.create_results()
