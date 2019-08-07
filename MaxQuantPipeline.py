@@ -30,7 +30,7 @@ VENN_SUBSET_LABEL_FONT_SIZE = 14
 def get_number_rows_cols_for_fig(obj):
     if isinstance(obj, Sized):
         obj = len(obj)
-    n_rows, n_cols = 1, 1
+    n_rows, n_cols = 0, 0
     while n_rows * n_cols < obj:
         if n_cols <= n_rows:
             n_cols += 1
@@ -122,9 +122,9 @@ class MaxQuantPipeline(Logger):
         self.path_pipeline_config = os.path.join(self.script_loc, "config")
 
         # make sure to be on the right level and set starting dir
-        if dir_.endswith("txt"):
+        if os.path.split(os.path.split(dir_)[0])[-1] == "txt":
             self.logger.debug("Removing txt ending from path")
-            self.start_dir = os.path.join(os.path.split(dir_)[:-1])
+            self.start_dir = os.path.join(os.path.split(os.path.split(dir_)[0])[0])
         else:
             self.start_dir = dir_
         self.logger.info(f"Starting dir: {self.start_dir}")
@@ -148,14 +148,14 @@ class MaxQuantPipeline(Logger):
         os.makedirs(self.path_config, exist_ok=True)
         self.update_config_file()
 
-        # read the proteinGroups.txt
+        # read the proteinGroups.txt and peptides.txt
         self.logger.info("Reading proteinGroups.txt")  # TODO also reading another file
         self.df_protein_names, self.df_peptide_names = self.init_dfs_from_txts()
         self.update_config_file()
 
-        # read all proteins and receptors of interest
+        # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")
-        self.interesting_proteins, self.interesting_receptors = self.init_interest_from_xlsx()
+        self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()
 
         # create all results according to configs
         if self.configs.get("venn_results", False):
@@ -163,6 +163,9 @@ class MaxQuantPipeline(Logger):
 
         if self.configs.get("descriptive_plots", False):
             self.create_descriptive_plots()
+
+        if self.configs.get("go_analysis", False):
+            self.create_go_analysis()
 
         if self.configs.get("vulcano_plots", False):
             pass
@@ -327,9 +330,6 @@ class MaxQuantPipeline(Logger):
         not_contaminants = (df_protein_names[
                                 ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
-        # TODO is this step required?
-        # species = (df_protein_names["Fasta headers"].str.contains("MOUSE" and "10090") == True)
-        # df_protein_names = df_protein_names[not_contaminants & species]
         df_protein_names = df_protein_names[not_contaminants]
         # split the fasta headers
         # first split all fasta headers that contain multiple entries
@@ -349,22 +349,26 @@ class MaxQuantPipeline(Logger):
         df_protein_names["Protein name"] = fasta_col["description"].str.split("_", expand=True)[0]
         return df_protein_names, df_peptide_names
 
-    def init_interest_from_xlsx(self) -> (dict, dict):
+    def init_interest_from_xlsx(self) -> (dict, dict, dict):
         protein_path = os.path.join(self.path_pipeline_config, "important_protein_names.xlsx")
         receptor_path = os.path.join(self.path_pipeline_config, "important_receptor_names.xlsx")
+        go_path = os.path.join(self.path_pipeline_config, "go_analysis_gene_names.xlsx")
         # make sure files exist
         if not os.path.isfile(protein_path):
             raise ValueError("missing important_protein_names.xlsx file")
         # make sure files exist
         if not os.path.isfile(receptor_path):
             raise ValueError("missing important_receptor_names.xlsx file")
+        if not os.path.isfile(go_path):
+            raise ValueError("missing go_analysis.xlsx file")
 
         def df_to_dict(df):
             return {col: df[col].dropna().tolist() for col in df}
 
         df_protein = pd.read_excel(protein_path)
         df_receptor = pd.read_excel(receptor_path)
-        return df_to_dict(df_protein), df_to_dict(df_receptor)
+        df_go = pd.read_excel(go_path)
+        return df_to_dict(df_protein), df_to_dict(df_receptor), df_to_dict(df_go)
 
     def create_venn_results(self):
         def save_venn(ex: str, sets, set_names):
@@ -531,11 +535,11 @@ class MaxQuantPipeline(Logger):
         fig8.suptitle("Number of identified proteins per pathway")
         pathway_counts = ddict(lambda: ddict(int))
         pathway_colors = {
-            '> Signaling of Hepatocyte Growth Factor Receptor': "navy",
-            '> TGF-beta signaling pathway': "royalblue",
-            '> EGF Signaling Pathway': "skyblue",
-            '> EPO Signaling Pathway': "darkslateblue",
-            '> GAS6 Signaling Pathway': "mediumpurple"
+            'Signaling of Hepatocyte Growth Factor Receptor': "navy",
+            'TGF-beta signaling pathway': "royalblue",
+            'EGF Signaling Pathway': "skyblue",
+            'EPO Signaling Pathway': "darkslateblue",
+            'GAS6 Signaling Pathway': "mediumpurple"
         }
 
         all_intensities = self.df_protein_names[
@@ -543,6 +547,7 @@ class MaxQuantPipeline(Logger):
              for exp in self.replicates for rep in self.replicates[exp]] +["Gene name fasta"]
         ].set_index("Gene name fasta")
         mask = (all_intensities != 0).sum(axis=1) != 0
+        all_intensities = all_intensities[mask]
         ex_list = list(self.replicates.keys())
         for experiment, ax, ax1 in zip(self.replicates, axarr.flat, axarr1.flat):
             plt.close("all")
@@ -704,7 +709,7 @@ class MaxQuantPipeline(Logger):
         for pathway in pathway_colors:
             plt.close("all")
             found_proteins = set(self.interesting_proteins[pathway])
-            found_proteins &= set(all_intensities[mask].index)
+            found_proteins &= set(all_intensities.index)
             found_proteins = sorted(list(found_proteins))
             n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
             fig, axarr = plt.subplots(n_rows, n_cols, figsize=(4 * n_rows if n_rows > 0 else 1,
@@ -736,6 +741,7 @@ class MaxQuantPipeline(Logger):
                         v2 = np.log2(v2 + 10)
                     # only perform the test if more than 3 data points are available for both experiments
                     if len(v1[v1 > 0]) < 3 or len(v2[v2 > 0]) < 3:
+                        # self.logger.debug(f"skipping test for: {protein}, {e1} vs {e2}")
                         continue
                     test = stats.ttest_ind(v1, v2)
                     if plot_ns or test[1] < threshhold:
@@ -800,6 +806,72 @@ class MaxQuantPipeline(Logger):
     def create_report(self):
         pass
 
+    def create_go_analysis(self):
+        self.logger.info("Creating go analysis plots")
+        file_dir_go_analysis = os.path.join(self.start_dir, "go_analysis")
+        # create file structure and folder
+        os.makedirs(file_dir_go_analysis, exist_ok=True)
+        plt.close("all")
+
+        all_intensities = self.df_protein_names[
+            [f"{self.configs['descriptive_intensity_col']}{rep}"
+             for exp in self.replicates for rep in self.replicates[exp]] +["Gene name fasta"]
+        ].set_index("Gene name fasta")
+        # eliminate all rows where intensities are 0
+        mask = (all_intensities != 0).sum(axis=1) != 0
+        # all proteins that were detected in any replicate
+        background = set(all_intensities[mask].index)
+        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+        heights = ddict(list)
+        test_results = ddict(list)
+
+        bar_width = 0.25
+        for compartiment, all_pathway_genes in self.go_analysis_gene_names.items():
+            all_pathway_genes = set(all_pathway_genes)
+            # 
+            pathway_genes = all_pathway_genes & background
+            # all genes that are not in the pathway
+            not_pathway_genes = background - pathway_genes
+            # sanity check
+            assert pathway_genes | not_pathway_genes == background
+            heights["background"].append(len(pathway_genes))
+            for experiment in self.replicates:
+                # create df with intensity means for specific experiment ofer all replicates
+                abc = all_intensities[[x for x in all_intensities.columns if x.startswith('Intensity ' + experiment)]].mean(axis=1)
+                # get all proteins with mean intensity > 0
+                experiment_genes = set(abc[abc > 0].index)
+                # all other experiments are not detected
+                not_experiment_genes = background - experiment_genes
+                # sanity check
+                assert experiment_genes | not_experiment_genes == background
+                # append height for the plot
+                heights[experiment].append(len(experiment_genes & pathway_genes))
+                table = pd.DataFrame([
+                            [len(experiment_genes & pathway_genes), len(experiment_genes & not_pathway_genes)],
+                            [len(not_experiment_genes & pathway_genes), len(not_experiment_genes & not_pathway_genes)]
+                ], columns=["in pathway", "not in pathway"], index=["in experiment", "not in experiment"])
+                oddsratio, pvalue = stats.fisher_exact(table, alternative='greater')
+                chi2, p, dof, ex = stats.chi2_contingency(table, correction=True)
+                # self.logger.debug(f"{chi2}, {dof}, {ex}")
+                # self.logger.debug(f"{compartiment} {experiment}: table: {table} fisher: {pvalue:.4f}, chi2: {p:.4f}")
+                test_results[experiment].append(pvalue)
+
+        for i, experiment in enumerate(heights):
+            y_pos = np.array([(i + (len(heights) + 1) * x) * bar_width for x in range(len(self.go_analysis_gene_names))])
+            ax.barh(y_pos, heights[experiment], height=bar_width, edgecolor='white', label=experiment)
+            for x, y, text in zip(heights[experiment], y_pos, test_results[experiment]):
+                ax.text(x, y, f" p: {text:.4f}", verticalalignment="center", fontsize="8")
+
+        ax.set_ylabel('compartiment')
+        ax.set_xlabel('number of proteins')
+        # add yticks on the middle of the group bars
+        ax.set_yticks(np.array([((len(heights) * 1.5 - 1.5) * x + 2) * bar_width for x in range(len(self.go_analysis_gene_names))]))
+        # replace the y ticks with the compartiment names
+        ax.set_yticklabels([x for x in self.go_analysis_gene_names])
+        plt.legend()
+        res_path = os.path.join(file_dir_go_analysis, "go_analysis.png")
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
     def update_config_file(self):
         yml_file_name_tmp = "config_tmp.yml"
         yml_file_name = "config.yml"
@@ -838,7 +910,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     args_dict = vars(args)
-    args.dir = "/media/heming/Elements/max_quant_txt_results/xaiomeng_combined_buffers_no_isoform/"
+    # args.dir = "/media/b200-linux/Elements/max_quant_txt_results/xaiomeng_combined_buffers_no_isoform/"
     # print(args)
     # if no dir was specified ask for one
     if args.dir is None:
