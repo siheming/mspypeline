@@ -1,24 +1,36 @@
 # README
 This pipeline can be used to analyze the results of a MaxQuant analysis.
 
+## Requirements
+It is recommended to use this pipeline with git and anaconda, which need to be installed if they aren't
+already. Proxies need to be set for these tools if they are set up (like in the DKFZ).
+The repository can be downloaded for example via
+`git clone https://github.com/siheming/klingmueller_maxquantpipeline.git` or other ways.
+
 ## Usage
 This pipeline can be used via the command line and needs a python
 installation with certain packages. A virtual environment is recommended
-with all packages specified in the `requirements.txt` file. This can be
+with all packages specified in the `environment.yml` file or `environment-windows.yml` . This can be
 done for example via:
 ```bash
-python3 -m venv -r requirements.txt maxquantpipeline
+conda env create python=3.7 -f environment.yml
 ```
 which can then be activated and deactivated via:
 ```bash
-source maxquantpipeline  # activation
-exit  # deactivation
+conda activate maxquantpipeline # activation
+conda deactivate  # deactivation
 ```
 When the environment is activated or the default python installation
 satisfies the requirements the script can be used via:
 ```bash
 python3 MaxQuantPipeline.py
 ```
+or
+```bash
+python MaxQuantPipeline.py
+```
+If the script is started with no further arguments the first prompt will ask for the directory,
+the second promp for the yml config file. If the second prompt is cancelled the default yml file is used
 To see help for the command line support type:
 ```bash
 python3 MaxQuantPipeline.py --help
@@ -41,6 +53,8 @@ analysis pipeline.
 - `important_protein_names.xlsx` a file which contains proteins which
 should be analyzed. These impact descriptive plots and the score calculation.
 - `important_receptor_names.xlsx` a file with receptors.
+- `go_analysis_gene_names.xlsx` a file which contains GO annotations for the
+enrichment analysis.
 
 ## Support
 If additional support is required try googleing, asking a programmer or
