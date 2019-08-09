@@ -23,17 +23,17 @@ conda deactivate  # deactivation
 When the environment is activated or the default python installation
 satisfies the requirements the script can be used via:
 ```bash
-python3 MaxQuantPipeline.py
+python3 MQPipeline.py
 ```
 or
 ```bash
-python MaxQuantPipeline.py
+python MQPipeline.py
 ```
 If the script is started with no further arguments the first prompt will ask for the directory,
 the second promp for the yml config file. If the second prompt is cancelled the default yml file is used
 To see help for the command line support type:
 ```bash
-python3 MaxQuantPipeline.py --help
+python3 MQPipeline.py --help
 ```
 The arguments that can be specified when using the pipeline are:
 - `--dir` the path to the directory that should be analyzed.

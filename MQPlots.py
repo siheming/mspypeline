@@ -3,16 +3,12 @@ import numpy as np
 import os
 import sys
 from Logger import Logger
-import tkinter as tk
-from tkinter import filedialog
-import argparse
 from matplotlib_venn import venn3, venn2
 import matplotlib.pyplot as plt
 from scipy import stats
 from itertools import combinations
 from collections import defaultdict as ddict
-from ruamel.yaml import YAML
-from collections.abc import Sized
+from Utils import barplot_annotate_brackets, get_number_rows_cols_for_fig
 
 
 # plt.style.use('ggplot')
@@ -25,158 +21,72 @@ VENN_SET_LABEL_FONT_SIZE = 16
 VENN_SUBSET_LABEL_FONT_SIZE = 14
 # descriptive plots settings
 
-
-def get_number_rows_cols_for_fig(obj):
-    if isinstance(obj, Sized):
-        obj = len(obj)
-    n_rows, n_cols = 0, 0
-    while n_rows * n_cols < obj:
-        if n_cols <= n_rows:
-            n_cols += 1
-        else:
-            n_rows += 1
-    return n_rows, n_cols
-
-
-def barplot_annotate_brackets(ax, num1, num2, data, center, height, yerr=None, dh=.05, barh=.05, fs=None,
-                              maxasterix=None):
-    """
-    From: https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph
-    Annotate barplot with p-values.
-
-    :param ax: axis of plot to put the annotaion brackets
-    :param num1: number of left bar to put bracket over
-    :param num2: number of right bar to put bracket over
-    :param data: string to write or number for generating asterixes
-    :param center: centers of all bars (like plt.bar() input)
-    :param height: heights of all bars (like plt.bar() input)
-    :param yerr: yerrs of all bars (like plt.bar() input)
-    :param dh: height offset over bar / bar + yerr in axes coordinates (0 to 1)
-    :param barh: bar height in axes coordinates (0 to 1)
-    :param fs: font size
-    :param maxasterix: maximum number of asterixes to write (for very small p-values)
-    """
-
-    if type(data) is str:
-        text = data
-    else:
-        # * is p < 0.05
-        # ** is p < 0.005
-        # *** is p < 0.0005
-        # etc.
-        text = ''
-        p = .05
-
-        while data < p:
-            text += '*'
-            p /= 10.
-
-            if maxasterix and len(text) == maxasterix:
-                break
-
-        if len(text) == 0:
-            text = 'n. s.'
-
-    lx, ly = center[num1], max(height)
-    rx, ry = center[num2], max(height)
-
-    if yerr:
-        ly += yerr[num1]
-        ry += yerr[num2]
-
-    ax_y0, ax_y1 = ax.get_ylim()
-    log = False
-    if log:
-        dh *= 10 ** (ax_y1 - ax_y0)
-        barh *= 10 ** (ax_y1 - ax_y0)
-    else:
-        dh *= (ax_y1 - ax_y0)
-        barh *= (ax_y1 - ax_y0)
-
-    y = max(ly, ry) + dh
-
-    barx = [lx, lx, rx, rx]
-    bary = [y, y + barh, y + barh, y]
-    mid = ((lx + rx) / 2, y + barh)
-
-    ax.plot(barx, bary, c='black')
-
-    kwargs = dict(ha='center', va='bottom')
-    if fs is not None:
-        kwargs['fontsize'] = fs
-
-    ax.text(*mid, text, **kwargs)
-
-
-class MaxQuantPipeline(Logger):
-    def __init__(self, dir_: str, file_path_yml: str = None):
+class MQPlots(Logger):
+    def __init__(
+        self, start_dir, replicates, configs,
+        df_protein_names, df_peptide_names,
+        interesting_proteins, interesting_receptors, go_analysis_gene_names
+        ):
         super().__init__(self.__class__.__name__)
-        self._replicates = None
+        # property variables
         self._replicate_representation = None
         self._min_number_replicates = None
         self._max_number_replicates = None
         self._replicates_representation = None
+        # general information
+        self.start_dir = start_dir
+        self.replicates = replicates
+        self.configs = configs
+        # data frames
+        self.df_protein_names = df_protein_names.set_index(df_protein_names["Gene name fasta"], drop=False)
+        self.df_peptide_names = df_peptide_names
+        # dicts
+        self.interesting_proteins = interesting_proteins
+        self.interesting_receptors = interesting_receptors
+        self.go_analysis_gene_names = go_analysis_gene_names
 
-        self.script_loc = os.path.dirname(os.path.realpath(__file__))
-        self.path_pipeline_config = os.path.join(self.script_loc, "config")
+        # extract all raw intensites from the dataframe
+        self.all_intensities_raw = self.df_protein_names[
+            [f"Intensity {rep}" for exp in self.replicates for rep in self.replicates[exp]]
+        ]
+        # filter all rows where all intensities are 0
+        mask = (self.all_intensities_raw != 0).sum(axis=1) != 0
+        self.all_intensities_raw = self.all_intensities_raw[mask]
 
-        self.yml_file_name_tmp = "config_tmp.yml"
-        self.yml_file_name = "config.yml"
-        self.default_yml_name = "ms_analysis_default.yml"
+        # write all intensites of every experiment to one dict entry
+        self.intensites_per_experiment_raw = {
+            exp: self.all_intensities_raw[
+                [f"Intensity {rep}" for rep in self.replicates[exp]]
+            ] for exp in self.replicates
+        }
 
-        # make sure to be on the right level and set starting dir
-        if os.path.split(os.path.split(dir_)[0])[-1] == "txt":
-            self.logger.debug("Removing txt ending from path")
-            self.start_dir = os.path.join(os.path.split(os.path.split(dir_)[0])[0])
-        else:
-            self.start_dir = dir_
-        self.logger.info(f"Starting dir: {self.start_dir}")
+        # extract all lfq intensites from the dataframe
+        self.all_intensities_lfq = self.df_protein_names[
+            [f"LFQ intensity {rep}" for exp in self.replicates for rep in self.replicates[exp]]
+        ]
+        # filter all rows where all intensities are 0
+        mask = (self.all_intensities_lfq != 0).sum(axis=1) != 0
+        self.all_intensities_lfq = self.all_intensities_lfq[mask]
 
-        # if no yml file is passed try to guess it or ask for one
-        if file_path_yml is None:
-            file_path_yml = self.init_yml_path()
-        elif file_path_yml.lower() == "default":
-            file_path_yml = self.get_default_yml_path()
+        # write all intensites of every experiment to one dict entry
+        self.intensites_per_experiment_lfg = {
+            exp: self.all_intensities_lfq[
+                [f"LFQ intensity {rep}" for rep in self.replicates[exp]]
+            ] for exp in self.replicates
+        }
 
-        # load the config from the yml file
-        self.logger.debug(f"yml file location: {file_path_yml}")
-        self.yaml = YAML()
-        self.yaml.default_flow_style = False
-        self.logger.info("loading yml file")
-        with open(file_path_yml) as f:
-            self.configs = self.yaml.load(f)
-        self.logger.debug(f"Config file contents: {self.configs}")
-
-        self.path_config = os.path.join(self.start_dir, "config")
-        os.makedirs(self.path_config, exist_ok=True)
-        self.update_config_file()
-
-        # read the proteinGroups.txt and peptides.txt
-        self.logger.info("Reading proteinGroups.txt")  # TODO also reading another file
-        self.df_protein_names, self.df_peptide_names = self.init_dfs_from_txts()
-        self.update_config_file()
-
-        # read all proteins and receptors of interest from the config dir
-        self.logger.info("Reading proteins and receptors of interest")
-        self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()
-
-    @property
-    def replicates(self):
-        if self._replicates is None:
-            self._replicates = self.init_replicates(self.df_protein_names.columns)
-        return self._replicates
-
-    def init_replicates(self, df_colnames):
-        all_reps = sorted([x.replace('Intensity ', '') for x in df_colnames
-                           if x.startswith('Intensity ')], key=len, reverse=True)
-        _replicates = ddict(list)
-        for experiment in self.configs.get("experiments", False):
-            if not experiment:
-                raise ValueError("Missing experiments key in config file")
-            for rep in all_reps:
-                if rep.startswith(experiment):
-                    _replicates[experiment].append(rep)
-        return _replicates
+    @classmethod
+    def from_MQInitializer(cls, mqinti_instance):
+        return cls(
+            start_dir = mqinti_instance.start_dir,
+            replicates = mqinti_instance.replicates,
+            configs = mqinti_instance.configs,
+            df_protein_names = mqinti_instance.df_protein_names,
+            df_peptide_names = mqinti_instance.df_peptide_names,
+            interesting_proteins = mqinti_instance.interesting_proteins,
+            interesting_receptors = mqinti_instance.interesting_receptors,
+            go_analysis_gene_names = mqinti_instance.go_analysis_gene_names
+            )
 
     @property
     def replicate_representation(self):
@@ -201,157 +111,6 @@ class MaxQuantPipeline(Logger):
             self._max_number_replicates = max([len(self.replicates[experiment]) for experiment in self.replicates])
         return self._max_number_replicates
 
-    def get_default_yml_path(self):
-        self.logger.debug(f"Loading default yml file from: {self.script_loc}, since no file was selected")
-        if self.default_yml_name in os.listdir(self.path_pipeline_config):
-            yaml_file = os.path.join(self.path_pipeline_config, self.default_yml_name)
-        else:
-            raise ValueError("Could not find default yaml file. Please select one.")
-        return yaml_file
-
-    def init_yml_path(self) -> str:
-        def yml_file_dialog() -> str:
-            file_path = filedialog.askopenfilename()
-            self.logger.debug(f"selected file path: {file_path}")
-            if not file_path:
-                yaml_file = self.get_default_yml_path()
-            elif not file_path.endswith(".yaml") and not file_path.endswith(".yml"):
-                raise ValueError("Please select a yaml / yml file")
-            else:
-                yaml_file = file_path
-            return yaml_file
-
-        if "config" in os.listdir(self.start_dir):
-            self.logger.debug("Found config dir")
-            config_dir = os.path.join(self.start_dir, "config")
-            if self.yml_file_name in os.listdir(config_dir):
-                self.logger.debug("Found config.yml file in config dir")
-                yaml_file = os.path.join(config_dir, self.yml_file_name)
-            else:
-                yaml_file = yml_file_dialog()
-        else:
-            yaml_file = yml_file_dialog()
-        return yaml_file
-
-    def init_dfs_from_txts(self):
-        file_dir_txt = os.path.join(self.start_dir, "txt")
-        if not os.path.isdir(file_dir_txt):
-            raise ValueError("Directory does not contain a txt dir")
-        file_dir_protein_names = os.path.join(file_dir_txt, "proteinGroups.txt")
-        file_dir_peptides_names = os.path.join(file_dir_txt, "peptides.txt")
-        # make sure protein groups file exists
-        if not os.path.isfile(file_dir_protein_names):
-            raise ValueError("txt directory does not contain a proteinGroups.txt file")
-        if not os.path.isfile(file_dir_peptides_names):
-            raise ValueError("txt directory does not contain a peptides.txt file")
-        # read protein groups file
-        df_protein_names = pd.read_csv(file_dir_protein_names, sep="\t")
-        df_peptide_names = pd.read_csv(file_dir_peptides_names, sep="\t")
-
-        # try to automatically determine experimental setup
-        if not self.configs.get("experiments", False):
-            self.logger.info("No replicates specified in settings file. Trying to infer.")
-            # TODO will there every be more than 9 replicates?
-            import difflib
-
-            def get_overlap(s1, s2):
-                s = difflib.SequenceMatcher(None, s1, s2)
-                pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2))
-                return s1[pos_a:pos_a + size]
-
-            # TODO can the Intensity column always be expected in the file?
-            # TODO will the column names always be the same between Intensity and LFQ intensity?
-            all_reps = sorted([x.replace('Intensity ', '') for x in df_protein_names.columns
-                               if x.startswith('Intensity ')], key=len, reverse=True)
-            # make sure the two files contain the same replicate names
-            all_reps_peptides = [x.replace('Intensity ', '') for x in df_protein_names.columns
-                                 if x.startswith('Intensity ')]
-            experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
-            if any(experiment_analysis_overlap):
-                unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
-                raise ValueError("Found replicates in peptides.txt, but not in proteinGroups.txt: " +
-                                 ", ".join(unmatched))
-            #
-            overlap = [[get_overlap(re1, re2) if re1 != re2 else "" for re1 in all_reps] for re2 in all_reps]
-            overlap_matrix = pd.DataFrame(overlap, columns=all_reps, index=all_reps)
-            unclear_matches = []
-            replicates = ddict(list)
-            for col in overlap_matrix:
-                sorted_matches = sorted(overlap_matrix[col].values, key=len, reverse=True)
-                best_match = sorted_matches[0]
-                replicates[best_match].append(col)
-                # check if any other match with the same length could be found
-                if any([len(best_match) == len(match) and best_match != match for match in sorted_matches]):
-                    unclear_matches.append(best_match)
-            for experiment in replicates:
-                if len(replicates[experiment]) == 1:
-                    rep = replicates.pop(experiment)
-                    replicates[rep[0]] = rep
-                elif experiment in unclear_matches:
-                    self.logger.debug(f"unclear match for experiment: {experiment}")
-            self.logger.info(f"determined experiemnts: {replicates.keys()}")
-            self.logger.debug(f"number of replicates per experiment:")
-            self.logger.debug("\n".join([f"{ex}: {len(replicates[ex])}" for ex in replicates]))
-            self.configs["experiments"] = list(replicates.keys())
-            self._replicates = replicates
-
-        # TODO properties seem to make no sense here anymore
-        if self._replicates is None:
-            self._replicates = self.init_replicates(df_protein_names.columns)
-
-        found_replicates = [rep for l in self.replicates.values() for rep in l]
-        for df_cols in [df_peptide_names.columns, df_protein_names.columns]:
-            intens_cols = [x.replace('Intensity ', '') for x in df_cols if x.startswith('Intensity ')]
-            not_found_replicates = [x not in found_replicates for x in intens_cols]
-            if any(not_found_replicates):
-                unmatched = [x for x in intens_cols if not_found_replicates]
-                raise ValueError("Found replicates in peptides.txt, but not in proteinGroups.txt: " +
-                                 ", ".join(unmatched))
-
-        # filter all contaminants by removing all rows where any of the 3 columns contains a +
-        not_contaminants = (df_protein_names[
-                                ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
-                            ).sum(axis=1) == 0
-        df_protein_names = df_protein_names[not_contaminants]
-        # split the fasta headers
-        # first split all fasta headers that contain multiple entries
-        sep_ind = df_protein_names["Fasta headers"].str.contains(";")
-        # replace all fasta headers with multiple entries with only the first one
-        # TODO will there always be a fasta header?
-        df_protein_names["Fasta headers"][sep_ind] = df_protein_names["Fasta headers"][sep_ind].str.split(";").apply(pd.Series)[0]
-        # split the fasta headers with the pipe symbol
-        fasta_col = df_protein_names["Fasta headers"].str.split("|", n=2).apply(pd.Series)
-        fasta_col.columns = ["trash", "protein id", "description"]
-        # extract the gene name from the description eg: "GN=abcd"
-        gene_names_fasta = fasta_col["description"].str.extract(r"(GN=[A-Za-z0-9]*)")[0].str.split("=").apply(pd.Series)
-        gene_names_fasta.columns = ["GN", "Gene name fasta"]
-        # concat all important columns with the original dataframe
-        df_protein_names = pd.concat([df_protein_names, fasta_col["protein id"], gene_names_fasta["Gene name fasta"]], axis=1)
-        # add protein name from fasta description col
-        df_protein_names["Protein name"] = fasta_col["description"].str.split("_", expand=True)[0]
-        return df_protein_names, df_peptide_names
-
-    def init_interest_from_xlsx(self) -> (dict, dict, dict):
-        protein_path = os.path.join(self.path_pipeline_config, "important_protein_names.xlsx")
-        receptor_path = os.path.join(self.path_pipeline_config, "important_receptor_names.xlsx")
-        go_path = os.path.join(self.path_pipeline_config, "go_analysis_gene_names.xlsx")
-        # make sure files exist
-        if not os.path.isfile(protein_path):
-            raise ValueError("missing important_protein_names.xlsx file")
-        # make sure files exist
-        if not os.path.isfile(receptor_path):
-            raise ValueError("missing important_receptor_names.xlsx file")
-        if not os.path.isfile(go_path):
-            raise ValueError("missing go_analysis.xlsx file")
-
-        def df_to_dict(df):
-            return {col: df[col].dropna().tolist() for col in df}
-
-        df_protein = pd.read_excel(protein_path)
-        df_receptor = pd.read_excel(receptor_path)
-        df_go = pd.read_excel(go_path)
-        return df_to_dict(df_protein), df_to_dict(df_receptor), df_to_dict(df_go)
-
     def create_results(self):
         # create all results according to configs
         if self.configs.get("venn_results", False):
@@ -369,6 +128,11 @@ class MaxQuantPipeline(Logger):
         self.create_report()
 
     def create_venn_results(self):
+        self.logger.info("Creating venn diagrams")
+        file_dir_venn = os.path.join(self.start_dir, "venn")
+        # create file structure and folder
+        os.makedirs(file_dir_venn, exist_ok=True)
+
         def save_venn(ex: str, sets, set_names):
             creates_figure = True
             plt.close("all")
@@ -448,7 +212,7 @@ class MaxQuantPipeline(Logger):
             res_path = os.path.join(
                 file_dir_venn, f"venn_bar_{name.replace(' ', '_')}" + FIG_FORMAT
             )
-            plt.savefig(res_path, dpi=200, bbox_inches="tight")
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
             plt.close("all")
 
         def venn_names(named_sets):
@@ -474,22 +238,16 @@ class MaxQuantPipeline(Logger):
                     for re in result:
                         out.write(re + "\n")
 
-        self.logger.info("Creating venn diagrams")
-        file_dir_venn = os.path.join(self.start_dir, "venn")
-        # create file structure and folder
-        os.makedirs(file_dir_venn, exist_ok=True)
-
         # create all sets that are required for plotting
         protein_ids = ddict(dict)
         whole_experiment_protein_ids = {}
         for experiment in self.replicates:
-            intensities = self.df_protein_names[
-                [f"{self.configs['venn_intensity_col']}{rep}" for rep in self.replicates[experiment]]
-            ]
             exp_prot_ids = set()
-            for rep_name, rep in zip(self.replicates[experiment], intensities):
+            for rep_name, rep in zip(self.replicates[experiment], self.all_intensities_raw):
                 # TODO what to use for venns
-                rep_set = set(self.df_protein_names[intensities[rep] > 0]["Protein name"])
+                idx = self.all_intensities_raw[rep] > 0
+                idx = [i for i in idx.index if idx[i]]
+                rep_set = set(self.df_protein_names.loc[idx, "Protein name"])
                 protein_ids[experiment][rep_name] = rep_set
                 exp_prot_ids |= rep_set
             whole_experiment_protein_ids[experiment] = exp_prot_ids
@@ -508,8 +266,10 @@ class MaxQuantPipeline(Logger):
             save_bar_venn(ex, protein_ids[ex])
         # create venn diagrams comparing all pellets with supernatants
         # create venn diagrams comparing all experiments
+        # first compare only proteins which are found between all replicates
         experiment_sets = {exp: set.intersection(*(protein_ids[exp][rep] for rep in protein_ids[exp])) for exp in protein_ids}
         save_bar_venn("All experiments intersection", experiment_sets)
+        # then compare all proteins that are found at all
         experiment_sets = {exp: set.union(*(protein_ids[exp][rep] for rep in protein_ids[exp])) for exp in protein_ids}
         save_bar_venn("All experiments union", experiment_sets)
 
@@ -548,17 +308,10 @@ class MaxQuantPipeline(Logger):
             'GAS6 Signaling Pathway': "mediumpurple"
         }
 
-        all_intensities = self.df_protein_names[
-            [f"{self.configs['descriptive_intensity_col']}{rep}"
-             for exp in self.replicates for rep in self.replicates[exp]] +["Gene name fasta"]
-        ].set_index("Gene name fasta")
-        mask = (all_intensities != 0).sum(axis=1) != 0
-        all_intensities = all_intensities[mask]
         ex_list = list(self.replicates.keys())
         for experiment, ax, ax1 in zip(self.replicates, axarr.flat, axarr1.flat):
             plt.close("all")
-            e_list = [f"{self.configs['descriptive_intensity_col']}{rep}" for rep in self.replicates[experiment]]
-            intensities = all_intensities[e_list]
+            intensities = self.intensites_per_experiment_raw[experiment]
 
             # plot 1
             # from 0 to number of replicates, how often was each protein detected
@@ -583,7 +336,7 @@ class MaxQuantPipeline(Logger):
                 heights.append(h)
                 labels.append(col)
             mean_height = np.mean(heights[2:])
-            self.logger.debug(labels)
+            # self.logger.debug(labels)
             ax1.bar([x for x in range(len(heights))], heights)
             ax1.text(1, mean_height * 1.01, f"{mean_height:.2f}", horizontalalignment='center')
             ax1.set_title(f"{experiment}")
@@ -716,7 +469,7 @@ class MaxQuantPipeline(Logger):
         for pathway in pathway_colors:
             plt.close("all")
             found_proteins = set(self.interesting_proteins[pathway])
-            found_proteins &= set(all_intensities.index)
+            found_proteins &= set(self.all_intensities_raw.index)
             found_proteins = sorted(list(found_proteins))
             n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
             fig, axarr = plt.subplots(n_rows, n_cols, figsize=(4 * n_rows, 4 * n_cols))
@@ -725,8 +478,7 @@ class MaxQuantPipeline(Logger):
                 ax.set_title(protein)
                 heights = []
                 for idx, experiment in enumerate(self.replicates):
-                    e_list = [x for x in all_intensities.columns if x.startswith(self.configs['descriptive_intensity_col'] + experiment)]
-                    protein_intensities = all_intensities.loc[protein, e_list]
+                    protein_intensities = self.intensites_per_experiment_raw[experiment].loc[protein, :]
                     ax.scatter([idx] * len(protein_intensities), protein_intensities, label=f"{experiment}")
                     # self.logger.debug(f"{protein}: min: {min_i}, max: {max_i}")
                     heights.append(np.max(protein_intensities))
@@ -735,10 +487,8 @@ class MaxQuantPipeline(Logger):
                 # ax.legend()
                 n_annotations = 0
                 for e1, e2 in combinations(self.replicates, 2):
-                    e1_list = [x for x in all_intensities.columns if x.startswith(self.configs['descriptive_intensity_col'] + e1)]
-                    e2_list = [x for x in all_intensities.columns if x.startswith(self.configs['descriptive_intensity_col'] + e2)]
-                    v1 = all_intensities.loc[protein, e1_list].astype(float)
-                    v2 = all_intensities.loc[protein, e2_list].astype(float)
+                    v1 = self.intensites_per_experiment_raw[e1].loc[protein, :].astype(float)
+                    v2 = self.intensites_per_experiment_raw[e2].loc[protein, :].astype(float)
                     log_transform = False
                     plot_ns = False
                     threshhold = 0.05
@@ -759,13 +509,9 @@ class MaxQuantPipeline(Logger):
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
         for ex1, ex2 in combinations(self.replicates, 2):
-            protein_intensities_ex1 = self.df_protein_names[
-                [f"{self.configs['descriptive_intensity_col']}{rep}" for rep in self.replicates[ex1]]
-            ]
+            protein_intensities_ex1 = self.intensites_per_experiment_raw[ex1]
             counts_ex1 = (protein_intensities_ex1 > 0).sum(axis=1) == len(protein_intensities_ex1.columns)
-            protein_intensities_ex2 = self.df_protein_names[
-                [f"{self.configs['descriptive_intensity_col']}{rep}" for rep in self.replicates[ex2]]
-            ]
+            protein_intensities_ex2 = self.intensites_per_experiment_raw[ex1]
             counts_ex2 = (protein_intensities_ex2 > 0).sum(axis=1) == len(protein_intensities_ex2.columns)
             # combine intersections
             intersection = pd.concat(
@@ -819,22 +565,15 @@ class MaxQuantPipeline(Logger):
         os.makedirs(file_dir_go_analysis, exist_ok=True)
         plt.close("all")
 
-        all_intensities = self.df_protein_names[
-            [f"{self.configs['descriptive_intensity_col']}{rep}"
-             for exp in self.replicates for rep in self.replicates[exp]] +["Gene name fasta"]
-        ].set_index("Gene name fasta")
-        # eliminate all rows where intensities are 0
-        mask = (all_intensities != 0).sum(axis=1) != 0
         # all proteins that were detected in any replicate
-        background = set(all_intensities[mask].index)
-        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+        background = set(self.all_intensities_raw.index)
         heights = ddict(list)
         test_results = ddict(list)
 
         bar_width = 0.25
         for compartiment, all_pathway_genes in self.go_analysis_gene_names.items():
             all_pathway_genes = set(all_pathway_genes)
-            # 
+            # get all pathway genes that were detected throughout all experiments
             pathway_genes = all_pathway_genes & background
             # all genes that are not in the pathway
             not_pathway_genes = background - pathway_genes
@@ -843,9 +582,9 @@ class MaxQuantPipeline(Logger):
             heights["background"].append(len(pathway_genes))
             for experiment in self.replicates:
                 # create df with intensity means for specific experiment ofer all replicates
-                abc = all_intensities[[x for x in all_intensities.columns if x.startswith('Intensity ' + experiment)]].mean(axis=1)
+                mean_intensity = self.intensites_per_experiment_raw[experiment].mean(axis=1)
                 # get all proteins with mean intensity > 0
-                experiment_genes = set(abc[abc > 0].index)
+                experiment_genes = set(mean_intensity[mean_intensity > 0].index)
                 # all other experiments are not detected
                 not_experiment_genes = background - experiment_genes
                 # sanity check
@@ -862,6 +601,8 @@ class MaxQuantPipeline(Logger):
                 # self.logger.debug(f"{compartiment} {experiment}: table: {table} fisher: {pvalue:.4f}, chi2: {p:.4f}")
                 test_results[experiment].append(pvalue)
 
+        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+
         for i, experiment in enumerate(heights):
             y_pos = np.array([(i + (len(heights) + 1) * x) * bar_width for x in range(len(self.go_analysis_gene_names))])
             ax.barh(y_pos, heights[experiment], height=bar_width, edgecolor='white', label=experiment)
@@ -877,53 +618,3 @@ class MaxQuantPipeline(Logger):
         plt.legend()
         res_path = os.path.join(file_dir_go_analysis, "go_analysis" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
-
-    def update_config_file(self):
-        # store the config file as tmp
-        yml_file_loc_tmp = os.path.join(self.path_config, self.yml_file_name_tmp)
-        with open(yml_file_loc_tmp, "w") as outfile:
-            self.yaml.dump(self.configs, outfile)
-
-        # delete non tmp if exists
-        yml_file_loc = os.path.join(self.path_config, self.yml_file_name)
-        if self.yml_file_name in os.listdir(self.path_config):
-            os.remove(yml_file_loc)
-
-        # rename to non tmp
-        os.rename(yml_file_loc_tmp, yml_file_loc)
-
-
-if __name__ == "__main__":
-    # create arg parser to handle different options
-    parser = argparse.ArgumentParser(description="")
-    parser.add_argument(
-        '--dir',
-        dest='dir',
-        action='store',
-        help="Path to directory of analysis which should be analyzed."
-             "If not set the program will open a prompt and ask to select one."
-    )
-    parser.add_argument(
-        '--yml-file',
-        dest='yml_file',
-        action='store',
-        help="Path to yml file which should be used for analysis, or 'default'."
-             "If not set the program will open a prompt and ask to select one,"
-             "but if canceled the default yml file will be used."
-    )
-    args = parser.parse_args()
-    args_dict = vars(args)
-    # args.dir = "/media/b200-linux/Elements/max_quant_txt_results/xaiomeng_combined_buffers_no_isoform/"
-    # print(args)
-    # disable most ui things
-    root = tk.Tk()
-    root.withdraw()
-    # if no dir was specified ask for one
-    if args.dir is None:
-        start_dir = filedialog.askdirectory()
-        if not start_dir:
-            raise ValueError("Please select a directory")
-    else:
-        start_dir = args.dir
-    mxpipeline = MaxQuantPipeline(start_dir, args.yml_file)
-    mxpipeline.create_results()
