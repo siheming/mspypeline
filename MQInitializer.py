@@ -10,6 +10,7 @@ from itertools import combinations
 from collections import defaultdict as ddict
 from ruamel.yaml import YAML
 from tkinter import filedialog
+from shutil import copy2
 
 
 class MQInitializer(Logger):
@@ -24,9 +25,15 @@ class MQInitializer(Logger):
         self.script_loc = os.path.dirname(os.path.realpath(__file__))
         self.path_pipeline_config = os.path.join(self.script_loc, "config")
 
+        # set all file names that are required
         self.yml_file_name_tmp = "config_tmp.yml"
         self.yml_file_name = "config.yml"
         self.default_yml_name = "ms_analysis_default.yml"
+        self.proteins_txt = "proteinGroups.txt"
+        self.peptides_txt = "peptides.txt"
+        self.important_proteins_xlsx = "important_protein_names.xlsx"
+        self.important_receptors_xlsx = "important_receptor_names.xlsx"
+        self.go_analysis_gene_xlsx = "go_analysis_gene_names.xlsx"
 
         # make sure to be on the right level and set starting dir
         if os.path.split(os.path.split(dir_)[0])[-1] == "txt":
@@ -55,8 +62,8 @@ class MQInitializer(Logger):
         os.makedirs(self.path_config, exist_ok=True)
         self.update_config_file()
 
-        # read the proteinGroups.txt and peptides.txt
-        self.logger.info("Reading proteinGroups.txt")  # TODO also reading another file
+        # read the proteins_txt and peptides_txt
+        self.logger.info("Reading %s, and %s", self.proteins_txt, self.peptides_txt)
         self.df_protein_names, self.df_peptide_names = self.init_dfs_from_txts()
         self.update_config_file()
 
@@ -82,8 +89,8 @@ class MQInitializer(Logger):
                     _replicates[experiment].append(rep)
         return _replicates
 
-    def get_default_yml_path(self):
-        self.logger.debug(f"Loading default yml file from: {self.script_loc}, since no file was selected")
+    def get_default_yml_path(self) -> str:
+        self.logger.debug("Loading default yml file from: %s, since no file was selected", self.script_loc)
         if self.default_yml_name in os.listdir(self.path_pipeline_config):
             yaml_file = os.path.join(self.path_pipeline_config, self.default_yml_name)
         else:
@@ -114,17 +121,17 @@ class MQInitializer(Logger):
             yaml_file = yml_file_dialog()
         return yaml_file
 
-    def init_dfs_from_txts(self):
+    def init_dfs_from_txts(self) -> (pd.DataFrame, pd.DataFrame):
         file_dir_txt = os.path.join(self.start_dir, "txt")
         if not os.path.isdir(file_dir_txt):
             raise ValueError("Directory does not contain a txt dir")
-        file_dir_protein_names = os.path.join(file_dir_txt, "proteinGroups.txt")
-        file_dir_peptides_names = os.path.join(file_dir_txt, "peptides.txt")
+        file_dir_protein_names = os.path.join(file_dir_txt, self.proteins_txt)
+        file_dir_peptides_names = os.path.join(file_dir_txt, self.peptides_txt)
         # make sure protein groups file exists
         if not os.path.isfile(file_dir_protein_names):
-            raise ValueError("txt directory does not contain a proteinGroups.txt file")
+            raise ValueError(f"txt directory does not contain a {self.proteins_txt} file")
         if not os.path.isfile(file_dir_peptides_names):
-            raise ValueError("txt directory does not contain a peptides.txt file")
+            raise ValueError(f"txt directory does not contain a {self.peptides_txt} file")
         # read protein groups file
         df_protein_names = pd.read_csv(file_dir_protein_names, sep="\t")
         df_peptide_names = pd.read_csv(file_dir_peptides_names, sep="\t")
@@ -215,17 +222,36 @@ class MQInitializer(Logger):
         return df_protein_names, df_peptide_names
 
     def init_interest_from_xlsx(self) -> (dict, dict, dict):
-        protein_path = os.path.join(self.path_pipeline_config, "important_protein_names.xlsx")
-        receptor_path = os.path.join(self.path_pipeline_config, "important_receptor_names.xlsx")
-        go_path = os.path.join(self.path_pipeline_config, "go_analysis_gene_names.xlsx")
-        # make sure files exist
-        if not os.path.isfile(protein_path):
-            raise ValueError("missing important_protein_names.xlsx file")
-        # make sure files exist
-        if not os.path.isfile(receptor_path):
-            raise ValueError("missing important_receptor_names.xlsx file")
-        if not os.path.isfile(go_path):
-            raise ValueError("missing go_analysis.xlsx file")
+        list_path_config = os.listdir(self.path_config)
+        list_path_pipeline_config = os.listdir(self.path_pipeline_config)
+
+        # load excel sheets.
+        # first priority is the config dir of the results.
+        # second priority is the original config dir. In this case the file gets copied to the first priority.
+        # load important_proteins_xlsx
+        if self.important_proteins_xlsx in list_path_config:
+            protein_path = os.path.join(self.path_config, self.important_proteins_xlsx)
+        elif self.important_proteins_xlsx in list_path_pipeline_config:
+            protein_path = os.path.join(self.path_pipeline_config, self.important_proteins_xlsx)
+            copy2(protein_path, self.path_config)
+        else:
+            raise ValueError(f"missing {self.important_proteins_xlsx} file")
+        # load important_receptors_xlsx
+        if self.important_receptors_xlsx in list_path_config:
+            receptor_path = os.path.join(self.path_config, self.important_receptors_xlsx)
+        elif self.important_receptors_xlsx in list_path_pipeline_config:
+            receptor_path = os.path.join(self.path_pipeline_config, self.important_receptors_xlsx)
+            copy2(receptor_path, self.path_config)
+        else:
+            raise ValueError(f"missing {self.important_receptors_xlsx} file")
+        # load go_analysis_gene_xlsx
+        if self.go_analysis_gene_xlsx in list_path_config:
+            go_path = os.path.join(self.path_config, self.go_analysis_gene_xlsx)
+        elif self.go_analysis_gene_xlsx in list_path_pipeline_config:
+            go_path = os.path.join(self.path_pipeline_config, self.go_analysis_gene_xlsx)
+            copy2(go_path, self.path_config)
+        else:
+            raise ValueError(f"missing {self.important_proteins_xlsx} file")
 
         def df_to_dict(df):
             return {col: df[col].dropna().tolist() for col in df}
