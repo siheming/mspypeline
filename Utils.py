@@ -1,4 +1,5 @@
 from collections.abc import Sized
+from itertools import combinations
 
 
 def get_number_rows_cols_for_fig(obj):
@@ -81,3 +82,12 @@ def barplot_annotate_brackets(ax, num1, num2, data, center, height, yerr=None, d
         kwargs['fontsize'] = fs
 
     ax.text(*mid, text, **kwargs)
+
+def venn_names(named_sets):
+    names = set(named_sets)
+    for i in range(1, len(named_sets) + 1):
+        for to_intersect in combinations(sorted(named_sets), i):
+            others = names.difference(to_intersect)
+            intersected = set.intersection(*(named_sets[k] for k in to_intersect))
+            unioned = set.union(*(named_sets[k] for k in others)) if others else set()
+            yield to_intersect, others, intersected - unioned

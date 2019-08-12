@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from itertools import combinations
 from collections import defaultdict as ddict
-from Utils import barplot_annotate_brackets, get_number_rows_cols_for_fig
+from Utils import barplot_annotate_brackets, get_number_rows_cols_for_fig, venn_names
 
 
 # plt.style.use('ggplot')
@@ -75,6 +75,37 @@ class MQPlots(Logger):
             ] for exp in self.replicates
         }
 
+        # create all sets that are required for plotting
+        # this could be turned into a property
+        self.protein_ids = ddict(dict)
+        self.whole_experiment_protein_ids = {}
+        for experiment in self.replicates:
+            exp_prot_ids = set()
+            for rep_name, rep in zip(self.replicates[experiment], self.all_intensities_raw):
+                # TODO what to use for venns
+                idx = self.all_intensities_raw[rep] > 0
+                idx = [i for i in idx.index if idx[i]]
+                rep_set = set(self.df_protein_names.loc[idx, "Protein name"])
+                self.protein_ids[experiment][rep_name] = rep_set
+                exp_prot_ids |= rep_set
+            self.whole_experiment_protein_ids[experiment] = exp_prot_ids
+
+        # set all result dirs
+        if self.configs.get("venn_results", False):
+            # path for venn diagrams
+            self.file_dir_venn = os.path.join(self.start_dir, "venn")
+            # create file structure and folder
+            os.makedirs(self.file_dir_venn, exist_ok=True)
+        if self.configs.get("descriptive_plots", False):
+            # path for descriptive plots
+            self.file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
+            # create file structure and folder
+            os.makedirs(self.file_dir_descriptive, exist_ok=True)
+        if self.configs.get("go_analysis", False):
+            self.file_dir_go_analysis = os.path.join(self.start_dir, "go_analysis")
+            # create file structure and folder
+            os.makedirs(self.file_dir_go_analysis, exist_ok=True)
+
     @classmethod
     def from_MQInitializer(cls, mqinti_instance):
         return cls(
@@ -127,157 +158,126 @@ class MQPlots(Logger):
         # create report summarizing the analysis results
         self.create_report()
 
+    def save_venn(self, ex: str, sets, set_names):
+        creates_figure = True
+        plt.close("all")
+        plt.figure(figsize=(14, 7))
+        plt.title(self.replicate_representation[ex], fontsize=VENN_TITLE_FONT_SIZE)
+
+        # create venn diagram based on size of set
+        if len(sets) < 2:
+            creates_figure = False
+            self.logger.warning(f"Could not create venn diagram for {ex} because it has less than 2 replicates")
+        elif len(sets) == 2:
+            venn = venn2(subsets=sets, set_labels=set_names)
+        elif len(sets) == 3:
+            venn = venn3(subsets=sets, set_labels=set_names)
+        else:
+            self.logger.warning(f"Could not create venn diagram for {ex}"
+                                f" because it has more than 3 replicates ({len(sets)})")
+            creates_figure = False
+
+        # if a figure was created, do some further configuration and save it
+        if creates_figure:
+            res_path = os.path.join(
+                self.file_dir_venn, f"venn_replicate_{self.replicate_representation[ex].replace(' ', '_')}" + FIG_FORMAT
+            )
+
+            for text in venn.set_labels:
+                try:
+                    text.set_fontsize(VENN_SET_LABEL_FONT_SIZE)
+                except AttributeError:
+                    pass
+            for text in venn.subset_labels:
+                try:
+                    text.set_fontsize(VENN_SUBSET_LABEL_FONT_SIZE)
+                except AttributeError:
+                    pass
+            plt.savefig(res_path, dpi=200, bbox_inches="tight")
+        plt.close("all")
+
+    def save_bar_venn(self, ex: str, named_sets):
+        plt.close("all")
+        # ax1.set_title("size")
+        # ax2.set_title("selected samples")
+
+        # create a mapping from name to a y coordinate
+        y_mappings = {name: i for i, name in enumerate(named_sets)}
+        # get all the heights and other info required for the plot
+        heights = []
+        x = []
+        ys = []
+        for i, (intersected, unioned, result) in enumerate(venn_names(named_sets)):
+            heights.append(len(result))
+            x.append(i)
+            ys.append([y_mappings[x] for x in intersected])
+
+        # initial figure setup
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
+        try:
+            name = self.replicate_representation[ex]
+        except KeyError:
+            name = ex
+        fig.suptitle(name, fontsize=20)
+        # create the bar plot
+        ax1.bar(x, heights)
+        # add text to the bar plot
+        for x_level, height in zip(x, heights):
+            ax1.text(x_level, max(heights) / 2, height, verticalalignment='center', horizontalalignment='center')
+
+        # create the line plots
+        for x_level, y in zip(x, ys):
+            # we just want to draw a straight line every time so we repeat x as often as needed
+            ax2.plot([x_level] * len(y), y, linestyle="-", color="gray", marker=".")
+        # replace the yticks with the names of the samples
+        ax2.set_yticks([i for i in range(len(y_mappings))])
+        ax2.set_yticklabels(y_mappings)
+
+        # save the result with the according name
+        res_path = os.path.join(
+            self.file_dir_venn, f"venn_bar_{name.replace(' ', '_')}" + FIG_FORMAT
+        )
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+        plt.close("all")
+
+    def save_venn_names(self, named_sets):
+        for intersected, unioned, result in venn_names(named_sets):
+            # create name based on the intersections and unions that were done
+            intersected_name = "&".join(sorted(intersected))
+            unioned_name = "-" + "-".join(sorted(unioned)) if unioned else ""
+            res_path = os.path.join(
+                self.file_dir_venn,
+                f"set_{intersected_name}{unioned_name}.txt"
+            )
+            # write all names line by line into the file
+            with open(res_path, "w") as out:
+                for re in result:
+                    out.write(re + "\n")
+
     def create_venn_results(self):
         self.logger.info("Creating venn diagrams")
-        file_dir_venn = os.path.join(self.start_dir, "venn")
-        # create file structure and folder
-        os.makedirs(file_dir_venn, exist_ok=True)
 
-        def save_venn(ex: str, sets, set_names):
-            creates_figure = True
-            plt.close("all")
-            plt.figure(figsize=(14, 7))
-            plt.title(self.replicate_representation[ex], fontsize=VENN_TITLE_FONT_SIZE)
-
-            # create venn diagram based on size of set
-            if len(sets) < 2:
-                creates_figure = False
-                self.logger.warning(f"Could not create venn diagram for {ex} because it has less than 2 replicates")
-            elif len(sets) == 2:
-                venn = venn2(subsets=sets, set_labels=set_names)
-            elif len(sets) == 3:
-                venn = venn3(subsets=sets, set_labels=set_names)
-            else:
-                self.logger.warning(f"Could not create venn diagram for {ex}"
-                                    f" because it has more than 3 replicates ({len(sets)})")
-                creates_figure = False
-
-            # if a figure was created, do some further configuration and save it
-            if creates_figure:
-                res_path = os.path.join(
-                    file_dir_venn, f"venn_replicate_{self.replicate_representation[ex].replace(' ', '_')}" + FIG_FORMAT
-                )
-
-                for text in venn.set_labels:
-                    try:
-                        text.set_fontsize(VENN_SET_LABEL_FONT_SIZE)
-                    except AttributeError:
-                        pass
-                for text in venn.subset_labels:
-                    try:
-                        text.set_fontsize(VENN_SUBSET_LABEL_FONT_SIZE)
-                    except AttributeError:
-                        pass
-                plt.savefig(res_path, dpi=200, bbox_inches="tight")
-            plt.close("all")
-
-        def save_bar_venn(ex: str, named_sets):
-            plt.close("all")
-            # ax1.set_title("size")
-            # ax2.set_title("selected samples")
-
-            # create a mapping from name to a y coordinate
-            y_mappings = {name: i for i, name in enumerate(named_sets)}
-            # get all the heights and other info required for the plot
-            heights = []
-            x = []
-            ys = []
-            for i, (intersected, unioned, result) in enumerate(venn_names(named_sets)):
-                heights.append(len(result))
-                x.append(i)
-                ys.append([y_mappings[x] for x in intersected])
-
-            # initial figure setup
-            fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
-            try:
-                name = self.replicate_representation[ex]
-            except KeyError:
-                name = ex
-            fig.suptitle(name, fontsize=20)
-            # create the bar plot
-            ax1.bar(x, heights)
-            # add text to the bar plot
-            for x_level, height in zip(x, heights):
-                ax1.text(x_level, max(heights) / 2, height, verticalalignment='center', horizontalalignment='center')
-
-            # create the line plots
-            for x_level, y in zip(x, ys):
-                # we just want to draw a straight line every time so we repeat x as often as needed
-                ax2.plot([x_level] * len(y), y, linestyle="-", color="gray", marker=".")
-            # replace the yticks with the names of the samples
-            ax2.set_yticks([i for i in range(len(y_mappings))])
-            ax2.set_yticklabels(y_mappings)
-
-            # save the result with the according name
-            res_path = os.path.join(
-                file_dir_venn, f"venn_bar_{name.replace(' ', '_')}" + FIG_FORMAT
-            )
-            fig.savefig(res_path, dpi=200, bbox_inches="tight")
-            plt.close("all")
-
-        def venn_names(named_sets):
-            names = set(named_sets)
-            for i in range(1, len(named_sets) + 1):
-                for to_intersect in combinations(sorted(named_sets), i):
-                    others = names.difference(to_intersect)
-                    intersected = set.intersection(*(named_sets[k] for k in to_intersect))
-                    unioned = set.union(*(named_sets[k] for k in others)) if others else set()
-                    yield to_intersect, others, intersected - unioned
-
-        def save_venn_names(named_sets):
-            for intersected, unioned, result in venn_names(named_sets):
-                # create name based on the intersections and unions that were done
-                intersected_name = "&".join(sorted(intersected))
-                unioned_name = "-"+"-".join(sorted(unioned)) if unioned else ""
-                res_path = os.path.join(
-                    file_dir_venn,
-                    f"set_{intersected_name}{unioned_name}.txt"
-                )
-                # write all names line by line into the file
-                with open(res_path, "w") as out:
-                    for re in result:
-                        out.write(re + "\n")
-
-        # create all sets that are required for plotting
-        protein_ids = ddict(dict)
-        whole_experiment_protein_ids = {}
-        for experiment in self.replicates:
-            exp_prot_ids = set()
-            for rep_name, rep in zip(self.replicates[experiment], self.all_intensities_raw):
-                # TODO what to use for venns
-                idx = self.all_intensities_raw[rep] > 0
-                idx = [i for i in idx.index if idx[i]]
-                rep_set = set(self.df_protein_names.loc[idx, "Protein name"])
-                protein_ids[experiment][rep_name] = rep_set
-                exp_prot_ids |= rep_set
-            whole_experiment_protein_ids[experiment] = exp_prot_ids
-
-        # create venn diagrams
         # create venn diagrams comparing all replicates within an experiment
-        for ex in protein_ids:
-            set_names = protein_ids[ex].keys()
-            sets = protein_ids[ex].values()
+        for ex in self.protein_ids:
+            set_names = self.protein_ids[ex].keys()
+            sets = self.protein_ids[ex].values()
             # save the resulting venn diagram
-            save_venn(ex, sets, set_names)
-            # TODO should these results be different options
+            self.save_venn(ex, sets, set_names)
             # save the sets to txt files
-            save_venn_names(protein_ids[ex])
+            self.save_venn_names(self.protein_ids[ex])
             # create a mixture of bar and venn diagram
-            save_bar_venn(ex, protein_ids[ex])
-        # create venn diagrams comparing all pellets with supernatants
+            self.save_bar_venn(ex, self.protein_ids[ex])
+        # create venn diagrams comparing all pellets with supernatants  # TODO
         # create venn diagrams comparing all experiments
         # first compare only proteins which are found between all replicates
-        experiment_sets = {exp: set.intersection(*(protein_ids[exp][rep] for rep in protein_ids[exp])) for exp in protein_ids}
-        save_bar_venn("All experiments intersection", experiment_sets)
+        experiment_sets = {exp: set.intersection(*(self.protein_ids[exp][rep] for rep in self.protein_ids[exp])) for exp in self.protein_ids}
+        self.save_bar_venn("All experiments intersection", experiment_sets)
         # then compare all proteins that are found at all
-        experiment_sets = {exp: set.union(*(protein_ids[exp][rep] for rep in protein_ids[exp])) for exp in protein_ids}
-        save_bar_venn("All experiments union", experiment_sets)
+        experiment_sets = {exp: set.union(*(self.protein_ids[exp][rep] for rep in self.protein_ids[exp])) for exp in self.protein_ids}
+        self.save_bar_venn("All experiments union", experiment_sets)
 
     def create_descriptive_plots(self):
         self.logger.info("Creating descriptive plots")
-        file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
-        # create file structure and folder
-        os.makedirs(file_dir_descriptive, exist_ok=True)
         plt.close("all")
         # determine number of rows and columns in the plot based on the number of experiments
         n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
@@ -360,7 +360,7 @@ class MQPlots(Logger):
 
             fig3.legend()
 
-            res3_path = os.path.join(file_dir_descriptive,
+            res3_path = os.path.join(self.file_dir_descriptive,
                                      f"{self.replicate_representation[experiment].replace(' ', '_')}_scatter" + FIG_FORMAT)
             # TODO add r2
             fig3.savefig(res3_path, dpi=200, bbox_inches="tight")
@@ -385,7 +385,7 @@ class MQPlots(Logger):
             ax4.set_xlabel("Protein rank")
             ax4.set_ylabel("Raw intensity mean")
 
-            res4_path = os.path.join(file_dir_descriptive,
+            res4_path = os.path.join(self.file_dir_descriptive,
                                      f"{self.replicate_representation[experiment].replace(' ', '_')}_rank" + FIG_FORMAT)
             fig4.savefig(res4_path, dpi=200, bbox_inches="tight")
 
@@ -413,7 +413,7 @@ class MQPlots(Logger):
             ax5.axhline(20, color=cm[1])
             ax5.axhline(30, color=cm[2])
 
-            res5_path = os.path.join(file_dir_descriptive,
+            res5_path = os.path.join(self.file_dir_descriptive,
                                      f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std" + FIG_FORMAT)
             fig5.savefig(res5_path, dpi=200, bbox_inches="tight")
 
@@ -433,13 +433,13 @@ class MQPlots(Logger):
                 ax7.set_xscale('log')
                 fig7_index += 1
 
-        res_path = os.path.join(file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
+        res_path = os.path.join(self.file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-        res1_path = os.path.join(file_dir_descriptive, "detection_per_replicate" + FIG_FORMAT)
+        res1_path = os.path.join(self.file_dir_descriptive, "detection_per_replicate" + FIG_FORMAT)
         fig1.savefig(res1_path, dpi=200, bbox_inches="tight")
 
-        res7_path = os.path.join(file_dir_descriptive, "intensity_histograms" + FIG_FORMAT)
+        res7_path = os.path.join(self.file_dir_descriptive, "intensity_histograms" + FIG_FORMAT)
         fig7.savefig(res7_path, dpi=200, bbox_inches="tight")
 
         experiment_proportion = ddict(lambda: ddict(int))
@@ -463,7 +463,7 @@ class MQPlots(Logger):
                 ax8.text(j, height, df_total_counts.iloc[i, j], horizontalalignment="center")
         # fig8.xticks(rotation=45)
         fig8.legend()
-        res8_path = os.path.join(file_dir_descriptive, "pathway_proportions" + FIG_FORMAT)
+        res8_path = os.path.join(self.file_dir_descriptive, "pathway_proportions" + FIG_FORMAT)
         fig8.savefig(res8_path, dpi=200, bbox_inches="tight")
 
         for pathway in pathway_colors:
@@ -505,7 +505,7 @@ class MQPlots(Logger):
                                                   heights, dh=0.05 + 0.1 * n_annotations)
                         n_annotations += 1
 
-            res_path = os.path.join(file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
+            res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
         for ex1, ex2 in combinations(self.replicates, 2):
@@ -528,7 +528,7 @@ class MQPlots(Logger):
             ax6.set_ylabel(ex2)
 
             # TODO add r2
-            res_path = os.path.join(file_dir_descriptive,
+            res_path = os.path.join(self.file_dir_descriptive,
                                     f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_intersection" + FIG_FORMAT)
             fig6.savefig(res_path, dpi=200, bbox_inches="tight")
             plt.close("all")
@@ -546,7 +546,7 @@ class MQPlots(Logger):
             ax9.set_xlabel(ex1)
             ax9.set_ylabel(ex2)
             # TODO add r2
-            res_path = os.path.join(file_dir_descriptive,
+            res_path = os.path.join(self.file_dir_descriptive,
                                     f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_total" + FIG_FORMAT)
             plt.savefig(res_path, dpi=200, bbox_inches="tight")
             plt.close("all")
@@ -560,9 +560,6 @@ class MQPlots(Logger):
 
     def create_go_analysis(self):
         self.logger.info("Creating go analysis plots")
-        file_dir_go_analysis = os.path.join(self.start_dir, "go_analysis")
-        # create file structure and folder
-        os.makedirs(file_dir_go_analysis, exist_ok=True)
         plt.close("all")
 
         # all proteins that were detected in any replicate
@@ -616,5 +613,5 @@ class MQPlots(Logger):
         # replace the y ticks with the compartiment names
         ax.set_yticklabels([x for x in self.go_analysis_gene_names])
         plt.legend()
-        res_path = os.path.join(file_dir_go_analysis, "go_analysis" + FIG_FORMAT)
+        res_path = os.path.join(self.file_dir_go_analysis, "go_analysis" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
