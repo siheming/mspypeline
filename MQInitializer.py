@@ -3,19 +3,16 @@ import numpy as np
 import os
 import sys
 from Logger import Logger
-from matplotlib_venn import venn3, venn2
-import matplotlib.pyplot as plt
-from scipy import stats
-from itertools import combinations
 from collections import defaultdict as ddict
 from ruamel.yaml import YAML
 from tkinter import filedialog
 from shutil import copy2
+import logging
 
 
 class MQInitializer(Logger):
-    def __init__(self, dir_: str, file_path_yml: str = None):
-        super().__init__(self.__class__.__name__)
+    def __init__(self, dir_: str, file_path_yml: str = None, loglevel=logging.DEBUG):
+        super().__init__(self.__class__.__name__, loglevel=loglevel)
         self._replicates = None
         self._replicate_representation = None
         self._min_number_replicates = None

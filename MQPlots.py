@@ -9,6 +9,7 @@ from scipy import stats
 from itertools import combinations
 from collections import defaultdict as ddict
 from Utils import barplot_annotate_brackets, get_number_rows_cols_for_fig, venn_names
+import logging
 
 
 # plt.style.use('ggplot')
@@ -25,9 +26,10 @@ class MQPlots(Logger):
     def __init__(
         self, start_dir, replicates, configs,
         df_protein_names, df_peptide_names,
-        interesting_proteins, interesting_receptors, go_analysis_gene_names
+        interesting_proteins, interesting_receptors, go_analysis_gene_names,
+        loglevel=logging.DEBUG
         ):
-        super().__init__(self.__class__.__name__)
+        super().__init__(self.__class__.__name__, loglevel=loglevel)
         # property variables
         self._replicate_representation = None
         self._min_number_replicates = None
@@ -107,7 +109,7 @@ class MQPlots(Logger):
             os.makedirs(self.file_dir_go_analysis, exist_ok=True)
 
     @classmethod
-    def from_MQInitializer(cls, mqinti_instance):
+    def from_MQInitializer(cls, mqinti_instance, loglevel=logging.DEBUG):
         return cls(
             start_dir = mqinti_instance.start_dir,
             replicates = mqinti_instance.replicates,
@@ -116,7 +118,8 @@ class MQPlots(Logger):
             df_peptide_names = mqinti_instance.df_peptide_names,
             interesting_proteins = mqinti_instance.interesting_proteins,
             interesting_receptors = mqinti_instance.interesting_receptors,
-            go_analysis_gene_names = mqinti_instance.go_analysis_gene_names
+            go_analysis_gene_names = mqinti_instance.go_analysis_gene_names,
+            loglevel=loglevel
             )
 
     @property
@@ -276,59 +279,46 @@ class MQPlots(Logger):
         experiment_sets = {exp: set.union(*(self.protein_ids[exp][rep] for rep in self.protein_ids[exp])) for exp in self.protein_ids}
         self.save_bar_venn("All experiments union", experiment_sets)
 
-    def create_descriptive_plots(self):
-        self.logger.info("Creating descriptive plots")
+    def plot_detection_counts(self):
         plt.close("all")
         # determine number of rows and columns in the plot based on the number of experiments
         n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
-
-        # plot showing the amount of proteins that were detected x amount of times
-        n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig([x for l in self.replicates.values() for x in l])
-
-        fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, sharex=True, squeeze=True, figsize=(5 * n_rows_experiment, 3 * n_cols_experiment))
+        fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, sharex=True, squeeze=True,
+                                  figsize=(5 * n_rows_experiment, 3 * n_cols_experiment))
         fig.suptitle("Detection counts")
-        fig1, axarr1 = plt.subplots(n_rows_experiment, n_cols_experiment, figsize=(14, 7))
-        fig1.suptitle("Number of detected proteins")
-
-        # make a intensity histogram for every replicate
-        # TODO scale this fig size with number of rows
-        fig7, axarr7 = plt.subplots(n_rows_replicates, n_cols_replicates, figsize=(20, 15))
-        fig7_index = 0
-        fig7.suptitle("Replicate Intensity histograms")
-
-        # make a intensity histogram for every replicate
-        fig8, ax8 = plt.subplots(1, 1, figsize=(14, 7))
-        fig8.suptitle("Number of identified proteins per pathway")
-        pathway_counts = ddict(lambda: ddict(int))
-        pathway_colors = {
-            'Signaling of Hepatocyte Growth Factor Receptor': "navy",
-            'TGF-beta signaling pathway': "royalblue",
-            'EGF Signaling Pathway': "skyblue",
-            'EPO Signaling Pathway': "darkslateblue",
-            'GAS6 Signaling Pathway': "mediumpurple"
-        }
-
-        ex_list = list(self.replicates.keys())
-        for experiment, ax, ax1 in zip(self.replicates, axarr.flat, axarr1.flat):
-            plt.close("all")
+        for experiment, ax in zip(self.replicates, axarr.flat):
             intensities = self.intensites_per_experiment_raw[experiment]
-
-            # plot 1
             # from 0 to number of replicates, how often was each protein detected
             counts = (intensities > 0).sum(axis=1)
             counts = counts[counts > 0]
-            ax.set_title(f"{experiment}, total detected: {len(counts)}")
             bins = [x - 0.5 for x in range(1, self.max_number_replicates + 2)]
-            ax.hist(counts, bins=bins)
             max_val = max([len(counts[counts == value]) for value in counts.unique()])
+
+            ax.set_title(f"{experiment}, total detected: {len(counts)}")
+            ax.hist(counts, bins=bins)
             for x, value in zip(bins, sorted(counts.unique())):
                 ax.text(x + 0.5, max_val / 2, len(counts[counts == value]),
                         verticalalignment='center', horizontalalignment='center')
             ax.set_xticks(range(1, self.max_number_replicates + 1))
             ax.set_ylabel("Counts")
 
-            # plot 2
+        res_path = os.path.join(self.file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    def plot_number_of_detected_proteins(self):
+        plt.close("all")
+        # determine number of rows and columns in the plot based on the number of experiments
+        n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
+        fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, figsize=(14, 7))
+        fig.suptitle("Number of detected proteins")
+
+        for experiment, ax in zip(self.replicates, axarr.flat):
+            plt.close("all")
+            intensities = self.intensites_per_experiment_raw[experiment]
+
             # how many proteins were detected per replicate and in total
+            counts = (intensities > 0).sum(axis=1)
+            counts = counts[counts > 0]
             heights = [len(counts), 0]
             labels = ["Total", " "]
             for col in intensities:
@@ -337,136 +327,133 @@ class MQPlots(Logger):
                 labels.append(col)
             mean_height = np.mean(heights[2:])
             # self.logger.debug(labels)
-            ax1.bar([x for x in range(len(heights))], heights)
-            ax1.text(1, mean_height * 1.01, f"{mean_height:.2f}", horizontalalignment='center')
-            ax1.set_title(f"{experiment}")
-            ax1.axhline(mean_height, linestyle="--", color="black", alpha=0.6)
+            ax.bar([x for x in range(len(heights))], heights)
+            ax.text(1, mean_height * 1.01, f"{mean_height:.2f}", horizontalalignment='center')
+            ax.set_title(f"{experiment}")
+            ax.axhline(mean_height, linestyle="--", color="black", alpha=0.6)
             # ax1.set_xticklabels(labels, rotation=45)
-            ax1.set_ylabel("Counts")
+            ax.set_ylabel("Counts")
             #ax1.tick_params(rotation=70)
 
-            # plot 3
+        res_path = os.path.join(self.file_dir_descriptive, "detection_per_replicate" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    def plot_intensity_histograms(self):
+        plt.close("all")
+        n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig([x for l in self.replicates.values() for x in l])
+        # make a intensity histogram for every replicate
+        # TODO scale this fig size with number of rows
+        fig, axarr = plt.subplots(n_rows_replicates, n_cols_replicates, figsize=(20, 15))
+        fig_index = 0
+        fig.suptitle("Replicate Intensity histograms")
+        for experiment in self.replicates:
+            intensities = self.intensites_per_experiment_raw[experiment]
+            for col in intensities:
+                mask = intensities[col] > 0
+                ax = axarr.flat[fig_index]
+                ax.set_title(f"{col}".replace(self.configs['descriptive_intensity_col'], ""))
+                ax.hist(intensities[col][mask],
+                        bins=np.logspace(
+                            np.log10(intensities[col][mask].min()),
+                            np.log10(intensities[col][mask].max()),
+                            25
+                           )
+                        )
+
+                ax.set_xscale('log')
+                fig_index += 1
+        res_path = os.path.join(self.file_dir_descriptive, "intensity_histograms" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    def plot_scatter_replicates(self):
+        plt.close("all")
+        for experiment in self.replicates:
             # scatter plot of all replicates vs all replicates
-            fig3, ax3 = plt.subplots(1, 1, figsize=(7, 7))
+            fig, ax = plt.subplots(1, 1, figsize=(7, 7))
             for rep1, rep2 in combinations(self.replicates[experiment], 2):
                 x1 = self.df_protein_names[self.configs['descriptive_intensity_col'] + rep1]
                 x2 = self.df_protein_names[self.configs['descriptive_intensity_col'] + rep2]
                 mask = np.logical_or(x1 != 0, x2 != 0)
-                ax3.scatter(x1[mask] + 1e2, x2[mask] + 1e2, label=f"{rep1} vs {rep2}, "
-                                                      f"r: {stats.pearsonr(x1[mask], x2[mask])[0] ** 2}",
+                exp = r"^{2}"
+                ax.scatter(x1[mask] + 1e2, x2[mask] + 1e2, label=f"{rep1} vs {rep2}, "
+                                                      f"r{exp}: {stats.pearsonr(x1[mask], x2[mask])[0] ** 2}",
                             alpha=0.5, marker=".")
-                ax3.set_xscale('log')
-                ax3.set_yscale('log')
+                ax.set_xscale('log')
+                ax.set_yscale('log')
 
-            fig3.legend()
+            fig.legend()
 
-            res3_path = os.path.join(self.file_dir_descriptive,
-                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_scatter" + FIG_FORMAT)
-            # TODO add r2
-            fig3.savefig(res3_path, dpi=200, bbox_inches="tight")
+            res_path = os.path.join(self.file_dir_descriptive,
+                                    f"{self.replicate_representation[experiment].replace(' ', '_')}_scatter" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-            # plot 4
+    def plot_rank(self):
+        plt.close("all")
+        pathway_colors = {
+            'Signaling of Hepatocyte Growth Factor Receptor': "navy",
+            'TGF-beta signaling pathway': "royalblue",
+            'EGF Signaling Pathway': "skyblue",
+            'EPO Signaling Pathway': "darkslateblue",
+            'GAS6 Signaling Pathway': "mediumpurple"
+        }
+        for experiment in self.replicates:
+            intensities = self.intensites_per_experiment_raw[experiment]
             # protein ranks vs intensity
-            fig4, ax4 = plt.subplots(1, 1, figsize=(14, 7))
+            fig, ax = plt.subplots(1, 1, figsize=(14, 7))
             m_intensity = intensities.mean(axis=1).sort_values(ascending=False)
             m_intensity = m_intensity[m_intensity > 0]
 
-            protein_colors = {protein: pathway_colors.get(pathway, "black") for pathway, proteins in self.interesting_proteins.items() for protein in proteins}
+            protein_colors = {protein: pathway_colors.get(pathway, "black")
+                              for pathway, proteins in self.interesting_proteins.items() for protein in proteins}
 
             colors = [protein_colors.get(index, "darkgray") for index in m_intensity.index]
             sizes = [10 if col == "black" or col == "darkgray" else 100 for col in colors]
-            colors_pathway = {v: k for k, v in pathway_colors.items()}
-            # TODO this is done at mean intensity level now
-            for col in colors:
-                pathway_counts[colors_pathway.get(col, "Remaining")][experiment] += 1
 
-            ax4.scatter(range(1, len(m_intensity) + 1), m_intensity, c=colors, s=sizes, alpha=0.3, marker=".")
-            ax4.set_yscale('log')
-            ax4.set_xlabel("Protein rank")
-            ax4.set_ylabel("Raw intensity mean")
+            ax.scatter(range(1, len(m_intensity) + 1), m_intensity, c=colors, s=sizes, alpha=0.3, marker=".")
+            ax.set_yscale("log")
+            ax.set_xlabel("Protein rank")
+            ax.set_ylabel("Raw intensity mean")
 
-            res4_path = os.path.join(self.file_dir_descriptive,
+            res_path = os.path.join(self.file_dir_descriptive,
                                      f"{self.replicate_representation[experiment].replace(' ', '_')}_rank" + FIG_FORMAT)
-            fig4.savefig(res4_path, dpi=200, bbox_inches="tight")
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-            # plot 5
-            # intensity vs relative standard deviation
-            fig5, ax5 = plt.subplots(1, 1, figsize=(14, 7))
+    def plot_relative_std(self):
+        plt.close("all")
+        for experiment in self.replicates:
+            intensities = self.intensites_per_experiment_raw[experiment]
             y = intensities.copy()
             # below cutoff remove zeros, above threshold include 0
             cutoff = 1e6
             index = y.replace(0, np.nan).mean(axis=1) < cutoff
             y[index] = y[index].replace(0, np.nan)
-
             relative_std_percent = y.std(axis=1) / y.mean(axis=1) * 100
+
             bins = np.array([10, 20, 30])
             inds = np.digitize(relative_std_percent, bins).astype(int)
+
             cm = {0: "navy", 1: "royalblue", 2: "skyblue", 3: "darkgray"}
             colors = pd.Series([cm.get(x, "black") for x in inds], index=relative_std_percent.index)
             mask = ~relative_std_percent.isna()
-            ax5.scatter(y.mean(axis=1)[mask], relative_std_percent[mask], c=colors[mask], marker=".", s=200, alpha=0.8)
-            ax5.set_xscale('log')
-            ax5.set_xlabel("Mean raw intensity")
-            ax5.set_ylabel("Relative Stadartdeviation [%]")
-            ax5.axvline(cutoff, color="black", alpha=0.5)
-            ax5.axhline(10, color=cm[0])
-            ax5.axhline(20, color=cm[1])
-            ax5.axhline(30, color=cm[2])
 
-            res5_path = os.path.join(self.file_dir_descriptive,
-                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std" + FIG_FORMAT)
-            fig5.savefig(res5_path, dpi=200, bbox_inches="tight")
+            # intensity vs relative standard deviation
+            fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+            ax.scatter(y.mean(axis=1)[mask], relative_std_percent[mask], c=colors[mask], marker=".", s=200, alpha=0.8)
+            ax.set_xscale("log")
+            ax.set_xlabel("Mean raw intensity")
+            ax.set_ylabel("Relative Stadartdeviation [%]")
+            ax.axvline(cutoff, color="black", alpha=0.5)
+            ax.axhline(10, color=cm[0])
+            ax.axhline(20, color=cm[1])
+            ax.axhline(30, color=cm[2])
 
-            for col in intensities:
-                ax7 = axarr7.flat[fig7_index]
-                mask = intensities[col] > 0
-                ax7.set_title(f"{col}".replace(self.configs['descriptive_intensity_col'], ""))
-                # ax7.hist(np.log2(intensities[col][mask]))
-                ax7.hist(intensities[col][mask],
-                         bins=np.logspace(
-                             np.log10(intensities[col][mask].min()),
-                             np.log10(intensities[col][mask].max()),
-                             25
-                            )
-                         )
+            res_path = os.path.join(self.file_dir_descriptive,
+                                    f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-                ax7.set_xscale('log')
-                fig7_index += 1
-
-        res_path = os.path.join(self.file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
-
-        res1_path = os.path.join(self.file_dir_descriptive, "detection_per_replicate" + FIG_FORMAT)
-        fig1.savefig(res1_path, dpi=200, bbox_inches="tight")
-
-        res7_path = os.path.join(self.file_dir_descriptive, "intensity_histograms" + FIG_FORMAT)
-        fig7.savefig(res7_path, dpi=200, bbox_inches="tight")
-
-        experiment_proportion = ddict(lambda: ddict(int))
-        for pathway in pathway_counts:
-            counts = np.array(list(pathway_counts[pathway].values()))
-            for experiment, count in zip(pathway_counts[pathway], counts):
-                experiment_proportion[experiment][pathway] = count
-
-        df_total_counts = pd.DataFrame(experiment_proportion).T
-        df_proportion = df_total_counts / df_total_counts.sum()
-        bottom_cumsum = df_proportion.cumsum()
-        for i, index in enumerate(df_proportion.index):
-            if i == 0:
-                bottom = [0] * len(df_proportion.loc[index])
-            else:
-                bottom = bottom_cumsum.iloc[i - 1]
-            ax8.bar(range(len(df_proportion.loc[index])), df_proportion.loc[index],
-                    bottom=bottom, label=df_proportion.index[i], tick_label=df_proportion.columns)
-            for j, text_index in enumerate(df_total_counts.columns):
-                height = (bottom_cumsum.iloc[i, j] + bottom[j]) / 2
-                ax8.text(j, height, df_total_counts.iloc[i, j], horizontalalignment="center")
-        # fig8.xticks(rotation=45)
-        fig8.legend()
-        res8_path = os.path.join(self.file_dir_descriptive, "pathway_proportions" + FIG_FORMAT)
-        fig8.savefig(res8_path, dpi=200, bbox_inches="tight")
-
-        for pathway in pathway_colors:
+    def plot_pathway_analysis(self):
+        ex_list = list(self.replicates.keys())
+        for pathway in self.interesting_proteins:
             plt.close("all")
             found_proteins = set(self.interesting_proteins[pathway])
             found_proteins &= set(self.all_intensities_raw.index)
@@ -508,7 +495,9 @@ class MQPlots(Logger):
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    def plot_experiment_comparison(self):
         for ex1, ex2 in combinations(self.replicates, 2):
+            plt.close("all")
             protein_intensities_ex1 = self.intensites_per_experiment_raw[ex1]
             counts_ex1 = (protein_intensities_ex1 > 0).sum(axis=1) == len(protein_intensities_ex1.columns)
             protein_intensities_ex2 = self.intensites_per_experiment_raw[ex1]
@@ -518,7 +507,6 @@ class MQPlots(Logger):
                 [protein_intensities_ex1.mean(axis=1).rename("ex1"), protein_intensities_ex2.mean(axis=1).rename("ex2")]
                 , axis=1)
             intersection = intersection[counts_ex1 & counts_ex2]
-            plt.close("all")
             fig6, ax6 = plt.subplots(1, 1, figsize=(7, 7))
             # plot intersection
             ax6.scatter(intersection["ex1"], intersection["ex2"], s=8, alpha=0.6, marker=".")
@@ -536,21 +524,66 @@ class MQPlots(Logger):
             protein_intensities_ex1 = protein_intensities_ex1.mean(axis=1).rename("ex1")
             protein_intensities_ex2 = protein_intensities_ex2.mean(axis=1).rename("ex2")
             conc = pd.concat([protein_intensities_ex1, protein_intensities_ex2], axis=1)
+            # TODO unique proteins are missing
             conc = conc[conc > 0]
             # plot total
             plt.close("all")
             fig9, ax9 = plt.subplots(1, 1, figsize=(7, 7))
             ax9.scatter(conc["ex1"], conc["ex2"], s=8, alpha=0.6, marker=".")
-            ax9.set_xscale('log')
-            ax9.set_yscale('log')
+            ax9.set_xscale("log")
+            ax9.set_yscale("log")
             ax9.set_xlabel(ex1)
             ax9.set_ylabel(ex2)
             # TODO add r2
             res_path = os.path.join(self.file_dir_descriptive,
                                     f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_total" + FIG_FORMAT)
             plt.savefig(res_path, dpi=200, bbox_inches="tight")
-            plt.close("all")
             # sys.exit(0)
+
+    def plot_pathway_proportions(self):
+        plt.close("all")
+        experiment_proportion = {
+            experiment:
+                {
+                    pathway: len(set(pproteins) & set(intensities[intensities.mean(axis=1) > 0].index))
+                    for pathway, pproteins in self.interesting_proteins.items()
+                }
+            for experiment, intensities in self.intensites_per_experiment_raw.items()
+        }
+
+        df_total_counts = pd.DataFrame(experiment_proportion).T
+        df_proportion = df_total_counts / df_total_counts.sum()
+        bottom_cumsum = df_proportion.cumsum()
+
+        fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+        fig.suptitle("Number of identified proteins per pathway")
+
+        for i, index in enumerate(df_proportion.index):
+            if i == 0:
+                bottom = [0] * len(df_proportion.loc[index])
+            else:
+                bottom = bottom_cumsum.iloc[i - 1]
+            ax.bar(range(len(df_proportion.loc[index])), df_proportion.loc[index],
+                    bottom=bottom, label=df_proportion.index[i], tick_label=df_proportion.columns)
+            for j, text_index in enumerate(df_total_counts.columns):
+                height = (bottom_cumsum.iloc[i, j] + bottom[j]) / 2
+                ax.text(j, height, df_total_counts.iloc[i, j], horizontalalignment="center")
+        # fig.xticks(rotation=45)
+        fig.legend()
+        res_path = os.path.join(self.file_dir_descriptive, "pathway_proportions" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    def create_descriptive_plots(self):
+        self.logger.info("Creating descriptive plots")
+        self.plot_detection_counts()
+        self.plot_number_of_detected_proteins()
+        self.plot_intensity_histograms()
+        self.plot_relative_std()
+        self.plot_rank()
+        self.plot_pathway_analysis()
+        self.plot_pathway_proportions()
+        self.plot_scatter_replicates()
+        self.plot_experiment_comparison()
 
     def calculate_buffer_score(self):
         pass
