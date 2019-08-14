@@ -21,6 +21,7 @@ class MQInitializer(Logger):
 
         self.script_loc = os.path.dirname(os.path.realpath(__file__))
         self.path_pipeline_config = os.path.join(self.script_loc, "config")
+        self.logger.debug("Script location %s", self.script_loc)
 
         # set all file names that are required
         self.yml_file_name_tmp = "config_tmp.yml"
@@ -96,12 +97,11 @@ class MQInitializer(Logger):
 
     def init_yml_path(self) -> str:
         def yml_file_dialog() -> str:
-            file_path = filedialog.askopenfilename()
+            file_path = filedialog.askopenfilename(filetypes=[(".yaml", ".yml")],
+                                                   title='Please select a yml / yaml settings file')
             self.logger.debug(f"selected file path: {file_path}")
             if not file_path:
                 yaml_file = self.get_default_yml_path()
-            elif not file_path.endswith(".yaml") and not file_path.endswith(".yml"):
-                raise ValueError("Please select a yaml / yml file")
             else:
                 yaml_file = file_path
             return yaml_file
@@ -131,7 +131,9 @@ class MQInitializer(Logger):
             raise ValueError(f"txt directory does not contain a {self.peptides_txt} file")
         # read protein groups file
         df_protein_names = pd.read_csv(file_dir_protein_names, sep="\t")
+        self.logger.debug("%s shape: %s", self.proteins_txt, df_protein_names.shape)
         df_peptide_names = pd.read_csv(file_dir_peptides_names, sep="\t")
+        self.logger.debug("%s shape: %s", self.peptides_txt, df_peptide_names.shape)
 
         # try to automatically determine experimental setup
         if not self.configs.get("experiments", False):
@@ -154,7 +156,7 @@ class MQInitializer(Logger):
             experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
             if any(experiment_analysis_overlap):
                 unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
-                raise ValueError("Found replicates in peptides.txt, but not in proteinGroups.txt: " +
+                raise ValueError(f"Found replicates in {self.proteins_txt}, but not in {self.peptides_txt}: " +
                                  ", ".join(unmatched))
             #
             overlap = [[get_overlap(re1, re2) if re1 != re2 else "" for re1 in all_reps] for re2 in all_reps]
@@ -190,13 +192,15 @@ class MQInitializer(Logger):
             not_found_replicates = [x not in found_replicates for x in intens_cols]
             if any(not_found_replicates):
                 unmatched = [x for x in intens_cols if not_found_replicates]
-                raise ValueError("Found replicates in peptides.txt, but not in proteinGroups.txt: " +
+                raise ValueError(f"Found replicates in {self.proteins_txt}, but not in {self.peptides_txt}: " +
                                  ", ".join(unmatched))
 
         # filter all contaminants by removing all rows where any of the 3 columns contains a +
         not_contaminants = (df_protein_names[
                                 ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
+        self.logger.debug("Removing %s rows from %s because they are marked as contaminant",
+                          (~not_contaminants).sum(), self.proteins_txt)
         df_protein_names = df_protein_names[not_contaminants]
         # split the fasta headers
         # first split all fasta headers that contain multiple entries
@@ -215,7 +219,11 @@ class MQInitializer(Logger):
         # add protein name from fasta description col
         df_protein_names["Protein name"] = fasta_col["description"].str.split("_", expand=True)[0]
         # filter all entries with duplicate Gene name fasta
-        df_protein_names = df_protein_names.drop_duplicates(subset="Gene name fasta", keep=False)
+        if any(df_protein_names.duplicated(subset="Gene name fasta")):
+            self.logger.warning("Found duplicates in Gene name fasta column. Dropping all %s duplicates.",
+                                df_protein_names.duplicated(subset="Gene name fasta", keep=False).sum())
+            df_protein_names = df_protein_names.drop_duplicates(subset="Gene name fasta", keep=False)
+        self.logger.debug("%s shape after preprocessing: %s", self.proteins_txt, df_protein_names.shape)
         return df_protein_names, df_peptide_names
 
     def init_interest_from_xlsx(self) -> (dict, dict, dict):
@@ -227,24 +235,33 @@ class MQInitializer(Logger):
         # second priority is the original config dir. In this case the file gets copied to the first priority.
         # load important_proteins_xlsx
         if self.important_proteins_xlsx in list_path_config:
+            self.logger.debug("Loading %s from %s", self.important_proteins_xlsx, self.path_config)
             protein_path = os.path.join(self.path_config, self.important_proteins_xlsx)
         elif self.important_proteins_xlsx in list_path_pipeline_config:
+            self.logger.debug("Loading %s from %s. Copying file to %s",
+                              self.important_proteins_xlsx, self.path_pipeline_config, self.path_config)
             protein_path = os.path.join(self.path_pipeline_config, self.important_proteins_xlsx)
             copy2(protein_path, self.path_config)
         else:
             raise ValueError(f"missing {self.important_proteins_xlsx} file")
         # load important_receptors_xlsx
         if self.important_receptors_xlsx in list_path_config:
+            self.logger.debug("Loading %s from %s", self.important_receptors_xlsx, self.path_config)
             receptor_path = os.path.join(self.path_config, self.important_receptors_xlsx)
         elif self.important_receptors_xlsx in list_path_pipeline_config:
+            self.logger.debug("Loading %s from %s. Copying file to %s",
+                              self.important_receptors_xlsx, self.path_pipeline_config, self.path_config)
             receptor_path = os.path.join(self.path_pipeline_config, self.important_receptors_xlsx)
             copy2(receptor_path, self.path_config)
         else:
             raise ValueError(f"missing {self.important_receptors_xlsx} file")
         # load go_analysis_gene_xlsx
         if self.go_analysis_gene_xlsx in list_path_config:
+            self.logger.debug("Loading %s from %s", self.go_analysis_gene_xlsx, self.path_config)
             go_path = os.path.join(self.path_config, self.go_analysis_gene_xlsx)
         elif self.go_analysis_gene_xlsx in list_path_pipeline_config:
+            self.logger.debug("Loading %s from %s. Copying file to %s",
+                              self.go_analysis_gene_xlsx, self.path_pipeline_config, self.path_config)
             go_path = os.path.join(self.path_pipeline_config, self.go_analysis_gene_xlsx)
             copy2(go_path, self.path_config)
         else:
@@ -260,6 +277,7 @@ class MQInitializer(Logger):
 
     def update_config_file(self):
         # store the config file as tmp
+        self.logger.debug("Updating yml settings file")
         yml_file_loc_tmp = os.path.join(self.path_config, self.yml_file_name_tmp)
         with open(yml_file_loc_tmp, "w") as outfile:
             self.yaml.dump(self.configs, outfile)

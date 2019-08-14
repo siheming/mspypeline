@@ -31,7 +31,7 @@ def main():
         action="store",
         default=logging.WARNING,
         help="Logging level of analysis. Should be from options (lowest to highest): DEBUG < INFO < WARNING < ERROR. "
-             "The higher the logging level the fewer messages are shown."
+             "The higher the logging level the fewer messages are shown. Default: WARNING"
     )
     args = parser.parse_args()
     args_dict = vars(args)
@@ -41,7 +41,7 @@ def main():
     root.withdraw()
     # if no dir was specified ask for one
     if args.dir is None:
-        start_dir = filedialog.askdirectory()
+        start_dir = filedialog.askdirectory(title='Please select a directory with MaxQuant result files')
         if not start_dir:
             raise ValueError("Please select a directory")
     else:
