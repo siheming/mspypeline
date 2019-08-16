@@ -387,9 +387,9 @@ class MQPlots(Logger):
                 x1 = self.df_protein_names[self.configs['descriptive_intensity_col'] + rep1]
                 x2 = self.df_protein_names[self.configs['descriptive_intensity_col'] + rep2]
                 mask = np.logical_or(x1 != 0, x2 != 0)
-                exp = r"^{2}"
+                exp = r"$r^{2}$"
                 ax.scatter(x1[mask] + 1e2, x2[mask] + 1e2, label=f"{rep1} vs {rep2}, "
-                                                      f"r{exp}: {stats.pearsonr(x1[mask], x2[mask])[0] ** 2}",
+                                                      fr"{exp}: {stats.pearsonr(x1[mask], x2[mask])[0] ** 2}",
                             alpha=0.5, marker=".")
                 ax.set_xscale('log')
                 ax.set_yscale('log')
@@ -437,8 +437,10 @@ class MQPlots(Logger):
             ax.set_yscale("log")
             xmin, xmax = ax.get_xbound()
             xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
+            ymin, ymax = ax.get_ybound()
+            ym = (np.log10(median_intensity) - np.log10(ymin) ) / (np.log10(ymax) - np.log10(ymin))
             # plot the median rank and intensity at that rank
-            ax.axvline(median_pathway_rank, ymax=0.5, linestyle="--", color="black", alpha=0.6)
+            ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color="black", alpha=0.6)
             ax.axhline(median_intensity, xmax=xm, linestyle="--", color="black", alpha=0.6)
             ax.text(xmin * 0.9, median_intensity * 0.9,
                     f"median rank: {median_pathway_rank} ({median_pathway_rank/len(m_intensity) * 100 :.1f}%) "
@@ -475,6 +477,7 @@ class MQPlots(Logger):
 
             cm = {0: "navy", 1: "royalblue", 2: "skyblue", 3: "darkgray"}
             colors = pd.Series([cm.get(x, "black") for x in inds], index=relative_std_percent.index)
+            color_counts = {color: (colors == color).sum() for color in colors.unique()}
             mask = ~relative_std_percent.isna()
 
             # intensity vs relative standard deviation
@@ -484,9 +487,13 @@ class MQPlots(Logger):
             ax.set_xlabel("Mean raw intensity")
             ax.set_ylabel("Relative Stadartdeviation [%]")
             ax.axvline(cutoff, color="black", alpha=0.5)
+            xmin, xmax = ax.get_xbound()
             ax.axhline(10, color=cm[0])
+            ax.text(xmin, 10, color_counts[cm[0]])
             ax.axhline(20, color=cm[1])
+            ax.text(xmin, 20, color_counts[cm[1]])
             ax.axhline(30, color=cm[2])
+            ax.text(xmin, 30, color_counts[cm[2]])
 
             res_path = os.path.join(self.file_dir_descriptive,
                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std" + FIG_FORMAT)
@@ -533,6 +540,7 @@ class MQPlots(Logger):
                                                   heights, dh=0.05 + 0.1 * n_annotations)
                         n_annotations += 1
 
+            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
@@ -553,6 +561,10 @@ class MQPlots(Logger):
             ax6.scatter(intersection["ex1"], intersection["ex2"], s=8, alpha=0.6, marker=".")
             ax6.set_xscale('log')
             ax6.set_yscale('log')
+            xmin, xmax = ax6.get_xbound()
+            ymin, ymax = ax6.get_ybound()
+            ax6.set_xlim(min(xmin, ymin), max(xmax, ymax))
+            ax6.set_ylim(min(xmin, ymin), max(xmax, ymax))
             ax6.set_xlabel(ex1)
             ax6.set_ylabel(ex2)
 
@@ -573,6 +585,10 @@ class MQPlots(Logger):
             ax9.scatter(conc["ex1"], conc["ex2"], s=8, alpha=0.6, marker=".")
             ax9.set_xscale("log")
             ax9.set_yscale("log")
+            xmin, xmax = ax9.get_xbound()
+            ymin, ymax = ax9.get_ybound()
+            ax9.set_xlim(min(xmin, ymin), max(xmax, ymax))
+            ax9.set_ylim(min(xmin, ymin), max(xmax, ymax))
             ax9.set_xlabel(ex1)
             ax9.set_ylabel(ex2)
             # TODO add r2
