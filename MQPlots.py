@@ -494,12 +494,11 @@ class MQPlots(Logger):
             ax.set_ylabel("Relative Stadartdeviation [%]")
             ax.axvline(cutoff, color="black", alpha=0.5)
             xmin, xmax = ax.get_xbound()
-            ax.axhline(10, color=cm[0])
-            ax.text(xmin, 10, color_counts[cm[0]])
-            ax.axhline(20, color=cm[1])
-            ax.text(xmin, 20, color_counts[cm[1]])
-            ax.axhline(30, color=cm[2])
-            ax.text(xmin, 30, color_counts[cm[2]])
+            cumulative_count = 0
+            for i, bin_ in enumerate(bins):
+                cumulative_count += color_counts[cm[i]]
+                ax.axhline(bin_, color=cm[i])
+                ax.text(xmin, bin_, cumulative_count)
 
             res_path = os.path.join(self.file_dir_descriptive,
                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std" + FIG_FORMAT)
