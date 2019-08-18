@@ -214,6 +214,8 @@ class MQInitializer(Logger):
         # extract the gene name from the description eg: "GN=abcd"
         gene_names_fasta = fasta_col["description"].str.extract(r"(GN=(.*?)(\s|$))")[1].apply(pd.Series)
         gene_names_fasta.columns = ["Gene name fasta"]
+        # added upper() function to avoid that non-human gene names are not recognized
+        gene_names_fasta["Gene name fasta"] = gene_names_fasta["Gene name fasta"].str.upper()
         # concat all important columns with the original dataframe
         df_protein_names = pd.concat([df_protein_names, fasta_col["protein id"], gene_names_fasta["Gene name fasta"]], axis=1)
         # add protein name from fasta description col
