@@ -71,10 +71,16 @@ class MQPlots(Logger):
         self.all_intensities_lfq = self.all_intensities_lfq[mask]
 
         # write all intensites of every experiment to one dict entry
-        self.intensites_per_experiment_lfg = {
+        self.intensites_per_experiment_lfq = {
             exp: self.all_intensities_lfq[
                 [f"LFQ intensity {rep}" for rep in self.replicates[exp]]
             ] for exp in self.replicates
+        }
+
+        # create a dict matching the raw and lfq dfs by string
+        self.all_intensities_dict = {"lfq": self.all_intensities_lfq, "raw": self.all_intensities_raw}
+        self.intensities_per_experiment_dict = {
+            "lfq": self.intensites_per_experiment_lfq, "raw": self.intensites_per_experiment_raw
         }
 
         # create all sets that are required for plotting
@@ -285,7 +291,7 @@ class MQPlots(Logger):
         }
         self.save_bar_venn("All experiments union", experiment_union_sets)
 
-    def plot_detection_counts(self):
+    def plot_detection_counts(self, df_to_use: str = "raw"):
         plt.close("all")
         # determine number of rows and columns in the plot based on the number of experiments
         n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
@@ -293,7 +299,7 @@ class MQPlots(Logger):
                                   figsize=(4 * n_rows_experiment, 4 * n_cols_experiment))
         fig.suptitle("Detection counts")
         for experiment, ax in zip(self.replicates, axarr.flat):
-            intensities = self.intensites_per_experiment_raw[experiment]
+            intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             # from 0 to number of replicates, how often was each protein detected
             counts = (intensities > 0).sum(axis=1)
             counts = counts[counts > 0]
@@ -313,7 +319,7 @@ class MQPlots(Logger):
         res_path = os.path.join(self.file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def plot_number_of_detected_proteins(self):
+    def plot_number_of_detected_proteins(self, df_to_use: str = "raw"):
         plt.close("all")
         # determine number of rows and columns in the plot based on the number of experiments
         n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
@@ -323,7 +329,7 @@ class MQPlots(Logger):
 
         for experiment, ax in zip(self.replicates, axarr.flat):
             plt.close("all")
-            intensities = self.intensites_per_experiment_raw[experiment]
+            intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
 
             # how many proteins were detected per replicate and in total
             counts = (intensities > 0).sum(axis=1)
@@ -348,7 +354,7 @@ class MQPlots(Logger):
         res_path = os.path.join(self.file_dir_descriptive, "detection_per_replicate" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def plot_intensity_histograms(self):
+    def plot_intensity_histograms(self, df_to_use: str = "raw"):
         plt.close("all")
         n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig([x for l in self.replicates.values() for x in l])
         # make a intensity histogram for every replicate
@@ -358,7 +364,7 @@ class MQPlots(Logger):
         fig_index = 0
         fig.suptitle("Replicate Intensity histograms")
         for experiment in self.replicates:
-            intensities = self.intensites_per_experiment_raw[experiment]
+            intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             for col in intensities:
                 mask = intensities[col] > 0
                 ax = axarr.flat[fig_index]
@@ -400,11 +406,11 @@ class MQPlots(Logger):
                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_scatter" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def plot_rank(self):
+    def plot_rank(self, df_to_use: str = "raw"):
         plt.close("all")
         all_pathway_proteins = set.union(*(set(x) for x in self.interesting_proteins.values()))
         for experiment in self.replicates:
-            intensities = self.intensites_per_experiment_raw[experiment]
+            intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             # protein ranks vs intensity
             # calculate mean intensity for the experiment and sort from highest to lowest
             m_intensity = intensities.mean(axis=1).sort_values(ascending=False)
@@ -461,10 +467,10 @@ class MQPlots(Logger):
                                      f"{self.replicate_representation[experiment].replace(' ', '_')}_rank" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def plot_relative_std(self):
+    def plot_relative_std(self, df_to_use: str = "raw"):
         plt.close("all")
         for experiment in self.replicates:
-            intensities = self.intensites_per_experiment_raw[experiment]
+            intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             y = intensities.copy()
             # below cutoff remove zeros, above threshold include 0
             cutoff = 1e6
@@ -499,12 +505,12 @@ class MQPlots(Logger):
                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def plot_pathway_analysis(self):
+    def plot_pathway_analysis(self, df_to_use: str = "raw"):
         ex_list = list(self.replicates.keys())
         for pathway in self.interesting_proteins:
             plt.close("all")
             found_proteins = set(self.interesting_proteins[pathway])
-            found_proteins &= set(self.all_intensities_raw.index)
+            found_proteins &= set(self.all_intensities_dict[df_to_use].index)
             found_proteins = sorted(list(found_proteins))
             n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
             fig, axarr = plt.subplots(n_rows, n_cols, figsize=(4 * n_rows, 4 * n_cols))
@@ -544,12 +550,12 @@ class MQPlots(Logger):
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def plot_experiment_comparison(self):
+    def plot_experiment_comparison(self, df_to_use: str = "raw"):
         for ex1, ex2 in combinations(self.replicates, 2):
             plt.close("all")
-            protein_intensities_ex1 = self.intensites_per_experiment_raw[ex1]
+            protein_intensities_ex1 = self.intensities_per_experiment_dict[df_to_use][ex1]
             counts_ex1 = (protein_intensities_ex1 > 0).sum(axis=1) == len(protein_intensities_ex1.columns)
-            protein_intensities_ex2 = self.intensites_per_experiment_raw[ex2]
+            protein_intensities_ex2 = self.intensities_per_experiment_dict[df_to_use][ex2]
             counts_ex2 = (protein_intensities_ex2 > 0).sum(axis=1) == len(protein_intensities_ex2.columns)
             # combine intersections
             intersection = pd.concat(
@@ -597,7 +603,7 @@ class MQPlots(Logger):
             plt.savefig(res_path, dpi=200, bbox_inches="tight")
             # sys.exit(0)
 
-    def plot_pathway_proportions(self):
+    def plot_pathway_proportions(self, df_to_use: str = "raw"):
         plt.close("all")
         experiment_proportion = {
             experiment:
@@ -605,7 +611,7 @@ class MQPlots(Logger):
                     pathway: len(set(pproteins) & set(intensities[intensities.mean(axis=1) > 0].index))
                     for pathway, pproteins in self.interesting_proteins.items()
                 }
-            for experiment, intensities in self.intensites_per_experiment_raw.items()
+            for experiment, intensities in self.intensities_per_experiment_dict[df_to_use].items()
         }
 
         df_total_counts = pd.DataFrame(experiment_proportion).T
@@ -635,12 +641,12 @@ class MQPlots(Logger):
         self.plot_detection_counts()
         self.plot_number_of_detected_proteins()
         self.plot_intensity_histograms()
-        self.plot_relative_std()
+        self.plot_relative_std("lfq")
         self.plot_rank()
-        self.plot_pathway_analysis()
+        self.plot_pathway_analysis("lfq")
         self.plot_pathway_proportions()
         self.plot_scatter_replicates()
-        self.plot_experiment_comparison()
+        self.plot_experiment_comparison("lfq")
 
     def calculate_buffer_score(self):
         pass
@@ -648,12 +654,12 @@ class MQPlots(Logger):
     def create_report(self):
         pass
 
-    def create_go_analysis(self):
+    def create_go_analysis(self, df_to_use: str = "raw"):
         self.logger.info("Creating go analysis plots")
         plt.close("all")
 
         # all proteins that were detected in any replicate
-        background = set(self.all_intensities_raw.index)
+        background = set(self.all_intensities_dict[df_to_use].index)
         heights = ddict(list)
         test_results = ddict(list)
 
@@ -668,8 +674,8 @@ class MQPlots(Logger):
             assert pathway_genes | not_pathway_genes == background
             heights["background"].append(len(pathway_genes))
             for experiment in self.replicates:
-                # create df with intensity means for specific experiment ofer all replicates
-                mean_intensity = self.intensites_per_experiment_raw[experiment].mean(axis=1)
+                # create df with intensity means for specific experiment over all replicates
+                mean_intensity = self.intensities_per_experiment_dict[df_to_use][experiment].mean(axis=1)
                 # get all proteins with mean intensity > 0
                 experiment_genes = set(mean_intensity[mean_intensity > 0].index)
                 # all other experiments are not detected
