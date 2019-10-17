@@ -36,4 +36,8 @@ use_protein_id: false
 # should the protein id be used, or TODO
 # can be "true" or "false"
 
+equal_variance: false
+# should equal variance be assumed for the t-test?
+# can be "true" or "false"
+
 # ##### IMAGE SETTINGS ########

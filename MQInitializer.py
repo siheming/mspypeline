@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import numpy as np
 import os
 import sys
@@ -11,9 +12,8 @@ import logging
 
 
 class MQInitializer(Logger):
-    def __init__(self, dir_: str, file_path_yml: str = None, loglevel=logging.DEBUG):
+    def __init__(self, dir_: str, has_replicates: bool, file_path_yml: str = None, loglevel=logging.DEBUG):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
-        self._replicates = None
         self._replicate_representation = None
         self._min_number_replicates = None
         self._max_number_replicates = None
@@ -40,6 +40,8 @@ class MQInitializer(Logger):
         else:
             self.start_dir = dir_
         self.logger.info(f"Starting dir: {self.start_dir}")
+        self.has_replicates = has_replicates
+        self.replicates = None
 
         # if no yml file is passed try to guess it or ask for one
         if file_path_yml is None:
@@ -68,24 +70,6 @@ class MQInitializer(Logger):
         # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")
         self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()
-
-    @property
-    def replicates(self):
-        if self._replicates is None:
-            self._replicates = self.init_replicates(self.df_protein_names.columns)
-        return self._replicates
-
-    def init_replicates(self, df_colnames):
-        all_reps = sorted([x.replace('Intensity ', '') for x in df_colnames
-                           if x.startswith('Intensity ')], key=len, reverse=True)
-        _replicates = ddict(list)
-        for experiment in self.configs.get("experiments", False):
-            if not experiment:
-                raise ValueError("Missing experiments key in config file")
-            for rep in all_reps:
-                if rep.startswith(experiment):
-                    _replicates[experiment].append(rep)
-        return _replicates
 
     def get_default_yml_path(self) -> str:
         self.logger.debug("Loading default yml file from: %s, since no file was selected", self.script_loc)
@@ -135,9 +119,22 @@ class MQInitializer(Logger):
         df_peptide_names = pd.read_csv(file_dir_peptides_names, sep="\t")
         self.logger.debug("%s shape: %s", self.peptides_txt, df_peptide_names.shape)
 
+        # TODO can the Intensity column always be expected in the file?
+        # TODO will the column names always be the same between Intensity and LFQ intensity?
+        all_reps = sorted([x.replace('Intensity ', '') for x in df_protein_names.columns
+                           if x.startswith('Intensity ')], key=len, reverse=True)
+        # make sure the two files contain the same replicate names
+        all_reps_peptides = [x.replace('Intensity ', '') for x in df_protein_names.columns
+                             if x.startswith('Intensity ')]
+        experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
+        if any(experiment_analysis_overlap):
+            unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
+            raise ValueError(f"Found replicates in {self.proteins_txt}, but not in {self.peptides_txt}: " +
+                             ", ".join(unmatched))
+
         # try to automatically determine experimental setup
         if not self.configs.get("experiments", False):
-            self.logger.info("No replicates specified in settings file. Trying to infer.")
+            self.logger.info("No experiments specified in settings file. Trying to infer.")
             # TODO will there every be more than 9 replicates?
             import difflib
 
@@ -146,45 +143,43 @@ class MQInitializer(Logger):
                 pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2))
                 return s1[pos_a:pos_a + size]
 
-            # TODO can the Intensity column always be expected in the file?
-            # TODO will the column names always be the same between Intensity and LFQ intensity?
-            all_reps = sorted([x.replace('Intensity ', '') for x in df_protein_names.columns
-                               if x.startswith('Intensity ')], key=len, reverse=True)
-            # make sure the two files contain the same replicate names
-            all_reps_peptides = [x.replace('Intensity ', '') for x in df_protein_names.columns
-                                 if x.startswith('Intensity ')]
-            experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
-            if any(experiment_analysis_overlap):
-                unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
-                raise ValueError(f"Found replicates in {self.proteins_txt}, but not in {self.peptides_txt}: " +
-                                 ", ".join(unmatched))
-            #
-            overlap = [[get_overlap(re1, re2) if re1 != re2 else "" for re1 in all_reps] for re2 in all_reps]
-            overlap_matrix = pd.DataFrame(overlap, columns=all_reps, index=all_reps)
-            unclear_matches = []
+            if self.has_replicates:
+                #
+                overlap = [[get_overlap(re1, re2) if re1 != re2 else "" for re1 in all_reps] for re2 in all_reps]
+                overlap_matrix = pd.DataFrame(overlap, columns=all_reps, index=all_reps)
+                unclear_matches = []
+                replicates = ddict(list)
+                for col in overlap_matrix:
+                    sorted_matches = sorted(overlap_matrix[col].values, key=len, reverse=True)
+                    best_match = sorted_matches[0]
+                    replicates[best_match].append(col)
+                    # check if any other match with the same length could be found
+                    if any([len(best_match) == len(match) and best_match != match for match in sorted_matches]):
+                        unclear_matches.append(best_match)
+                for experiment in replicates:
+                    if len(replicates[experiment]) == 1:
+                        rep = replicates.pop(experiment)
+                        replicates[rep[0]] = rep
+                    elif experiment in unclear_matches:
+                        self.logger.debug(f"unclear match for experiment: {experiment}")
+                self.logger.info(f"determined experiemnts: {replicates.keys()}")
+                self.logger.debug("number of replicates per experiment:")
+                self.logger.debug("\n".join([f"{ex}: {len(replicates[ex])}" for ex in replicates]))
+                self.configs["experiments"] = list(replicates.keys())
+                self.replicates = replicates
+            else:
+                self.configs["experiments"] = all_reps
+                self.replicates = {rep: [rep] for rep in all_reps}
+        else:
+            self.logger.info("Using saved experimental setup")
             replicates = ddict(list)
-            for col in overlap_matrix:
-                sorted_matches = sorted(overlap_matrix[col].values, key=len, reverse=True)
-                best_match = sorted_matches[0]
-                replicates[best_match].append(col)
-                # check if any other match with the same length could be found
-                if any([len(best_match) == len(match) and best_match != match for match in sorted_matches]):
-                    unclear_matches.append(best_match)
-            for experiment in replicates:
-                if len(replicates[experiment]) == 1:
-                    rep = replicates.pop(experiment)
-                    replicates[rep[0]] = rep
-                elif experiment in unclear_matches:
-                    self.logger.debug(f"unclear match for experiment: {experiment}")
-            self.logger.info(f"determined experiemnts: {replicates.keys()}")
-            self.logger.debug(f"number of replicates per experiment:")
-            self.logger.debug("\n".join([f"{ex}: {len(replicates[ex])}" for ex in replicates]))
-            self.configs["experiments"] = list(replicates.keys())
-            self._replicates = replicates
-
-        # TODO properties seem to make no sense here anymore
-        if self._replicates is None:
-            self._replicates = self.init_replicates(df_protein_names.columns)
+            for experiment in self.configs.get("experiments", False):
+                if not experiment:
+                    raise ValueError("Missing experiments key in config file")
+                for rep in all_reps:
+                    if rep.startswith(experiment):
+                        replicates[experiment].append(rep)
+            self.replicates = replicates
 
         found_replicates = [rep for l in self.replicates.values() for rep in l]
         for df_cols in [df_peptide_names.columns, df_protein_names.columns]:
@@ -225,6 +220,11 @@ class MQInitializer(Logger):
             self.logger.warning("Found duplicates in Gene name fasta column. Dropping all %s duplicates.",
                                 df_protein_names.duplicated(subset="Gene name fasta", keep=False).sum())
             df_protein_names = df_protein_names.drop_duplicates(subset="Gene name fasta", keep=False)
+        # convert all non numeric intensities
+        for col in [col for col in df_protein_names.columns if 'ntensity' in col]:
+            if not is_numeric_dtype(df_protein_names[col]):
+                df_protein_names[col] = df_protein_names[col].apply(lambda x: x.replace(",", "."))
+                df_protein_names[col] = df_protein_names[col].astype("int64")
         self.logger.debug("%s shape after preprocessing: %s", self.proteins_txt, df_protein_names.shape)
         return df_protein_names, df_peptide_names
 

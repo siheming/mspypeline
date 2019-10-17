@@ -41,6 +41,11 @@ class MQPlots(Logger):
         self.configs = configs
         # data frames
         self.df_protein_names = df_protein_names.set_index(df_protein_names["Gene name fasta"], drop=False)
+        if any((col.startswith("LFQ intensity") for col in self.df_protein_names)):
+            self.has_lfq = True
+        else:
+            self.has_lfq = False
+            self.logger.warning("LFQ intensities were not found. Raw intensities are used for all plots")
         self.df_peptide_names = df_peptide_names
         # dicts
         self.interesting_proteins = interesting_proteins
@@ -62,20 +67,25 @@ class MQPlots(Logger):
             ] for exp in self.replicates
         }
 
-        # extract all lfq intensites from the dataframe
-        self.all_intensities_lfq = self.df_protein_names[
-            [f"LFQ intensity {rep}" for exp in self.replicates for rep in self.replicates[exp]]
-        ]
-        # filter all rows where all intensities are 0
-        mask = (self.all_intensities_lfq != 0).sum(axis=1) != 0
-        self.all_intensities_lfq = self.all_intensities_lfq[mask]
+        if self.has_lfq:
+            # extract all lfq intensites from the dataframe
+            self.all_intensities_lfq = self.df_protein_names[
+                [f"LFQ intensity {rep}" for exp in self.replicates for rep in self.replicates[exp]]
+            ]
+            # filter all rows where all intensities are 0
+            mask = (self.all_intensities_lfq != 0).sum(axis=1) != 0
+            self.all_intensities_lfq = self.all_intensities_lfq[mask]
 
-        # write all intensites of every experiment to one dict entry
-        self.intensites_per_experiment_lfq = {
-            exp: self.all_intensities_lfq[
-                [f"LFQ intensity {rep}" for rep in self.replicates[exp]]
-            ] for exp in self.replicates
-        }
+            # write all intensites of every experiment to one dict entry
+            self.intensites_per_experiment_lfq = {
+                exp: self.all_intensities_lfq[
+                    [f"LFQ intensity {rep}" for rep in self.replicates[exp]]
+                ] for exp in self.replicates
+            }
+
+        else:
+            self.all_intensities_lfq = self.all_intensities_raw
+            self.intensites_per_experiment_lfq = self.intensites_per_experiment_raw
 
         # create a dict matching the raw and lfq dfs by string
         self.all_intensities_dict = {"lfq": self.all_intensities_lfq, "raw": self.all_intensities_raw}
@@ -297,7 +307,7 @@ class MQPlots(Logger):
         n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
         fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, sharex=True, squeeze=True,
                                   figsize=(4 * n_rows_experiment, 4 * n_cols_experiment))
-        fig.suptitle("Detection counts")
+        fig.suptitle(f"Detection counts from {df_to_use} intensities")
         for experiment, ax in zip(self.replicates, axarr.flat):
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             # from 0 to number of replicates, how often was each protein detected
@@ -325,7 +335,7 @@ class MQPlots(Logger):
         n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
         fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment,
                                   figsize=(5 * n_cols_experiment, 3 * n_rows_experiment))
-        fig.suptitle("Number of detected proteins")
+        fig.suptitle(f"Number of detected proteins from {df_to_use} intensity")
 
         for experiment, ax in zip(self.replicates, axarr.flat):
             plt.close("all")
@@ -358,11 +368,10 @@ class MQPlots(Logger):
         plt.close("all")
         n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig([x for l in self.replicates.values() for x in l])
         # make a intensity histogram for every replicate
-        # TODO scale this fig size with number of rows
         fig, axarr = plt.subplots(n_rows_replicates, n_cols_replicates,
                                   figsize=(5 * n_cols_replicates, 5 * n_rows_replicates))
         fig_index = 0
-        fig.suptitle("Replicate Intensity histograms")
+        fig.suptitle(f"Replicate {df_to_use} Intensity histograms")
         for experiment in self.replicates:
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             for col in intensities:
@@ -425,8 +434,9 @@ class MQPlots(Logger):
             # get all proteins that are part of any pathway
             pathway_proteins = found_proteins & all_pathway_proteins
             rank_identified_proteins = [dic[protein][0] for protein in pathway_proteins]
-            median_pathway_rank = int(np.median(rank_identified_proteins))
-            median_intensity = m_intensity.iloc[median_pathway_rank]
+            if rank_identified_proteins:
+                median_pathway_rank = int(np.median(rank_identified_proteins))
+                median_intensity = m_intensity.iloc[median_pathway_rank]
 
             fig, ax = plt.subplots(1, 1, figsize=(14, 7))
             # plot the non pathway proteins
@@ -441,26 +451,27 @@ class MQPlots(Logger):
                 ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.6, marker=".", label=pathway)
             #
             ax.set_yscale("log")
-            xmin, xmax = ax.get_xbound()
-            xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
-            ymin, ymax = ax.get_ybound()
-            ym = (np.log10(median_intensity) - np.log10(ymin) ) / (np.log10(ymax) - np.log10(ymin))
-            # plot the median rank and intensity at that rank
-            ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color="black", alpha=0.6)
-            ax.axhline(median_intensity, xmax=xm, linestyle="--", color="black", alpha=0.6)
-            ax.text(xmin * 0.9, median_intensity * 0.9,
-                    f"median rank: {median_pathway_rank} ({median_pathway_rank/len(m_intensity) * 100 :.1f}%) "
-                    f"with intensity: {median_intensity:.2E}",
-                    verticalalignment="top", horizontalalignment="left")
-            # ax.annotate(f"median rank: {median_pathway_rank} with intensity: {median_intensity}",
-            #             xy=(median_pathway_rank, median_intensity), xycoords='data',
-            #             xytext=(0.1, 0.1), textcoords='axes fraction',
-            #             arrowprops=dict(facecolor='black', shrink=0.05),
-            #             horizontalalignment='right', verticalalignment='top',
-            #             )
+            if rank_identified_proteins:
+                xmin, xmax = ax.get_xbound()
+                xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
+                ymin, ymax = ax.get_ybound()
+                ym = (np.log10(median_intensity) - np.log10(ymin) ) / (np.log10(ymax) - np.log10(ymin))
+                # plot the median rank and intensity at that rank
+                ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color="black", alpha=0.6)
+                ax.axhline(median_intensity, xmax=xm, linestyle="--", color="black", alpha=0.6)
+                ax.text(xmin * 0.9, median_intensity * 0.9,
+                        f"median rank: {median_pathway_rank} ({median_pathway_rank/len(m_intensity) * 100 :.1f}%) "
+                        f"with intensity: {median_intensity:.2E}",
+                        verticalalignment="top", horizontalalignment="left")
+                # ax.annotate(f"median rank: {median_pathway_rank} with intensity: {median_intensity}",
+                #             xy=(median_pathway_rank, median_intensity), xycoords='data',
+                #             xytext=(0.1, 0.1), textcoords='axes fraction',
+                #             arrowprops=dict(facecolor='black', shrink=0.05),
+                #             horizontalalignment='right', verticalalignment='top',
+                #             )
 
             ax.set_xlabel("Protein rank")
-            ax.set_ylabel("Raw intensity mean")
+            ax.set_ylabel(f"{df_to_use} intensity mean")
             fig.legend()
 
             res_path = os.path.join(self.file_dir_descriptive,
@@ -539,7 +550,7 @@ class MQPlots(Logger):
                     if len(v1[v1 > 0]) < 3 or len(v2[v2 > 0]) < 3:
                         # self.logger.debug(f"skipping test for: {protein}, {e1} vs {e2}")
                         continue
-                    test = stats.ttest_ind(v1, v2)
+                    test = stats.ttest_ind(v1, v2, equal_var=self.configs.get("equal_var", False))
                     if plot_ns or test[1] < threshhold:
                         barplot_annotate_brackets(ax, ex_list.index(e1), ex_list.index(e2), test[1], range(len(ex_list)),
                                                   heights, dh=0.05 + 0.1 * n_annotations)

@@ -43,6 +43,10 @@ If the directory contains a config dir with a yml file it will be used
 for analysis. Otherwise the user will be asked to select a yml file.
 When this is skipped the default yml file will be used instead.
 Using the default yml file can also be forced via `--yml-file default`
+- `--loglevel` Logging level used during run. Should be from options 
+(lowest to highest): DEBUG < INFO < WARNING < ERROR.
+- `--has_replicates` does the max quant result file contain replicates.
+Should be y or n (yes or no).
 
 ## Dependencies
 The pipeline required multiple input files to perform the analysis. They
