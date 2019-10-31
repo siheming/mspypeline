@@ -217,6 +217,9 @@ class MQPlots(Logger):
 
     def save_bar_venn(self, ex: str, named_sets):
         plt.close("all")
+        if len(named_sets) > 6:
+            self.logger.warning("Skipping bar-venn for %s because it has more than 6 experiments", ex)
+            return
         # ax1.set_title("size")
         # ax2.set_title("selected samples")
 
@@ -278,6 +281,7 @@ class MQPlots(Logger):
 
         # create venn diagrams comparing all replicates within an experiment
         for ex in self.protein_ids:
+            self.logger.debug("Creating venn diagram for experiment %s", ex)
             set_names = self.protein_ids[ex].keys()
             sets = self.protein_ids[ex].values()
             # save the resulting venn diagram
@@ -289,12 +293,14 @@ class MQPlots(Logger):
         # create venn diagrams comparing all pellets with supernatants  # TODO
         # create venn diagrams comparing all experiments
         # first compare only proteins which are found between all replicates
+        self.logger.debug("Creating venn diagram for intersection")
         experiment_intersection_sets = {
             exp: set.intersection(*(self.protein_ids[exp][rep] for rep in self.protein_ids[exp]))
             for exp in self.protein_ids
         }
         self.save_bar_venn("All experiments intersection", experiment_intersection_sets)
         # then compare all proteins that are found at all
+        self.logger.debug("Creating venn diagram for union")
         experiment_union_sets = {
             exp: set.union(*(self.protein_ids[exp][rep] for rep in self.protein_ids[exp]))
             for exp in self.protein_ids
