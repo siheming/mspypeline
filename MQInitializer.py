@@ -14,10 +14,13 @@ import logging
 class MQInitializer(Logger):
     def __init__(self, dir_: str, has_replicates: bool, file_path_yml: str = None, loglevel=logging.DEBUG):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
-        self._replicate_representation = None
-        self._min_number_replicates = None
-        self._max_number_replicates = None
-        self._replicates_representation = None
+        self.yaml = YAML()
+        self.yaml.default_flow_style = False
+        self.replicates = None
+        self.configs = None
+        self.path_config = None
+        self.df_protein_names, self.df_peptide_names = None, None
+        self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = None, None, None
 
         self.script_loc = os.path.dirname(os.path.realpath(__file__))
         self.path_pipeline_config = os.path.join(self.script_loc, "config")
@@ -32,44 +35,67 @@ class MQInitializer(Logger):
         self.important_proteins_xlsx = "important_protein_names.xlsx"
         self.important_receptors_xlsx = "important_receptor_names.xlsx"
         self.go_analysis_gene_xlsx = "go_analysis_gene_names.xlsx"
+        self.possible_compartiments = sorted([x for x in os.listdir(self.path_pipeline_config) if x.endswith(".txt")])
 
-        # make sure to be on the right level and set starting dir
-        if os.path.split(os.path.split(dir_)[0])[-1] == "txt":
-            self.logger.debug("Removing txt ending from path")
-            self.start_dir = os.path.join(os.path.split(os.path.split(dir_)[0])[0])
-        else:
-            self.start_dir = dir_
-        self.logger.info(f"Starting dir: {self.start_dir}")
+        self._start_dir = None
+        self.start_dir = dir_
+
+        self._file_path_yaml = None
+        self.file_path_yaml = file_path_yml
+
         self.has_replicates = has_replicates
-        self.replicates = None
 
+    @property
+    def start_dir(self):
+        return self._start_dir
+
+    @start_dir.setter
+    def start_dir(self, start_dir):
+        # make sure to be on the right level and set starting dir
+        if os.path.split(os.path.split(start_dir)[0])[-1] == "txt":
+            self.logger.debug("Removing txt ending from path")
+            self._start_dir = os.path.join(os.path.split(os.path.split(start_dir)[0])[0])
+        else:
+            self._start_dir = start_dir
+        self.logger.info(f"Starting dir: {self.start_dir}")
+        self.replicates = None
+        self.path_config = os.path.join(self.start_dir, "config")
+
+    @property
+    def file_path_yaml(self):
+        return self._file_path_yaml
+
+    @file_path_yaml.setter
+    def file_path_yaml(self, file_path_yml):
         # if no yml file is passed try to guess it or ask for one
-        if file_path_yml is None:
-            file_path_yml = self.init_yml_path()
-        elif file_path_yml.lower() == "default":
-            file_path_yml = self.get_default_yml_path()
+        if file_path_yml.lower() == "default":
+            self._file_path_yaml = self.get_default_yml_path()
+        elif file_path_yml.lower() == "file":
+            self._file_path_yaml = os.path.join(self.start_dir, "config", self.yml_file_name)
+        elif file_path_yml is None:
+            self._file_path_yaml = self.init_yml_path()
+        self.logger.debug(f"yml file location: {self._file_path_yaml}")
 
         # load the config from the yml file
-        self.logger.debug(f"yml file location: {file_path_yml}")
-        self.yaml = YAML()
-        self.yaml.default_flow_style = False
         self.logger.info("loading yml file")
-        with open(file_path_yml) as f:
+        with open(self.file_path_yaml) as f:
             self.configs = self.yaml.load(f)
         self.logger.debug(f"Config file contents: {self.configs}")
 
-        self.path_config = os.path.join(self.start_dir, "config")
+    def init_config(self):
         os.makedirs(self.path_config, exist_ok=True)
         self.update_config_file()
 
-        # read the proteins_txt and peptides_txt
-        self.logger.info("Reading %s, and %s", self.proteins_txt, self.peptides_txt)
-        self.df_protein_names, self.df_peptide_names = self.init_dfs_from_txts()
-        self.update_config_file()
-
-        # read all proteins and receptors of interest from the config dir
-        self.logger.info("Reading proteins and receptors of interest")
-        self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()
+    def has_yml_file(self):
+        if not self.start_dir:
+            return False
+        if "config" in os.listdir(self.start_dir):
+            self.logger.debug("Found config dir")
+            config_dir = os.path.join(self.start_dir, "config")
+            if self.yml_file_name in os.listdir(config_dir):
+                self.logger.debug("Found config.yml file in config dir")
+                return True
+        return False
 
     def get_default_yml_path(self) -> str:
         self.logger.debug("Loading default yml file from: %s, since no file was selected", self.script_loc)
@@ -90,14 +116,8 @@ class MQInitializer(Logger):
                 yaml_file = file_path
             return yaml_file
 
-        if "config" in os.listdir(self.start_dir):
-            self.logger.debug("Found config dir")
-            config_dir = os.path.join(self.start_dir, "config")
-            if self.yml_file_name in os.listdir(config_dir):
-                self.logger.debug("Found config.yml file in config dir")
-                yaml_file = os.path.join(config_dir, self.yml_file_name)
-            else:
-                yaml_file = yml_file_dialog()
+        if self.has_yml_file():
+            yaml_file = os.path.join(self.start_dir, "config", self.yml_file_name)
         else:
             yaml_file = yml_file_dialog()
         return yaml_file
@@ -291,3 +311,13 @@ class MQInitializer(Logger):
 
         # rename to non tmp
         os.rename(yml_file_loc_tmp, yml_file_loc)
+
+    def prepare_stuff(self):
+        # read the proteins_txt and peptides_txt
+        self.logger.info("Reading %s, and %s", self.proteins_txt, self.peptides_txt)
+        self.df_protein_names, self.df_peptide_names = self.init_dfs_from_txts()
+        self.update_config_file()
+
+        # read all proteins and receptors of interest from the config dir
+        self.logger.info("Reading proteins and receptors of interest")
+        self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()

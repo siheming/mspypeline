@@ -39,6 +39,13 @@ class MQPlots(Logger):
         self.start_dir = start_dir
         self.replicates = replicates
         self.configs = configs
+        self.possible_plots = [
+            self.plot_detection_counts, self.plot_number_of_detected_proteins, self.plot_intensity_histograms,
+            self.plot_relative_std, self.plot_rank, self.plot_pathway_analysis, self.plot_pathway_proportions,
+            self.plot_scatter_replicates, self.plot_experiment_comparison, self.plot_go_analysis,
+            self.plot_venn_results
+        ]
+        self.int_mapping = {"raw": "Intensity ", "lfq": "LFQ intensity "}
         # data frames
         self.df_protein_names = df_protein_names.set_index(df_protein_names["Gene name fasta"], drop=False)
         if any((col.startswith("LFQ intensity") for col in self.df_protein_names)):
@@ -68,7 +75,7 @@ class MQPlots(Logger):
         }
 
         if self.has_lfq:
-            # extract all lfq intensites from the dataframe
+            # extract all lfq intensities from the dataframe
             self.all_intensities_lfq = self.df_protein_names[
                 [f"LFQ intensity {rep}" for exp in self.replicates for rep in self.replicates[exp]]
             ]
@@ -109,20 +116,18 @@ class MQPlots(Logger):
             self.whole_experiment_protein_ids[experiment] = exp_prot_ids
 
         # set all result dirs
-        if self.configs.get("venn_results", False):
-            # path for venn diagrams
-            self.file_dir_venn = os.path.join(self.start_dir, "venn")
-            # create file structure and folder
-            os.makedirs(self.file_dir_venn, exist_ok=True)
-        if self.configs.get("descriptive_plots", False):
-            # path for descriptive plots
-            self.file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
-            # create file structure and folder
-            os.makedirs(self.file_dir_descriptive, exist_ok=True)
-        if self.configs.get("go_analysis", False):
-            self.file_dir_go_analysis = os.path.join(self.start_dir, "go_analysis")
-            # create file structure and folder
-            os.makedirs(self.file_dir_go_analysis, exist_ok=True)
+        # TODO: for now just create all of them
+        # path for venn diagrams
+        self.file_dir_venn = os.path.join(self.start_dir, "venn")
+        # create file structure and folder
+        os.makedirs(self.file_dir_venn, exist_ok=True)
+        # path for descriptive plots
+        self.file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
+        # create file structure and folder
+        os.makedirs(self.file_dir_descriptive, exist_ok=True)
+        self.file_dir_go_analysis = os.path.join(self.start_dir, "go_analysis")
+        # create file structure and folder
+        os.makedirs(self.file_dir_go_analysis, exist_ok=True)
 
     @classmethod
     def from_MQInitializer(cls, mqinti_instance, loglevel=logging.DEBUG):
@@ -162,20 +167,11 @@ class MQPlots(Logger):
         return self._max_number_replicates
 
     def create_results(self):
-        # create all results according to configs
-        if self.configs.get("venn_results", False):
-            self.create_venn_results()
-
-        if self.configs.get("descriptive_plots", False):
-            self.create_descriptive_plots()
-
-        if self.configs.get("go_analysis", False):
-            self.create_go_analysis()
-
-        if self.configs.get("buffer_score", False):
-            pass
-        # create report summarizing the analysis results
-        self.create_report()
+        for plot in self.possible_plots:
+            plot_name = str(plot).split(" ")[2].split(".")[1]
+            intensity_name = plot_name + "_intensity"
+            if self.configs.get(plot_name, False):
+                plot(self.configs.get(intensity_name, "raw"))
 
     def save_venn(self, ex: str, sets, set_names):
         creates_figure = True
@@ -276,7 +272,8 @@ class MQPlots(Logger):
                 for re in result:
                     out.write(re + "\n")
 
-    def create_venn_results(self):
+    def plot_venn_results(self, *args):
+        # TODO the *args should not be used?
         self.logger.info("Creating venn diagrams")
 
         # create venn diagrams comparing all replicates within an experiment
@@ -383,13 +380,11 @@ class MQPlots(Logger):
             for col in intensities:
                 mask = intensities[col] > 0
                 ax = axarr.flat[fig_index]
-                ax.set_title(f"{col}".replace(self.configs['descriptive_intensity_col'], ""))
+                ax.set_title(f"{col}".replace(self.int_mapping[df_to_use], ""))
                 ax.hist(intensities[col][mask],
-                        bins=np.logspace(
-                            np.log10(intensities[col][mask].min()),
-                            np.log10(intensities[col][mask].max()),
-                            25
-                           )
+                        bins=np.logspace(np.log10(intensities[col][mask].min()),
+                                         np.log10(intensities[col][mask].max()),
+                                         25)
                         )
 
                 ax.set_xscale('log')
@@ -399,14 +394,14 @@ class MQPlots(Logger):
         res_path = os.path.join(self.file_dir_descriptive, "intensity_histograms" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def plot_scatter_replicates(self):
+    def plot_scatter_replicates(self, df_to_use: str = "raw"):
         plt.close("all")
         for experiment in self.replicates:
             # scatter plot of all replicates vs all replicates
             fig, ax = plt.subplots(1, 1, figsize=(7, 7))
             for rep1, rep2 in combinations(self.replicates[experiment], 2):
-                x1 = self.df_protein_names[self.configs['descriptive_intensity_col'] + rep1]
-                x2 = self.df_protein_names[self.configs['descriptive_intensity_col'] + rep2]
+                x1 = self.all_intensities_dict[df_to_use][self.int_mapping[df_to_use] + rep1]
+                x2 = self.all_intensities_dict[df_to_use][self.int_mapping[df_to_use] + rep2]
                 mask = np.logical_or(x1 != 0, x2 != 0)
                 exp = r"$r^{2}$"
                 ax.scatter(x1[mask] + 1e2, x2[mask] + 1e2, label=f"{rep1} vs {rep2}, "
@@ -440,6 +435,7 @@ class MQPlots(Logger):
             # get all proteins that are part of any pathway
             pathway_proteins = found_proteins & all_pathway_proteins
             rank_identified_proteins = [dic[protein][0] for protein in pathway_proteins]
+            # only if more than 0 proteins are identified
             if rank_identified_proteins:
                 median_pathway_rank = int(np.median(rank_identified_proteins))
                 median_intensity = m_intensity.iloc[median_pathway_rank]
@@ -457,6 +453,7 @@ class MQPlots(Logger):
                 ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.6, marker=".", label=pathway)
             #
             ax.set_yscale("log")
+            # only if more than 0 proteins are identified
             if rank_identified_proteins:
                 xmin, xmax = ax.get_xbound()
                 xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
@@ -505,7 +502,7 @@ class MQPlots(Logger):
 
             # intensity vs relative standard deviation
             fig, ax = plt.subplots(1, 1, figsize=(14, 7))
-            ax.scatter(y.mean(axis=1)[mask], relative_std_percent[mask], c=colors[mask], marker=".", s=200, alpha=0.8)
+            ax.scatter(y.mean(axis=1)[mask], relative_std_percent[mask], c=colors[mask], marker="o", s=(2* 72./fig.dpi)**2, alpha=0.8)
             ax.set_xscale("log")
             ax.set_xlabel("Mean raw intensity")
             ax.set_ylabel("Relative Stadartdeviation [%]")
@@ -654,15 +651,15 @@ class MQPlots(Logger):
 
     def create_descriptive_plots(self):
         self.logger.info("Creating descriptive plots")
-        self.plot_detection_counts()
-        self.plot_number_of_detected_proteins()
-        self.plot_intensity_histograms()
+        #self.plot_detection_counts()
+        #self.plot_number_of_detected_proteins()
+        #self.plot_intensity_histograms()
         self.plot_relative_std("lfq")
-        self.plot_rank()
-        self.plot_pathway_analysis("lfq")
-        self.plot_pathway_proportions()
-        self.plot_scatter_replicates()
-        self.plot_experiment_comparison("lfq")
+        #self.plot_rank()
+        #self.plot_pathway_analysis("lfq")
+        #self.plot_pathway_proportions()
+        #self.plot_scatter_replicates()
+        #self.plot_experiment_comparison("lfq")
 
     def calculate_buffer_score(self):
         pass
@@ -670,7 +667,7 @@ class MQPlots(Logger):
     def create_report(self):
         pass
 
-    def create_go_analysis(self, df_to_use: str = "raw"):
+    def plot_go_analysis(self, df_to_use: str = "raw"):
         self.logger.info("Creating go analysis plots")
         plt.close("all")
 
