@@ -239,9 +239,9 @@ class MQInitializer(Logger):
                                 df_protein_names.duplicated(subset="Gene name fasta", keep=False).sum())
             df_protein_names = df_protein_names.drop_duplicates(subset="Gene name fasta", keep=False)
         # convert all non numeric intensities
-        for col in [col for col in df_protein_names.columns if 'ntensity' in col]:
+        for col in [col for col in df_protein_names.columns if 'ntensity' in col] + [[col for col in df_protein_names.columns if 'iBAQ' in col]]:
             if not is_numeric_dtype(df_protein_names[col]):
-                df_protein_names[col] = df_protein_names[col].apply(lambda x: x.replace(",", "."))
+                df_protein_names[col] = df_protein_names[col].apply(lambda x: x.replace(",", ".")).fillna(0)
                 df_protein_names[col] = df_protein_names[col].astype("int64")
         self.logger.debug("%s shape after preprocessing: %s", self.proteins_txt, df_protein_names.shape)
         return df_protein_names, df_peptide_names
@@ -260,14 +260,14 @@ class MQInitializer(Logger):
 
     def read_config_txt_file(self, path, file):
         fullpath = os.path.join(self.path_pipeline_config, path, file)
-        if path == self.go_path:
+        if path == self.pathway_path:
             with open(fullpath) as f:
                 name = f.readline()
                 f.readline()
                 proteins = []
                 for line in f:
                     proteins.append(line.strip())
-        elif path == self.pathway_path:
+        elif path == self.go_path:
             name = file.replace(".txt", "")
             with open(fullpath) as f:
                 proteins = []

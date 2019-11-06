@@ -26,7 +26,7 @@ class MQPlots(Logger):
     def __init__(
         self, start_dir, replicates, configs,
         df_protein_names, df_peptide_names,
-        interesting_proteins, interesting_receptors, go_analysis_gene_names,
+        interesting_proteins, go_analysis_gene_names,
         loglevel=logging.DEBUG
         ):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
@@ -45,7 +45,7 @@ class MQPlots(Logger):
             self.plot_scatter_replicates, self.plot_experiment_comparison, self.plot_go_analysis,
             self.plot_venn_results
         ]
-        self.int_mapping = {"raw": "Intensity ", "lfq": "LFQ intensity "}
+        self.int_mapping = {"raw": "Intensity ", "lfq": "LFQ intensity ", "ibaq": "iBAQ "}
         # data frames
         self.df_protein_names = df_protein_names.set_index(df_protein_names["Gene name fasta"], drop=False)
         if any((col.startswith("LFQ intensity") for col in self.df_protein_names)):
@@ -61,7 +61,6 @@ class MQPlots(Logger):
         self.df_peptide_names = df_peptide_names
         # dicts
         self.interesting_proteins = interesting_proteins
-        self.interesting_receptors = interesting_receptors
         self.go_analysis_gene_names = go_analysis_gene_names
 
         # extract all raw intensites from the dataframe
@@ -164,7 +163,7 @@ class MQPlots(Logger):
             df_peptide_names = mqinti_instance.df_peptide_names,
             interesting_proteins = mqinti_instance.interesting_proteins,
             go_analysis_gene_names = mqinti_instance.go_analysis_gene_names,
-            loglevel = mqinti_instance.loglevel
+            loglevel = mqinti_instance.logger.getEffectiveLevel()
             )
 
     @property
@@ -195,6 +194,7 @@ class MQPlots(Logger):
             plot_name = str(plot).split(" ")[2].split(".")[1]
             intensity_name = plot_name + "_intensity"
             if self.configs.get(plot_name, False):
+                self.logger.debug(f"creating plot {plot_name}")
                 plot(self.configs.get(intensity_name, "raw"))
 
     def save_venn(self, ex: str, sets, set_names):
