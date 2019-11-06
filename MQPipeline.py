@@ -17,7 +17,7 @@ class MQGUI(tk.Tk):
             "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results"]
         self.called_update = False
 
-        self.mqinit = MQInitializer("", True, "default", loglevel=loglevel)
+        self.mqinit = MQInitializer("", "default", loglevel=loglevel)
 
         if no_gui:
             self.withdraw()
@@ -50,6 +50,27 @@ class MQGUI(tk.Tk):
     def dir_setter(self, *args):
         self.start_dir = self.dir_text.get()
 
+    def update_listboxes(self):
+        if self.mqinit.configs.get("experiments"):
+            self.experiments_list.delete(0, "end")
+            for op in self.mqinit.configs.get("experiments"):
+                self.experiments_list.insert("end", op)
+        else:
+            self.experiments_list.delete(0, "end")
+
+        if self.mqinit.configs.get("pathways"):
+            for pathway in self.mqinit.configs.get("pathways"):
+                self.pathway_list.select_set(self.mqinit.possible_pathways.index(pathway))
+        else:
+            for i, pathway in enumerate(self.mqinit.possible_pathways):
+                self.pathway_list.select_clear(i)
+        if self.mqinit.configs.get("go_terms"):
+            for go in self.mqinit.configs.get("go_terms"):
+                self.go_proteins_list.select_set(self.mqinit.possible_gos.index(go))
+        else:
+            for i, go in enumerate(self.mqinit.possible_gos):
+                self.go_proteins_list.select_clear(i)
+
     def yaml_path_setter(self, *args):
         if self.yaml_text.get() == "file":
             self.mqinit.file_path_yaml = "file"
@@ -64,12 +85,8 @@ class MQGUI(tk.Tk):
             int_name = var_name.replace("_var", "_int")
             getattr(self, var_name).set(self.mqinit.configs.get(plot_intensity, "raw"))
             getattr(self, int_name).set(self.mqinit.configs.get(plot_name, False))
-        if self.mqinit.configs.get("experiments"):
-            self.experiments_list.delete(0, "end")
-            for op in self.mqinit.configs.get("experiments"):
-                self.experiments_list.insert("end", op)
-        else:
-            self.experiments_list.delete(0, "end")
+        self.replicate_var.set(self.mqinit.configs.get("has_replicates", True))
+        self.update_listboxes()
 
     def update_button(self):
         for plot_name in self.plot_names:
@@ -78,14 +95,16 @@ class MQGUI(tk.Tk):
             int_name = var_name.replace("_var", "_int")
             self.mqinit.configs.update({plot_intensity: getattr(self, var_name).get()})
             self.mqinit.configs.update({plot_name: bool(getattr(self, int_name).get())})
+        gos = self.go_proteins_list.curselection()
+        gos = [self.mqinit.possible_gos[int(go)] for go in gos]
+        pathways = self.pathway_list.curselection()
+        pathways = [self.mqinit.possible_pathways[int(pathway)] for pathway in pathways]
+        self.mqinit.configs["go_terms"] = gos
+        self.mqinit.configs["pathways"] = pathways
+        self.mqinit.configs["has_replicates"] = bool(self.replicate_var.get())
         self.mqinit.init_config()
         self.mqinit.prepare_stuff()
-        if self.mqinit.configs.get("experiments"):
-            self.experiments_list.delete(0, "end")
-            for op in self.mqinit.configs.get("experiments"):
-                self.experiments_list.insert("end", op)
-        else:
-            self.experiments_list.delete(0, "end")
+        self.update_listboxes()
         self.called_update = True
 
     def start_button(self):
@@ -113,22 +132,30 @@ class MQGUI(tk.Tk):
         self.yaml_button = tk.OptionMenu(self, self.yaml_text, *self.yaml_options)
         self.yaml_button.grid(row=1, column=1)
 
-        replicate_var = tk.IntVar(value=1)
-        replicate_button = tk.Checkbutton(self, text="Does the file have replicates?", variable=replicate_var).grid(
+        self.replicate_var = tk.IntVar(value=1)
+        replicate_button = tk.Checkbutton(self, text="Does the file have replicates?", variable=self.replicate_var).grid(
             row=2, column=0)
+
+        self.experiments_list = tk.Listbox(self, height=3)
+        self.experiments_list.grid(row=2, column=1)
 
         go_proteins_label = tk.Label(self, text="Go analysis proteins").grid(row=3, column=0)
 
-        experiments_label = tk.Label(self, text="Experiments").grid(row=3, column=1)
+        experiments_label = tk.Label(self, text="Pathway analysis").grid(row=3, column=1)
 
-        go_proteins_list = tk.Listbox(self, selectmode="multiple", height=3)
-        for x in self.mqinit.possible_compartiments:
-            go_proteins_list.insert("end", x)
+        self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mqinit.possible_gos, key=len)))
+        self.go_proteins_list.configure(exportselection=False)
+        for x in self.mqinit.possible_gos:
+            self.go_proteins_list.insert("end", x)
 
-        go_proteins_list.grid(row=4, column=0)
+        self.go_proteins_list.grid(row=4, column=0)
 
-        self.experiments_list = tk.Listbox(self, height=3)
-        self.experiments_list.grid(row=4, column=1)
+        self.pathway_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mqinit.possible_pathways, key=len)))
+        self.pathway_list.configure(exportselection=False)
+        for x in self.mqinit.possible_pathways:
+            self.pathway_list.insert("end", x)
+
+        self.pathway_list.grid(row=4, column=1)
 
         plot_label = tk.Label(self, text="Which plots should be created").grid(row=5, column=0)
 
@@ -239,7 +266,7 @@ def main():
         mqinit.init_config()
         mqinit.prepare_stuff()
         # create plotter from initializer
-        mqplots = MQPlots.from_MQInitializer(mqinit, loglevel=loglevel)
+        mqplots = MQPlots.from_MQInitializer(mqinit)
         # create all plots and other results
         mqplots.create_results()
     else:
@@ -260,7 +287,7 @@ def plot_row(frame, text: str, row, intensity_default: str):
 
     intensity_var = tk.StringVar(value=intensity_default)
 
-    intensity_menu = tk.OptionMenu(frame, intensity_var, "lfq", "raw").grid(row=row, column=1)
+    intensity_menu = tk.OptionMenu(frame, intensity_var, "lfq", "raw", "ibaq").grid(row=row, column=1)
     return int_var, intensity_var
 
 

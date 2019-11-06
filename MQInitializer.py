@@ -12,7 +12,7 @@ import logging
 
 
 class MQInitializer(Logger):
-    def __init__(self, dir_: str, has_replicates: bool, file_path_yml: str = None, loglevel=logging.DEBUG):
+    def __init__(self, dir_: str, file_path_yml: str = None, loglevel=logging.DEBUG):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
         self.yaml = YAML()
         self.yaml.default_flow_style = False
@@ -20,7 +20,7 @@ class MQInitializer(Logger):
         self.configs = None
         self.path_config = None
         self.df_protein_names, self.df_peptide_names = None, None
-        self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = None, None, None
+        self.interesting_proteins, self.go_analysis_gene_names = None, None
 
         self.script_loc = os.path.dirname(os.path.realpath(__file__))
         self.path_pipeline_config = os.path.join(self.script_loc, "config")
@@ -30,20 +30,18 @@ class MQInitializer(Logger):
         self.yml_file_name_tmp = "config_tmp.yml"
         self.yml_file_name = "config.yml"
         self.default_yml_name = "ms_analysis_default.yml"
+        self.go_path = "go_terms"
+        self.pathway_path = "pathways"
         self.proteins_txt = "proteinGroups.txt"
         self.peptides_txt = "peptides.txt"
-        self.important_proteins_xlsx = "important_protein_names.xlsx"
-        self.important_receptors_xlsx = "important_receptor_names.xlsx"
-        self.go_analysis_gene_xlsx = "go_analysis_gene_names.xlsx"
-        self.possible_compartiments = sorted([x for x in os.listdir(self.path_pipeline_config) if x.endswith(".txt")])
+        self.possible_gos = sorted([x for x in os.listdir(os.path.join(self.path_pipeline_config , self.go_path)) if x.endswith(".txt")])
+        self.possible_pathways = sorted([x for x in os.listdir(os.path.join(self.path_pipeline_config , self.pathway_path)) if x.endswith(".txt")])
 
         self._start_dir = None
         self.start_dir = dir_
 
         self._file_path_yaml = None
         self.file_path_yaml = file_path_yml
-
-        self.has_replicates = has_replicates
 
     @property
     def start_dir(self):
@@ -163,7 +161,7 @@ class MQInitializer(Logger):
                 pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2))
                 return s1[pos_a:pos_a + size]
 
-            if self.has_replicates:
+            if self.config.get("has_replicates", True):
                 #
                 overlap = [[get_overlap(re1, re2) if re1 != re2 else "" for re1 in all_reps] for re2 in all_reps]
                 overlap_matrix = pd.DataFrame(overlap, columns=all_reps, index=all_reps)
@@ -248,54 +246,36 @@ class MQInitializer(Logger):
         self.logger.debug("%s shape after preprocessing: %s", self.proteins_txt, df_protein_names.shape)
         return df_protein_names, df_peptide_names
 
-    def init_interest_from_xlsx(self) -> (dict, dict, dict):
-        list_path_config = os.listdir(self.path_config)
-        list_path_pipeline_config = os.listdir(self.path_pipeline_config)
+    def init_interest_from_txt(self):
+        dict_pathway = {}
+        dict_go = {}
+        for pathway in self.configs.get("pathways"):
+            name, proteins = self.read_config_txt_file(self.pathway_path, pathway)
+            dict_pathway[name] = proteins
 
-        # load excel sheets.
-        # first priority is the config dir of the results.
-        # second priority is the original config dir. In this case the file gets copied to the first priority.
-        # load important_proteins_xlsx
-        if self.important_proteins_xlsx in list_path_config:
-            self.logger.debug("Loading %s from %s", self.important_proteins_xlsx, self.path_config)
-            protein_path = os.path.join(self.path_config, self.important_proteins_xlsx)
-        elif self.important_proteins_xlsx in list_path_pipeline_config:
-            self.logger.debug("Loading %s from %s. Copying file to %s",
-                              self.important_proteins_xlsx, self.path_pipeline_config, self.path_config)
-            protein_path = os.path.join(self.path_pipeline_config, self.important_proteins_xlsx)
-            copy2(protein_path, self.path_config)
-        else:
-            raise ValueError(f"missing {self.important_proteins_xlsx} file")
-        # load important_receptors_xlsx
-        if self.important_receptors_xlsx in list_path_config:
-            self.logger.debug("Loading %s from %s", self.important_receptors_xlsx, self.path_config)
-            receptor_path = os.path.join(self.path_config, self.important_receptors_xlsx)
-        elif self.important_receptors_xlsx in list_path_pipeline_config:
-            self.logger.debug("Loading %s from %s. Copying file to %s",
-                              self.important_receptors_xlsx, self.path_pipeline_config, self.path_config)
-            receptor_path = os.path.join(self.path_pipeline_config, self.important_receptors_xlsx)
-            copy2(receptor_path, self.path_config)
-        else:
-            raise ValueError(f"missing {self.important_receptors_xlsx} file")
-        # load go_analysis_gene_xlsx
-        if self.go_analysis_gene_xlsx in list_path_config:
-            self.logger.debug("Loading %s from %s", self.go_analysis_gene_xlsx, self.path_config)
-            go_path = os.path.join(self.path_config, self.go_analysis_gene_xlsx)
-        elif self.go_analysis_gene_xlsx in list_path_pipeline_config:
-            self.logger.debug("Loading %s from %s. Copying file to %s",
-                              self.go_analysis_gene_xlsx, self.path_pipeline_config, self.path_config)
-            go_path = os.path.join(self.path_pipeline_config, self.go_analysis_gene_xlsx)
-            copy2(go_path, self.path_config)
-        else:
-            raise ValueError(f"missing {self.important_proteins_xlsx} file")
+        for go in self.configs.get("go_terms"):
+            name, proteins = self.read_config_txt_file(self.go_path, go)
+            dict_go[name] = proteins
+        return dict_pathway, dict_go
 
-        def df_to_dict(df):
-            return {col: df[col].dropna().tolist() for col in df}
-
-        df_protein = pd.read_excel(protein_path)
-        df_receptor = pd.read_excel(receptor_path)
-        df_go = pd.read_excel(go_path)
-        return df_to_dict(df_protein), df_to_dict(df_receptor), df_to_dict(df_go)
+    def read_config_txt_file(self, path, file):
+        fullpath = os.path.join(self.path_pipeline_config, path, file)
+        if path == self.go_path:
+            with open(fullpath) as f:
+                name = f.readline()
+                f.readline()
+                proteins = []
+                for line in f:
+                    proteins.append(line.strip())
+        elif path == self.pathway_path:
+            name = file.replace(".txt", "")
+            with open(fullpath) as f:
+                proteins = []
+                for line in f:
+                    proteins.append(line.strip())
+        else:
+            raise ValueError(f"Invalid path: {path}")
+        return name, proteins
 
     def update_config_file(self):
         # store the config file as tmp
@@ -316,8 +296,9 @@ class MQInitializer(Logger):
         # read the proteins_txt and peptides_txt
         self.logger.info("Reading %s, and %s", self.proteins_txt, self.peptides_txt)
         self.df_protein_names, self.df_peptide_names = self.init_dfs_from_txts()
-        self.update_config_file()
 
         # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")
-        self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()
+        # self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()
+        self.interesting_proteins, self.go_analysis_gene_names = self.init_interest_from_txt()
+        self.update_config_file()

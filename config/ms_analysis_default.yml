@@ -9,8 +9,11 @@ experiments: false
 # - Urea_Urea_Pellet_0
 # - RIPA_SDS_0
 
-protein_names: false
-# list of stuff which should be used
+pathways: false
+# list of pathways which should be analyzed
+
+go_terms: false
+# list of go_terms which should be analyzed
 
 has_replicates: true
 # does the file have replicates
