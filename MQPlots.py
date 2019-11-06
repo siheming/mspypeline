@@ -53,6 +53,11 @@ class MQPlots(Logger):
         else:
             self.has_lfq = False
             self.logger.warning("LFQ intensities were not found. Raw intensities are used for all plots")
+        if any((col.startswith("iBAQ") for col in self.df_protein_names)):
+            self.has_ibaq = True
+        else:
+            self.has_ibaq = False
+            self.logger.warning("iBAQ intensities were not found. Raw intensities are used for all plots")
         self.df_peptide_names = df_peptide_names
         # dicts
         self.interesting_proteins = interesting_proteins
@@ -94,10 +99,30 @@ class MQPlots(Logger):
             self.all_intensities_lfq = self.all_intensities_raw
             self.intensites_per_experiment_lfq = self.intensites_per_experiment_raw
 
+        if self.has_ibaq:
+            # extract all lfq intensities from the dataframe
+            self.all_intensities_ibaq = self.df_protein_names[
+                [f"iBAQ {rep}" for exp in self.replicates for rep in self.replicates[exp]]
+            ]
+            # filter all rows where all intensities are 0
+            mask = (self.all_intensities_ibaq != 0).sum(axis=1) != 0
+            self.all_intensities_ibaq = self.all_intensities_ibaq[mask]
+
+            # write all intensites of every experiment to one dict entry
+            self.intensites_per_experiment_ibaq = {
+                exp: self.all_intensities_ibaq[
+                    [f"iBAQ {rep}" for rep in self.replicates[exp]]
+                ] for exp in self.replicates
+            }
+
+        else:
+            self.all_intensities_ibaq = self.all_intensities_raw
+            self.intensites_per_experiment_ibaq = self.intensites_per_experiment_raw
+
         # create a dict matching the raw and lfq dfs by string
-        self.all_intensities_dict = {"lfq": self.all_intensities_lfq, "raw": self.all_intensities_raw}
+        self.all_intensities_dict = {"lfq": self.all_intensities_lfq, "raw": self.all_intensities_raw, "ibaq": self.all_intensities_ibaq}
         self.intensities_per_experiment_dict = {
-            "lfq": self.intensites_per_experiment_lfq, "raw": self.intensites_per_experiment_raw
+            "lfq": self.intensites_per_experiment_lfq, "raw": self.intensites_per_experiment_raw, "ibaq": self.intensites_per_experiment_ibaq
         }
 
         # create all sets that are required for plotting
@@ -130,7 +155,7 @@ class MQPlots(Logger):
         os.makedirs(self.file_dir_go_analysis, exist_ok=True)
 
     @classmethod
-    def from_MQInitializer(cls, mqinti_instance, loglevel=logging.DEBUG):
+    def from_MQInitializer(cls, mqinti_instance):
         return cls(
             start_dir = mqinti_instance.start_dir,
             replicates = mqinti_instance.replicates,
@@ -138,9 +163,8 @@ class MQPlots(Logger):
             df_protein_names = mqinti_instance.df_protein_names,
             df_peptide_names = mqinti_instance.df_peptide_names,
             interesting_proteins = mqinti_instance.interesting_proteins,
-            interesting_receptors = mqinti_instance.interesting_receptors,
             go_analysis_gene_names = mqinti_instance.go_analysis_gene_names,
-            loglevel=loglevel
+            loglevel = mqinti_instance.loglevel
             )
 
     @property
