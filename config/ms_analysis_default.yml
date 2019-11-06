@@ -9,28 +9,50 @@ experiments: false
 # - Urea_Urea_Pellet_0
 # - RIPA_SDS_0
 
-venn_results: true
-# should venn diagrams be created
-# can be "true" or "false"
-venn_intensity_col: "Intensity "
-# which intensity columns should be considered for venn plots
-# trailing space (" ") is important!
+pathways: false
+# list of pathways which should be analyzed
 
-descriptive_plots: true
-# should descriptive plots be created
-# can be "true" or "false"
-descriptive_intensity_col: "Intensity "
-# which intensity columns should be considered for descriptive plots
-# trailing space (" ") is important!
+go_terms: false
+# list of go_terms which should be analyzed
 
-go_analysis: true
-# should go analysis be performed
+has_replicates: true
+# does the file have replicates
 # can be "true" or "false"
 
-buffer_score: true
-# TODO explain score?
-# should a score for the buffer be calculated
-# can be "true" or "false"
+# ###### PLOT CREATION SETTINGS #######
+
+plot_detection_counts: true
+plot_detection_counts_intensity: "raw"
+
+plot_number_of_detected_proteins: true
+plot_number_of_detected_proteins_intensity: "raw"
+
+plot_intensity_histograms: true
+plot_intensity_histograms_intensity: "raw"
+
+plot_relative_std: true
+plot_relative_std_intensity: "raw"
+
+plot_rank: true
+plot_rank_intensity: "raw"
+
+plot_pathway_analysis: true
+plot_pathway_analysis_intensity: "raw"
+
+plot_pathway_proportions: true
+plot_pathway_proportions_intensity: "raw"
+
+plot_scatter_replicates: true
+plot_scatter_replicates_intensity: "raw"
+
+plot_experiment_comparison: true
+plot_experiment_comparison_intensity: "raw"
+
+plot_go_analysis: true
+plot_go_analysis_intensity: "raw"
+
+plot_venn_results: true
+plot_venn_results_intensity: "raw"
 
 use_protein_id: false
 # should the protein id be used, or TODO

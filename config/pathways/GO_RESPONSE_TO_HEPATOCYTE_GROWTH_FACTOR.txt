@@ -1,0 +1,21 @@
+GO_RESPONSE_TO_HEPATOCYTE_GROWTH_FACTOR
+> Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a hepatocyte growth factor stimulus. [GOC:bf]
+ADAMTS12
+APPL1
+APPL2
+BCAR1
+CASR
+CREB1
+CRK
+GAB1
+GCLC
+GCLM
+HGF
+IL10
+LGMN
+MED1
+NRP1
+RELA
+SIRT2
+TDGF1
+VIL1
