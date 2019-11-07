@@ -161,7 +161,7 @@ class MQInitializer(Logger):
                 pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2))
                 return s1[pos_a:pos_a + size]
 
-            if self.config.get("has_replicates", True):
+            if self.configs.get("has_replicates", True):
                 #
                 overlap = [[get_overlap(re1, re2) if re1 != re2 else "" for re1 in all_reps] for re2 in all_reps]
                 overlap_matrix = pd.DataFrame(overlap, columns=all_reps, index=all_reps)
@@ -262,7 +262,7 @@ class MQInitializer(Logger):
         fullpath = os.path.join(self.path_pipeline_config, path, file)
         if path == self.pathway_path:
             with open(fullpath) as f:
-                name = f.readline()
+                name = f.readline().strip()
                 f.readline()
                 proteins = []
                 for line in f:

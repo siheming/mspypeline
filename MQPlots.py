@@ -196,6 +196,7 @@ class MQPlots(Logger):
             if self.configs.get(plot_name, False):
                 self.logger.debug(f"creating plot {plot_name}")
                 plot(self.configs.get(intensity_name, "raw"))
+        self.logger.info("Done creating plots")
 
     def save_venn(self, ex: str, sets, set_names):
         creates_figure = True
@@ -544,6 +545,9 @@ class MQPlots(Logger):
 
     def plot_pathway_analysis(self, df_to_use: str = "raw"):
         ex_list = list(self.replicates.keys())
+        log_transform = False
+        plot_ns = False
+        threshhold = 0.05
         for pathway in self.interesting_proteins:
             plt.close("all")
             found_proteins = set(self.interesting_proteins[pathway])
@@ -552,6 +556,7 @@ class MQPlots(Logger):
             n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
             fig, axarr = plt.subplots(n_rows, n_cols, figsize=(4 * n_rows, 4 * n_cols))
             fig.suptitle(pathway)
+            all_heights = {}
             for protein, ax in zip(found_proteins, axarr.flat):
                 ax.set_title(protein)
                 heights = []
@@ -560,16 +565,19 @@ class MQPlots(Logger):
                     ax.scatter([idx] * len(protein_intensities), protein_intensities, label=f"{experiment}")
                     # self.logger.debug(f"{protein}: min: {min_i}, max: {max_i}")
                     heights.append(np.max(protein_intensities))
+                all_heights[protein] = heights
                 # ax.set_ylim((0.9 * min_i, 1.1 * max_i))
                 # ax.set_yscale("log")
                 # ax.legend()
+            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+            res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}_no_labels" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
+            significances = []
+            for protein, ax in zip(found_proteins, axarr.flat):
                 n_annotations = 0
                 for e1, e2 in combinations(self.replicates, 2):
                     v1 = self.intensites_per_experiment_raw[e1].loc[protein, :].astype(float)
                     v2 = self.intensites_per_experiment_raw[e2].loc[protein, :].astype(float)
-                    log_transform = False
-                    plot_ns = False
-                    threshhold = 0.05
                     if log_transform:
                         v1 = np.log2(v1 + 10)
                         v2 = np.log2(v2 + 10)
@@ -580,8 +588,11 @@ class MQPlots(Logger):
                     test = stats.ttest_ind(v1, v2, equal_var=self.configs.get("equal_var", False))
                     if plot_ns or test[1] < threshhold:
                         barplot_annotate_brackets(ax, ex_list.index(e1), ex_list.index(e2), test[1], range(len(ex_list)),
-                                                  heights, dh=0.05 + 0.1 * n_annotations)
+                                                  all_heights[protein], dh=0.05 + 0.1 * n_annotations)
                         n_annotations += 1
+                        significances.append((protein, e1, e2, test[1]))
+            df = pd.DataFrame(significances, columns=["protein", "experiment1", "experiment2", "pvalue"])
+            df.to_csv(os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}_table.csv"), index=False )
 
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
