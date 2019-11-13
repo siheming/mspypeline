@@ -181,7 +181,7 @@ class MQInitializer(Logger):
                         replicates[rep[0]] = rep
                     elif experiment in unclear_matches:
                         self.logger.debug(f"unclear match for experiment: {experiment}")
-                self.logger.info(f"determined experiemnts: {replicates.keys()}")
+                self.logger.info(f"determined experiments: {replicates.keys()}")
                 self.logger.debug("number of replicates per experiment:")
                 self.logger.debug("\n".join([f"{ex}: {len(replicates[ex])}" for ex in replicates]))
                 self.configs["experiments"] = list(replicates.keys())
@@ -190,15 +190,19 @@ class MQInitializer(Logger):
                 self.configs["experiments"] = all_reps
                 self.replicates = {rep: [rep] for rep in all_reps}
         else:
-            self.logger.info("Using saved experimental setup")
-            replicates = ddict(list)
-            for experiment in self.configs.get("experiments", False):
-                if not experiment:
-                    raise ValueError("Missing experiments key in config file")
+            if self.configs.get("has_replicates", True):
+                self.logger.info("Using saved experimental setup")
+                replicates = ddict(list)
                 for rep in all_reps:
-                    if rep.startswith(experiment):
-                        replicates[experiment].append(rep)
-            self.replicates = replicates
+                    overlaps = pd.Series(
+                        [len(rep.replace(experiment, "")) if len(rep) > len(rep.replace(experiment, "")) else -1
+                         for experiment in self.configs.get("experiments")]
+                    )
+                    overlap_minimum = overlaps[overlaps >= 0].idxmin()
+                    replicates[self.configs.get("experiments")[overlap_minimum]].append(rep)
+                self.replicates = replicates
+            else:
+                self.replicates = {rep: [rep] for rep in all_reps}
 
         found_replicates = [rep for l in self.replicates.values() for rep in l]
         for df_cols in [df_peptide_names.columns, df_protein_names.columns]:
