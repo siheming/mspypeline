@@ -126,14 +126,14 @@ class MQPlots(Logger):
 
         # create all sets that are required for plotting
         # this could be turned into a property
+        venn_int = self.configs.get("plot_venn_results_intensity", "raw")
         self.protein_ids = ddict(dict)
         self.whole_experiment_protein_ids = {}
         for experiment in self.replicates:
             exp_prot_ids = set()
             for rep in self.replicates[experiment]:
-                # TODO what to use for venns: raw or lfq?
-                idx = self.all_intensities_raw["Intensity " + rep] > 0
-                idx = [i for i in idx.index if idx[i]]
+                series = self.intensities_per_experiment_dict[venn_int][experiment].loc[:, self.int_mapping[venn_int] + rep]
+                idx = series.loc[series > 0].index
                 rep_set = set(self.df_protein_names.loc[idx, "Protein name"])
                 self.protein_ids[experiment][rep] = rep_set
                 exp_prot_ids |= rep_set
@@ -535,13 +535,14 @@ class MQPlots(Logger):
             xmin, xmax = ax.get_xbound()
             cumulative_count = 0
             for i, bin_ in enumerate(bins):
-                cumulative_count += color_counts[cm[i]]
+                cumulative_count += color_counts.get(cm[i], 0)
                 ax.axhline(bin_, color=cm[i])
                 ax.text(xmin, bin_, cumulative_count)
 
             res_path = os.path.join(self.file_dir_descriptive,
                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rel_std" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
 
     def plot_pathway_analysis(self, df_to_use: str = "raw"):
         ex_list = list(self.replicates.keys())
