@@ -129,13 +129,13 @@ class MQInitializer(Logger):
         # make sure protein groups file exists
         if not os.path.isfile(file_dir_protein_names):
             raise ValueError(f"txt directory does not contain a {self.proteins_txt} file")
-        if not os.path.isfile(file_dir_peptides_names):
-            raise ValueError(f"txt directory does not contain a {self.peptides_txt} file")
+        if os.path.isfile(file_dir_peptides_names):
+            df_peptide_names = pd.read_csv(file_dir_peptides_names, sep="\t")
+        else:
+            df_peptide_names = pd.DataFrame()
         # read protein groups file
         df_protein_names = pd.read_csv(file_dir_protein_names, sep="\t")
         self.logger.debug("%s shape: %s", self.proteins_txt, df_protein_names.shape)
-        df_peptide_names = pd.read_csv(file_dir_peptides_names, sep="\t")
-        self.logger.debug("%s shape: %s", self.peptides_txt, df_peptide_names.shape)
 
         # TODO can the Intensity column always be expected in the file?
         # TODO will the column names always be the same between Intensity and LFQ intensity?
@@ -144,11 +144,12 @@ class MQInitializer(Logger):
         # make sure the two files contain the same replicate names
         all_reps_peptides = [x.replace('Intensity ', '') for x in df_protein_names.columns
                              if x.startswith('Intensity ')]
-        experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
-        if any(experiment_analysis_overlap):
-            unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
-            raise ValueError(f"Found replicates in {self.proteins_txt}, but not in {self.peptides_txt}: " +
-                             ", ".join(unmatched))
+        if df_peptide_names.shape == (0, 0):
+            experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
+            if any(experiment_analysis_overlap):
+                unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
+                raise ValueError(f"Found replicates in {self.proteins_txt}, but not in {self.peptides_txt}: " +
+                                 ", ".join(unmatched))
 
         # try to automatically determine experimental setup
         if not self.configs.get("experiments", False):
