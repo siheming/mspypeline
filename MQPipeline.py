@@ -15,7 +15,6 @@ class MQGUI(tk.Tk):
         self.plot_names = ["plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
             "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_proportions",
             "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results"]
-        self.called_update = False
 
         self.mqinit = MQInitializer("", "default", loglevel=loglevel)
 
@@ -45,7 +44,6 @@ class MQGUI(tk.Tk):
         self.yaml_button["menu"].delete(0, "end")
         for op in self.yaml_options:
             self.yaml_button['menu'].add_command(label=op, command=tk._setit(self.yaml_text, op))
-        self.called_update = False
 
     def dir_setter(self, *args):
         self.start_dir = self.dir_text.get()
@@ -105,11 +103,9 @@ class MQGUI(tk.Tk):
         self.mqinit.init_config()
         self.mqinit.prepare_stuff()
         self.update_listboxes()
-        self.called_update = True
 
     def start_button(self):
-        if not self.called_update:
-            self.update_button()
+        self.update_button()
         mqplots = MQPlots.from_MQInitializer(self.mqinit)
         mqplots.create_results()
 

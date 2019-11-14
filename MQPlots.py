@@ -171,9 +171,12 @@ class MQPlots(Logger):
         if self._replicate_representation is None:
             d = {}
             for experiment in self.replicates:
-                experiment_rep = experiment.rstrip("0123456789_")
-                experiment_rep = " ".join(experiment_rep.split("_"))
-                d[experiment] = experiment_rep
+                if len(self.replicates[experiment]) > 1:
+                    experiment_rep = experiment.rstrip("0123456789_")
+                    experiment_rep = " ".join(experiment_rep.split("_"))
+                    d[experiment] = experiment_rep
+                else:
+                    d[experiment] = experiment
             self._replicate_representation = d
         return self._replicate_representation
 
