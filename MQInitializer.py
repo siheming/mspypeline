@@ -230,12 +230,17 @@ class MQInitializer(Logger):
         fasta_col = df_protein_names["Fasta headers"].str.split("|", n=2).apply(pd.Series)
         fasta_col.columns = ["trash", "protein id", "description"]
         # extract the gene name from the description eg: "GN=abcd"
-        gene_names_fasta = fasta_col["description"].str.extract(r"(GN=(.*?)(\s|$))")[1].apply(pd.Series)
-        gene_names_fasta.columns = ["Gene name fasta"]
+        gene_names_fasta = fasta_col["description"].str.extract(r"(GN=(.*?)(\s|$))")[1]
+        gene_names_fasta.name = "Gene name fasta"
+        # remove all rows without gene names
+        mask = ~pd.isna(gene_names_fasta)
+        gene_names_fasta = gene_names_fasta.loc[mask]
+        fasta_col = fasta_col.loc[mask]
+        df_protein_names = df_protein_names.loc[mask]
         # added upper() function to avoid that non-human gene names are not recognized
-        gene_names_fasta["Gene name fasta"] = gene_names_fasta["Gene name fasta"].str.upper()
+        gene_names_fasta = gene_names_fasta.str.upper()
         # concat all important columns with the original dataframe
-        df_protein_names = pd.concat([df_protein_names, fasta_col["protein id"], gene_names_fasta["Gene name fasta"]], axis=1)
+        df_protein_names = pd.concat([df_protein_names, fasta_col["protein id"], gene_names_fasta], axis=1)
         # add protein name from fasta description col
         df_protein_names["Protein name"] = fasta_col["description"].str.split("_", expand=True)[0]
         # filter all entries with duplicate Gene name fasta
