@@ -558,7 +558,11 @@ class MQPlots(Logger):
             fig, axarr = plt.subplots(n_rows, n_cols, figsize=(4 * n_rows, 4 * n_cols))
             fig.suptitle(pathway)
             all_heights = {}
-            for protein, ax in zip(found_proteins, axarr.flat):
+            try:
+                axiterator = axarr.flat
+            except AttributeError:
+                axiterator = [axarr]
+            for protein, ax in zip(found_proteins, axiterator):
                 ax.set_title(protein)
                 heights = []
                 for idx, experiment in enumerate(self.replicates):
@@ -574,7 +578,7 @@ class MQPlots(Logger):
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}_no_labels" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
             significances = []
-            for protein, ax in zip(found_proteins, axarr.flat):
+            for protein, ax in zip(found_proteins, axiterator):
                 n_annotations = 0
                 for e1, e2 in combinations(self.replicates, 2):
                     v1 = self.intensites_per_experiment_raw[e1].loc[protein, :].astype(float)
