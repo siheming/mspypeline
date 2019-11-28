@@ -221,11 +221,13 @@ class MQInitializer(Logger):
                           (~not_contaminants).sum(), self.proteins_txt)
         df_protein_names = df_protein_names[not_contaminants]
         # split the fasta headers
+        colon_start = df_protein_names["Fasta headers"].str.startswith(";")
+        df_protein_names.loc[colon_start, "Fasta headers"] = df_protein_names.loc[colon_start, "Fasta headers"].str.lstrip(";")
         # first split all fasta headers that contain multiple entries
-        sep_ind = df_protein_names["Fasta headers"].str.contains(";")
+        sep_ind = df_protein_names["Fasta headers"].str.contains(";").fillna(False)
         # replace all fasta headers with multiple entries with only the first one
         # TODO will there always be a fasta header?
-        df_protein_names["Fasta headers"][sep_ind] = df_protein_names["Fasta headers"][sep_ind].str.split(";").apply(pd.Series)[0]
+        df_protein_names.loc[sep_ind, "Fasta headers"] = df_protein_names.loc[sep_ind, "Fasta headers"].str.split(";").apply(pd.Series)[0]
         # split the fasta headers with the pipe symbol
         fasta_col = df_protein_names["Fasta headers"].str.split("|", n=2).apply(pd.Series)
         fasta_col.columns = ["trash", "protein id", "description"]
