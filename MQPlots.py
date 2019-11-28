@@ -1,16 +1,18 @@
 import pandas as pd
 import numpy as np
 import os
-import sys
 from Logger import Logger
 from matplotlib_venn import venn3, venn2
 import matplotlib.pyplot as plt
 from scipy import stats
 from itertools import combinations
 from collections import defaultdict as ddict
-from Utils import barplot_annotate_brackets, get_number_rows_cols_for_fig, venn_names
+from Utils import barplot_annotate_brackets, get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, \
+    string_similarity_ratio
 import logging
+import warnings
 
+# TODO VALIDATE descriptive plots not changing between log2 and non log2
 
 # plt.style.use('ggplot')
 
@@ -21,6 +23,7 @@ VENN_TITLE_FONT_SIZE = 20
 VENN_SET_LABEL_FONT_SIZE = 16
 VENN_SUBSET_LABEL_FONT_SIZE = 14
 # descriptive plots settings
+
 
 class MQPlots(Logger):
     def __init__(
@@ -41,11 +44,20 @@ class MQPlots(Logger):
         self.configs = configs
         self.possible_plots = [
             self.plot_detection_counts, self.plot_number_of_detected_proteins, self.plot_intensity_histograms,
-            self.plot_relative_std, self.plot_rank, self.plot_pathway_analysis, self.plot_pathway_proportions,
-            self.plot_scatter_replicates, self.plot_experiment_comparison, self.plot_go_analysis,
-            self.plot_venn_results
+            self.plot_relative_std, self.plot_rank, self.plot_pathway_analysis, self.plot_pathway_timeline,
+            self.plot_pathway_proportions, self.plot_scatter_replicates, self.plot_experiment_comparison,
+            self.plot_go_analysis, self.plot_venn_results, self.plot_r_volcano
         ]
-        self.int_mapping = {"raw": "Intensity ", "lfq": "LFQ intensity ", "ibaq": "iBAQ "}
+        self.int_mapping = {
+            "raw": "Intensity ", "raw_log2": "Intensity ",
+            "lfq": "LFQ intensity ", "lfq_log2": "LFQ intensity ",
+            "ibaq": "iBAQ ", "ibaq_log2": "iBAQ "  # TODO check name of iBAQ column
+        }
+        self.intensity_label_names = {
+            "raw": "Intensity", "raw_log2": r"$Log_2$ Intensity",
+            "lfq": "LFQ intensity", "lfq_log2": r"$Log_2$ LFQ intensity",
+            "ibaq": "iBAQ intensity", "ibaq_log2": r"$Log_2$ iBAQ intensity",
+        }
         # data frames
         self.df_protein_names = df_protein_names.set_index(df_protein_names["Gene name fasta"], drop=False)
         if any((col.startswith("LFQ intensity") for col in self.df_protein_names)):
@@ -71,12 +83,21 @@ class MQPlots(Logger):
         mask = (self.all_intensities_raw != 0).sum(axis=1) != 0
         self.all_intensities_raw = self.all_intensities_raw[mask]
 
-        # write all intensites of every experiment to one dict entry
-        self.intensites_per_experiment_raw = {
+        # write all intensities of every experiment to one dict entry
+        self.intensities_per_experiment_raw = {
             exp: self.all_intensities_raw[
                 [f"Intensity {rep}" for rep in self.replicates[exp]]
             ] for exp in self.replicates
         }
+
+        # add log2 intensities
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            self.all_intensities_raw_log2 = np.log2(self.all_intensities_raw).replace({-np.inf: np.nan})
+            self.intensities_per_experiment_raw_log2 = {
+                experiment: np.log2(df).replace({-np.inf: np.nan})
+                for experiment, df in self.intensities_per_experiment_raw.items()
+            }
 
         if self.has_lfq:
             # extract all lfq intensities from the dataframe
@@ -88,15 +109,26 @@ class MQPlots(Logger):
             self.all_intensities_lfq = self.all_intensities_lfq[mask]
 
             # write all intensites of every experiment to one dict entry
-            self.intensites_per_experiment_lfq = {
+            self.intensities_per_experiment_lfq = {
                 exp: self.all_intensities_lfq[
                     [f"LFQ intensity {rep}" for rep in self.replicates[exp]]
                 ] for exp in self.replicates
             }
 
+            # add log2 values
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                self.all_intensities_lfq_log2 = np.log2(self.all_intensities_lfq).replace({-np.inf: np.nan})
+                self.intensities_per_experiment_lfq_log2 = {
+                    experiment: np.log2(df).replace({-np.inf: np.nan})
+                    for experiment, df in self.intensities_per_experiment_lfq.items()
+                }
+
         else:
             self.all_intensities_lfq = self.all_intensities_raw
-            self.intensites_per_experiment_lfq = self.intensites_per_experiment_raw
+            self.intensities_per_experiment_lfq = self.intensities_per_experiment_raw
+            self.all_intensities_lfq_log2 = self.all_intensities_raw_log2
+            self.intensities_per_experiment_lfq_log2 = self.intensities_per_experiment_raw_log2
 
         if self.has_ibaq:
             # extract all lfq intensities from the dataframe
@@ -108,20 +140,37 @@ class MQPlots(Logger):
             self.all_intensities_ibaq = self.all_intensities_ibaq[mask]
 
             # write all intensites of every experiment to one dict entry
-            self.intensites_per_experiment_ibaq = {
+            self.intensities_per_experiment_ibaq = {
                 exp: self.all_intensities_ibaq[
                     [f"iBAQ {rep}" for rep in self.replicates[exp]]
                 ] for exp in self.replicates
             }
 
+            # add log2 values
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                self.all_intensities_ibaq_log2 = np.log2(self.all_intensities_ibaq).replace({-np.inf: np.nan})
+                self.intensities_per_experiment_ibaq_log2 = {
+                    experiment: np.log2(df).replace({-np.inf: np.nan})
+                    for experiment, df in self.intensities_per_experiment_ibaq.items()
+                }
+
         else:
             self.all_intensities_ibaq = self.all_intensities_raw
-            self.intensites_per_experiment_ibaq = self.intensites_per_experiment_raw
+            self.intensities_per_experiment_ibaq = self.intensities_per_experiment_raw
+            self.all_intensities_ibaq_log2 = self.all_intensities_raw_log2
+            self.intensities_per_experiment_ibaq_log2 = self.intensities_per_experiment_raw_log2
 
         # create a dict matching the raw and lfq dfs by string
-        self.all_intensities_dict = {"lfq": self.all_intensities_lfq, "raw": self.all_intensities_raw, "ibaq": self.all_intensities_ibaq}
+        self.all_intensities_dict = {
+            "lfq": self.all_intensities_lfq, "lfq_log2": self.all_intensities_lfq_log2,
+            "raw": self.all_intensities_raw, "raw_log2": self.all_intensities_raw_log2,
+            "ibaq": self.all_intensities_ibaq, "ibaq_log2": self.all_intensities_ibaq_log2
+        }
         self.intensities_per_experiment_dict = {
-            "lfq": self.intensites_per_experiment_lfq, "raw": self.intensites_per_experiment_raw, "ibaq": self.intensites_per_experiment_ibaq
+            "lfq": self.intensities_per_experiment_lfq, "lfq_log2": self.intensities_per_experiment_lfq_log2,
+            "raw": self.intensities_per_experiment_raw, "raw_log2": self.intensities_per_experiment_raw_log2,
+            "ibaq": self.intensities_per_experiment_ibaq, "ibaq_log2": self.intensities_per_experiment_ibaq_log2
         }
 
         # create all sets that are required for plotting
@@ -139,6 +188,22 @@ class MQPlots(Logger):
                 exp_prot_ids |= rep_set
             self.whole_experiment_protein_ids[experiment] = exp_prot_ids
 
+        try:
+            # determine grouping
+            similarities = pd.DataFrame([[string_similarity_ratio(e1, e2) for e1 in self.replicates] for e2 in self.replicates],
+                                        columns=self.replicates, index=self.replicates)
+            similarities = similarities > 0.8
+            self.experiment_groups = {}
+            start_index = 0
+            count = 0
+            while start_index < similarities.shape[0]:
+                matches = similarities.iloc[start_index, :].sum()
+                self.experiment_groups[f"Group_{count}"] = [similarities.index[i] for i in range(start_index, start_index + matches)]
+                start_index += matches
+                count += 1
+        except Exception:
+            self.experiment_groups = {}
+
         # set all result dirs
         # TODO: for now just create all of them
         # path for venn diagrams
@@ -152,6 +217,9 @@ class MQPlots(Logger):
         self.file_dir_go_analysis = os.path.join(self.start_dir, "go_analysis")
         # create file structure and folder
         os.makedirs(self.file_dir_go_analysis, exist_ok=True)
+        self.file_dir_volcano = os.path.join(self.start_dir, "volcano")
+        # create file structure and folder
+        os.makedirs(self.file_dir_volcano, exist_ok=True)
 
     @classmethod
     def from_MQInitializer(cls, mqinti_instance):
@@ -205,7 +273,8 @@ class MQPlots(Logger):
         creates_figure = True
         plt.close("all")
         plt.figure(figsize=(14, 7))
-        plt.title(self.replicate_representation[ex], fontsize=VENN_TITLE_FONT_SIZE)
+        title = self.replicate_representation.get(ex, ex)
+        plt.title(title, fontsize=VENN_TITLE_FONT_SIZE)
 
         # create venn diagram based on size of set
         if len(sets) < 2:
@@ -223,7 +292,7 @@ class MQPlots(Logger):
         # if a figure was created, do some further configuration and save it
         if creates_figure:
             res_path = os.path.join(
-                self.file_dir_venn, f"venn_replicate_{self.replicate_representation[ex].replace(' ', '_')}" + FIG_FORMAT
+                self.file_dir_venn, f"venn_replicate_{title.replace(' ', '_')}" + FIG_FORMAT
             )
 
             for text in venn.set_labels:
@@ -244,8 +313,6 @@ class MQPlots(Logger):
         if len(named_sets) > 6:
             self.logger.warning("Skipping bar-venn for %s because it has more than 6 experiments", ex)
             return
-        # ax1.set_title("size")
-        # ax2.set_title("selected samples")
 
         # create a mapping from name to a y coordinate
         y_mappings = {name: i for i, name in enumerate(named_sets)}
@@ -260,16 +327,14 @@ class MQPlots(Logger):
 
         # initial figure setup
         fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
-        try:
-            name = self.replicate_representation[ex]
-        except KeyError:
-            name = ex
+        name = self.replicate_representation.get(ex, ex)
         fig.suptitle(name, fontsize=20)
         # create the bar plot
         ax1.bar(x, heights)
         # add text to the bar plot
         for x_level, height in zip(x, heights):
             ax1.text(x_level, max(heights) / 2, height, verticalalignment='center', horizontalalignment='center')
+        ax1.set_ylabel("Number of proteins")
 
         # create the line plots
         for x_level, y in zip(x, ys):
@@ -278,6 +343,8 @@ class MQPlots(Logger):
         # replace the yticks with the names of the samples
         ax2.set_yticks([i for i in range(len(y_mappings))])
         ax2.set_yticklabels(y_mappings)
+        ax2.set_ylabel("Sample name")
+        ax2.set_xlabel("Number of comparison")
 
         # save the result with the according name
         res_path = os.path.join(
@@ -332,13 +399,34 @@ class MQPlots(Logger):
         }
         self.save_bar_venn("All experiments union", experiment_union_sets)
 
+    def plot_venn_groups(self):
+        if self.experiment_groups:
+            self.logger.debug("Creating venn diagram for group comparison intersection")
+            group_proteins = [
+                set.union(*[
+                    set.intersection(*(self.protein_ids[experiment][rep] for rep in self.protein_ids[experiment]))
+                    for experiment in self.experiment_groups[group]
+                ])
+                for group in self.experiment_groups
+            ]
+            self.save_venn("group_comparison_intersection", group_proteins, [self.experiment_groups[group][0] for group in self.experiment_groups])
+            self.logger.debug("Creating venn diagram for group comparison union")
+            group_proteins = [
+                set.union(*(self.protein_ids[experiment][rep]
+                            for experiment in self.experiment_groups[group] for rep in self.protein_ids[experiment]))
+                for group in self.experiment_groups
+            ]
+            self.save_venn("group_comparison_union", group_proteins, [self.experiment_groups[group][0] for group in self.experiment_groups])
+        else:
+            self.logger.warning("Skipping venn group plot because grouping failed")
+
     def plot_detection_counts(self, df_to_use: str = "raw"):
         plt.close("all")
         # determine number of rows and columns in the plot based on the number of experiments
         n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
         fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, sharex=True, squeeze=True,
                                   figsize=(4 * n_rows_experiment, 4 * n_cols_experiment))
-        fig.suptitle(f"Detection counts from {df_to_use} intensities")
+        fig.suptitle(f"Detection counts from {self.intensity_label_names[df_to_use]} intensities")
         for experiment, ax in zip(self.replicates, axarr.flat):
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             # from 0 to number of replicates, how often was each protein detected
@@ -366,10 +454,9 @@ class MQPlots(Logger):
         n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(self.replicates)
         fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment,
                                   figsize=(5 * n_cols_experiment, 3 * n_rows_experiment))
-        fig.suptitle(f"Number of detected proteins from {df_to_use} intensity")
+        fig.suptitle(f"Number of detected proteins from {self.intensity_label_names[df_to_use]}")
 
         for experiment, ax in zip(self.replicates, axarr.flat):
-            plt.close("all")
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
 
             # how many proteins were detected per replicate and in total
@@ -381,7 +468,7 @@ class MQPlots(Logger):
             for col in intensities:
                 h = len(intensities[col][intensities[col] > 0])
                 heights.append(h)
-                labels.append(col.replace("Intensity ", ""))
+                labels.append(col.replace(self.int_mapping[df_to_use], ""))
             mean_height = np.mean(heights[2:])
             # self.logger.debug(labels)
             ax.barh([x for x in range(len(heights))], heights)
@@ -402,7 +489,7 @@ class MQPlots(Logger):
         fig, axarr = plt.subplots(n_rows_replicates, n_cols_replicates,
                                   figsize=(5 * n_cols_replicates, 5 * n_rows_replicates))
         fig_index = 0
-        fig.suptitle(f"Replicate {df_to_use} Intensity histograms")
+        fig.suptitle(f"Replicate {self.intensity_label_names[df_to_use]} histograms")
         for experiment in self.replicates:
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             for col in intensities:
@@ -415,7 +502,9 @@ class MQPlots(Logger):
                                          25)
                         )
 
-                ax.set_xscale('log')
+                ax.set_xscale("log")
+                ax.set_xlabel(f"{self.intensity_label_names[df_to_use]}")
+                ax.set_ylabel("Counts")
                 fig_index += 1
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -423,20 +512,26 @@ class MQPlots(Logger):
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     def plot_scatter_replicates(self, df_to_use: str = "raw"):
-        plt.close("all")
+        # TODO where to put uniquely found proteins
         for experiment in self.replicates:
+            plt.close("all")
             # scatter plot of all replicates vs all replicates
             fig, ax = plt.subplots(1, 1, figsize=(7, 7))
             for rep1, rep2 in combinations(self.replicates[experiment], 2):
                 x1 = self.all_intensities_dict[df_to_use][self.int_mapping[df_to_use] + rep1]
                 x2 = self.all_intensities_dict[df_to_use][self.int_mapping[df_to_use] + rep2]
-                mask = np.logical_or(x1 != 0, x2 != 0)
+                mask = np.logical_or(x1.fillna(0) != 0, x2.fillna(0) != 0)
+                corr_mask = np.logical_and(x1.fillna(0) != 0, x2.fillna(0) != 0)
                 exp = r"$r^{2}$"
                 ax.scatter(x1[mask] + 1e2, x2[mask] + 1e2, label=f"{rep1} vs {rep2}, "
-                                                      fr"{exp}: {stats.pearsonr(x1[mask], x2[mask])[0] ** 2}",
-                            alpha=0.5, marker=".")
-                ax.set_xscale('log')
-                ax.set_yscale('log')
+                           fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
+                           alpha=0.5, marker=".")
+                if "log2" in df_to_use:
+                    pass
+                    #ax.set_xscale('log', basex=2)
+                    #ax.set_yscale('log', basey=2)
+                ax.set_xlabel(f"{self.intensity_label_names[df_to_use]} intensity")
+                ax.set_ylabel(f"{self.intensity_label_names[df_to_use]} intensity")
 
             fig.legend()
 
@@ -445,9 +540,9 @@ class MQPlots(Logger):
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     def plot_rank(self, df_to_use: str = "raw"):
-        plt.close("all")
         all_pathway_proteins = set.union(*(set(x) for x in self.interesting_proteins.values()))
         for experiment in self.replicates:
+            plt.close("all")
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             # protein ranks vs intensity
             # calculate mean intensity for the experiment and sort from highest to lowest
@@ -467,11 +562,14 @@ class MQPlots(Logger):
             if rank_identified_proteins:
                 median_pathway_rank = int(np.median(rank_identified_proteins))
                 median_intensity = m_intensity.iloc[median_pathway_rank]
-
-            fig, ax = plt.subplots(1, 1, figsize=(14, 7))
             # plot the non pathway proteins
             x = [dic[protein][0] for protein in non_pathway_proteins]
             y = [dic[protein][1] for protein in non_pathway_proteins]
+
+            fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+            if "log2" in df_to_use:
+                pass
+                #ax.set_yscale("log", basey=2)
             ax.scatter(x, y, c=f"darkgray", s=10, alpha=0.3, marker=".", label="no pathway")
             # plot all proteins of a specific pathway
             for i, (pathway, proteins) in enumerate(self.interesting_proteins.items()):
@@ -480,13 +578,12 @@ class MQPlots(Logger):
                 y = [dic[protein][1] for protein in proteins]
                 ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.6, marker=".", label=pathway)
             #
-            ax.set_yscale("log")
             # only if more than 0 proteins are identified
             if rank_identified_proteins:
                 xmin, xmax = ax.get_xbound()
                 xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
                 ymin, ymax = ax.get_ybound()
-                ym = (np.log10(median_intensity) - np.log10(ymin) ) / (np.log10(ymax) - np.log10(ymin))
+                ym = ((median_intensity) - (ymin) ) / ((ymax) - (ymin))
                 # plot the median rank and intensity at that rank
                 ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color="black", alpha=0.6)
                 ax.axhline(median_intensity, xmax=xm, linestyle="--", color="black", alpha=0.6)
@@ -502,7 +599,7 @@ class MQPlots(Logger):
                 #             )
 
             ax.set_xlabel("Protein rank")
-            ax.set_ylabel(f"{df_to_use} intensity mean")
+            ax.set_ylabel(f"{self.intensity_label_names[df_to_use]} mean")
             fig.legend()
 
             res_path = os.path.join(self.file_dir_descriptive,
@@ -515,7 +612,7 @@ class MQPlots(Logger):
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
             y = intensities.copy()
             # below cutoff remove zeros, above threshold include 0
-            cutoff = 1e6
+            cutoff = 1e6 if "log2" not in df_to_use else np.log2(1e6)
             index = y.replace(0, np.nan).mean(axis=1) < cutoff
             y[index] = y[index].replace(0, np.nan)
             relative_std_percent = y.std(axis=1) / y.mean(axis=1) * 100
@@ -529,11 +626,14 @@ class MQPlots(Logger):
             mask = ~relative_std_percent.isna()
 
             # intensity vs relative standard deviation
+            # TODO show only experiments with full amount of intensities found
             fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+            if "log2" in df_to_use:
+                pass
+                #ax.set_xscale("log", basex=2)
             ax.scatter(y.mean(axis=1)[mask], relative_std_percent[mask], c=colors[mask], marker="o", s=(2* 72./fig.dpi)**2, alpha=0.8)
-            ax.set_xscale("log")
-            ax.set_xlabel("Mean raw intensity")
-            ax.set_ylabel("Relative Stadartdeviation [%]")
+            ax.set_xlabel(f"Mean {self.intensity_label_names[df_to_use]}")
+            ax.set_ylabel("Relative Standard deviation [%]")
             ax.axvline(cutoff, color="black", alpha=0.5)
             xmin, xmax = ax.get_xbound()
             cumulative_count = 0
@@ -549,7 +649,6 @@ class MQPlots(Logger):
 
     def plot_pathway_analysis(self, df_to_use: str = "raw"):
         ex_list = list(self.replicates.keys())
-        log_transform = False
         plot_ns = False
         threshhold = 0.05
         for pathway in self.interesting_proteins:
@@ -557,8 +656,11 @@ class MQPlots(Logger):
             found_proteins = set(self.interesting_proteins[pathway])
             found_proteins &= set(self.all_intensities_dict[df_to_use].index)
             found_proteins = sorted(list(found_proteins))
+            if len(found_proteins) < 1:
+                self.logger.warning("Skipping pathway %s in pathway timeline because no proteins were found", pathway)
+                continue
             n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
-            fig, axarr = plt.subplots(n_rows, n_cols, figsize=(4 * n_rows, 4 * n_cols))
+            fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, n_rows * int(len(self.replicates) / 3)))
             fig.suptitle(pathway)
             all_heights = {}
             try:
@@ -567,28 +669,35 @@ class MQPlots(Logger):
                 axiterator = [axarr]
             for protein, ax in zip(found_proteins, axiterator):
                 ax.set_title(protein)
+                if "log2" in df_to_use:
+                    pass
+                    #ax.set_yscale("log", basex=2)
                 heights = []
                 for idx, experiment in enumerate(self.replicates):
-                    protein_intensities = self.intensites_per_experiment_raw[experiment].loc[protein, :]
-                    ax.scatter([idx] * len(protein_intensities), protein_intensities, label=f"{experiment}")
+                    protein_intensities = self.intensities_per_experiment_dict[df_to_use][experiment].loc[protein, :]
+                    ax.scatter(protein_intensities, [idx] * len(protein_intensities), label=f"{experiment}")
                     # self.logger.debug(f"{protein}: min: {min_i}, max: {max_i}")
                     heights.append(np.max(protein_intensities))
                 all_heights[protein] = heights
-                # ax.set_ylim((0.9 * min_i, 1.1 * max_i))
-                # ax.set_yscale("log")
-                # ax.legend()
+                ax.set_ylim((-1, len(self.replicates) + 1))
+
+                ax.set_yticks([i for i in range(len(self.replicates))])
+                ax.set_yticklabels(self.replicates)
+            #handles, labels = axiterator[0].get_legend_handles_labels()
+            #fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}_no_labels" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
+            try:
+                axiterator = axarr.flat
+            except AttributeError:
+                axiterator = [axarr]
             significances = []
             for protein, ax in zip(found_proteins, axiterator):
                 n_annotations = 0
                 for e1, e2 in combinations(self.replicates, 2):
-                    v1 = self.intensites_per_experiment_raw[e1].loc[protein, :].astype(float)
-                    v2 = self.intensites_per_experiment_raw[e2].loc[protein, :].astype(float)
-                    if log_transform:
-                        v1 = np.log2(v1 + 10)
-                        v2 = np.log2(v2 + 10)
+                    v1 = self.intensities_per_experiment_dict[df_to_use][e1].loc[protein, :].astype(float)
+                    v2 = self.intensities_per_experiment_dict[df_to_use][e2].loc[protein, :].astype(float)
                     # only perform the test if more than 3 data points are available for both experiments
                     if len(v1[v1 > 0]) < 3 or len(v2[v2 > 0]) < 3:
                         # self.logger.debug(f"skipping test for: {protein}, {e1} vs {e2}")
@@ -600,10 +709,57 @@ class MQPlots(Logger):
                         n_annotations += 1
                         significances.append((protein, e1, e2, test[1]))
             df = pd.DataFrame(significances, columns=["protein", "experiment1", "experiment2", "pvalue"])
-            df.to_csv(os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}_table.csv"), index=False )
+            df.to_csv(os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}_table.csv"), index=False)
 
+            #handles, labels = axiterator[0].get_legend_handles_labels()
+            #fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    def plot_pathway_timeline(self, df_to_use: str = "raw"):
+        group_colors = {
+            "SD": "#808080",
+            "4W": "#0b8040",
+            "6W": "#ec2024",
+            "8W": "#4378bb"
+        }
+        groups = {k: "SD" if "SD" in k else k.split("_")[0] for k in self.replicates}
+        x_values = {k: sum([int(s.replace("W", "")) for s in k.split("_") if s.endswith("W")]) for k in self.replicates}
+        max_time = max(x_values.values())
+        for pathway in self.interesting_proteins:
+            plt.close("all")
+            found_proteins = set(self.interesting_proteins[pathway])
+            found_proteins &= set(self.all_intensities_dict[df_to_use].index)
+            found_proteins = sorted(list(found_proteins))
+            if len(found_proteins) < 1:
+                self.logger.warning("Skipping pathway %s in pathway timeline because no proteins were found", pathway)
+                continue
+            n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
+            fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * int(max_time / 5), 4 * n_rows))
+            fig.suptitle(pathway)
+            try:
+                axiterator = axarr.flat
+            except AttributeError:
+                axiterator = [axarr]
+            for protein, ax in zip(found_proteins, axiterator):
+                ax.set_title(protein)
+                ax.set_xlabel(f"Age [weeks]")
+                ax.set_ylabel(f"{self.intensity_label_names[df_to_use]}")
+                if "log2" in df_to_use:
+                    pass
+                    #ax.set_yscale("log", basey=2)
+                for idx, experiment in enumerate(self.replicates):
+                    protein_intensities = self.intensities_per_experiment_dict[df_to_use][experiment].loc[protein, :]
+                    mask = protein_intensities > 0
+                    ax.scatter([x_values[experiment]] * sum(mask), protein_intensities[mask],
+                               label=f"{groups[experiment]}", color=group_colors[groups[experiment]])
+                ax.set_ylim(bottom=0)
+                ax.set_xlim(left=0, right=max_time + 1)
+            handles, labels = axiterator[0].get_legend_handles_labels()
+            fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
+            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+            res_path = os.path.join(self.file_dir_descriptive, f"pathway_timeline_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     def plot_experiment_comparison(self, df_to_use: str = "raw"):
@@ -619,10 +775,12 @@ class MQPlots(Logger):
                 , axis=1)
             intersection = intersection[counts_ex1 & counts_ex2]
             fig6, ax6 = plt.subplots(1, 1, figsize=(7, 7))
+            if "log2" in df_to_use:
+                pass
+                #ax6.set_xscale('log', basex=2)
+                #ax6.set_yscale('log', basey=2)
             # plot intersection
             ax6.scatter(intersection["ex1"], intersection["ex2"], s=8, alpha=0.6, marker=".")
-            ax6.set_xscale('log')
-            ax6.set_yscale('log')
             xmin, xmax = ax6.get_xbound()
             ymin, ymax = ax6.get_ybound()
             ax6.set_xlim(min(xmin, ymin), max(xmax, ymax))
@@ -645,8 +803,8 @@ class MQPlots(Logger):
             plt.close("all")
             fig9, ax9 = plt.subplots(1, 1, figsize=(7, 7))
             ax9.scatter(conc["ex1"], conc["ex2"], s=8, alpha=0.6, marker=".")
-            ax9.set_xscale("log")
-            ax9.set_yscale("log")
+            #ax9.set_xscale("log")
+            #ax9.set_yscale("log")
             xmin, xmax = ax9.get_xbound()
             ymin, ymax = ax9.get_ybound()
             ax9.set_xlim(min(xmin, ymin), max(xmax, ymax))
@@ -657,7 +815,6 @@ class MQPlots(Logger):
             res_path = os.path.join(self.file_dir_descriptive,
                                     f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_total" + FIG_FORMAT)
             plt.savefig(res_path, dpi=200, bbox_inches="tight")
-            # sys.exit(0)
 
     def plot_pathway_proportions(self, df_to_use: str = "raw"):
         plt.close("all")
@@ -692,21 +849,6 @@ class MQPlots(Logger):
         res_path = os.path.join(self.file_dir_descriptive, "pathway_proportions" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def create_descriptive_plots(self):
-        self.logger.info("Creating descriptive plots")
-        #self.plot_detection_counts()
-        #self.plot_number_of_detected_proteins()
-        #self.plot_intensity_histograms()
-        self.plot_relative_std("lfq")
-        #self.plot_rank()
-        #self.plot_pathway_analysis("lfq")
-        #self.plot_pathway_proportions()
-        #self.plot_scatter_replicates()
-        #self.plot_experiment_comparison("lfq")
-
-    def calculate_buffer_score(self):
-        pass
-
     def create_report(self):
         pass
 
@@ -719,7 +861,6 @@ class MQPlots(Logger):
         heights = ddict(list)
         test_results = ddict(list)
 
-        bar_width = 0.25
         for compartiment, all_pathway_genes in self.go_analysis_gene_names.items():
             all_pathway_genes = set(all_pathway_genes)
             # get all pathway genes that were detected throughout all experiments
@@ -745,25 +886,97 @@ class MQPlots(Logger):
                             [len(not_experiment_genes & pathway_genes), len(not_experiment_genes & not_pathway_genes)]
                 ], columns=["in pathway", "not in pathway"], index=["in experiment", "not in experiment"])
                 oddsratio, pvalue = stats.fisher_exact(table, alternative='greater')
-                chi2, p, dof, ex = stats.chi2_contingency(table, correction=True)
+                # chi2, p, dof, ex = stats.chi2_contingency(table, correction=True)
                 # self.logger.debug(f"{chi2}, {dof}, {ex}")
                 # self.logger.debug(f"{compartiment} {experiment}: table: {table} fisher: {pvalue:.4f}, chi2: {p:.4f}")
                 test_results[experiment].append(pvalue)
 
-        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+        # TODO only show pvalue when sigificant
+        # TODO also create table
+        # TODO move labels to bars, remove legend
+        fig, ax = plt.subplots(1, 1, figsize=(7, int(len(self.replicates) * len(self.go_analysis_gene_names) / 3)))
 
+        bar_width = 0.25
         for i, experiment in enumerate(heights):
             y_pos = np.array([(i + (len(heights) + 1) * x) * bar_width for x in range(len(self.go_analysis_gene_names))])
             ax.barh(y_pos, heights[experiment], height=bar_width, edgecolor='white', label=experiment)
             for x, y, text in zip(heights[experiment], y_pos, test_results[experiment]):
-                ax.text(x, y, f" p: {text:.4f}", verticalalignment="center", fontsize="8")
+                if text > 0.05:
+                    continue
+                text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
+                ax.text(x, y, f" p: {text}", verticalalignment="center", fontsize="8")
 
         ax.set_ylabel('compartiment')
         ax.set_xlabel('number of proteins')
         # add yticks on the middle of the group bars
-        ax.set_yticks(np.array([((len(heights) * 1.5 - 1.5) * x + 2) * bar_width for x in range(len(self.go_analysis_gene_names))]))
+        ax.set_yticks([(len(heights) / 2 + (len(heights) + 1) * x) * bar_width
+                       for x in range(len(self.go_analysis_gene_names))])
         # replace the y ticks with the compartiment names
         ax.set_yticklabels([x for x in self.go_analysis_gene_names])
         plt.legend()
         res_path = os.path.join(self.file_dir_go_analysis, "go_analysis" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    def plot_r_volcano(self, df_to_use: str = "lfq_log2"):
+        # import r interface package
+        from rpy2.robjects.packages import importr
+        from rpy2.robjects import pandas2ri
+        # allow conversion of pd objects to r
+        pandas2ri.activate()
+
+        # install r packages
+        from Utils import install_r_dependencies
+        r_package_names = ("BiocManager", )
+        r_bioconducter_package_names = ("limma", )
+        install_r_dependencies(r_package_names, r_bioconducter_package_names)
+
+        # import r packages
+        limma = importr("limma")
+
+        for g1, g2 in combinations(self.experiment_groups, 2):
+            # get groups based on name
+            v1 = self.all_intensities_dict[df_to_use].loc[
+                :, [self.int_mapping[df_to_use] + rep for exp in self.experiment_groups[g1] for rep in self.replicates[exp]]]
+            v2 = self.all_intensities_dict[df_to_use].loc[
+                :, [self.int_mapping[df_to_use] + rep for exp in self.experiment_groups[g2] for rep in self.replicates[exp]]]
+
+            # filter entries with too many nans based on function
+            non_na_group_1 = get_number_of_non_na_values(v1.shape[1])
+            non_na_group_2 = get_number_of_non_na_values(v2.shape[1])
+            mask_1 = (v1 > 0).sum(axis=1) >= non_na_group_1
+            mask_2 = (v2 > 0).sum(axis=1) >= non_na_group_2
+            mask = np.logical_and(mask_1, mask_2)
+            # determine missing
+            missing_1 = (v1 > 0).sum(axis=1) == 0
+            missing_2 = (v2 > 0).sum(axis=1) == 0
+            # determine exclusive
+            exclusive_1 = np.logical_and(mask_1, missing_2)
+            exclusive_2 = np.logical_and(mask_2, missing_1)
+
+            df = pd.concat([v1[mask], v2[mask]], axis=1)
+            design = pd.DataFrame([[0] * v1.shape[1] + [1] * v2.shape[1],
+                                   [1] * v1.shape[1] + [0] * v2.shape[1]], index=[g1, g2]).T
+
+            # transform to r objects
+            r_df = pandas2ri.py2ri(df)
+            r_design = pandas2ri.py2ri(design)
+            # run the r code
+            fit = limma.lmFit(r_df, r_design)
+            c_matrix = limma.makeContrasts(f"{g1}-{g2}", levels=r_design)
+            contrast_fit = limma.contrasts_fit(fit, c_matrix)
+            fit_bayes = limma.eBayes(contrast_fit)
+            res = limma.topTable(fit_bayes, adjust="BH", number=df.shape[0])
+            # transform back to python
+            ress = pandas2ri.ri2py(res)
+            # save all values
+            # save significant values
+
+            # plot
+            fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+
+            ax.scatter(ress["logFC"], -np.log10(ress["adj.P.Val"]))  # TODO color
+            fig.suptitle(f"{g1} vs {g2}")
+            ax.set_xlabel("fold change")
+            ax.set_ylabel("- log10 p-value")
+            res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")

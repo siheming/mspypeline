@@ -54,6 +54,15 @@ plot_go_analysis_intensity: "raw"
 plot_venn_results: true
 plot_venn_results_intensity: "raw"
 
+plot_venn_groups: true
+plot_venn_groups_intensity: "raw"
+
+plot_pathway_timeline: true
+plot_pathway_timeline_intensity: "raw"
+
+plot_r_volcano: true
+plot_r_volcano_intensity: "raw"
+
 use_protein_id: false
 # should the protein id be used, or TODO
 # can be "true" or "false"

@@ -1,4 +1,5 @@
 from collections.abc import Sized
+from difflib import SequenceMatcher
 from itertools import combinations
 
 
@@ -83,6 +84,7 @@ def barplot_annotate_brackets(ax, num1, num2, data, center, height, yerr=None, d
 
     ax.text(*mid, text, **kwargs)
 
+
 def venn_names(named_sets):
     names = set(named_sets)
     for i in range(1, len(named_sets) + 1):
@@ -91,3 +93,31 @@ def venn_names(named_sets):
             intersected = set.intersection(*(named_sets[k] for k in to_intersect))
             unioned = set.union(*(named_sets[k] for k in others)) if others else set()
             yield to_intersect, others, intersected - unioned
+
+
+def install_r_dependencies(r_package_names, r_bioconducter_package_names):
+    from rpy2.robjects.packages import importr
+    import rpy2.robjects.packages as rpackages
+
+    r_packages_uninstalled = [x for x in r_package_names if not rpackages.isinstalled(x)]
+    r_bioconducter_packages_uninstalled = [x for x in r_bioconducter_package_names if not rpackages.isinstalled(x)]
+    if r_packages_uninstalled:
+        utils = importr('utils')
+        utils.chooseCRANmirror(ind=1)
+        for p in r_packages_uninstalled:
+            utils.install_packages(p)
+
+    if r_bioconducter_packages_uninstalled:
+        biocm = importr("BiocManager")
+        for p in r_bioconducter_packages_uninstalled:
+            biocm.install(p)
+
+
+def get_number_of_non_na_values(x):
+    import numpy as np
+    percentage = 1 / (1 + np.exp(0.5 * x - 3.5)) * 0.5 + 0.5
+    return int(np.round(percentage * x))
+
+
+def string_similarity_ratio(a, b):
+    return SequenceMatcher(None, a, b).ratio()

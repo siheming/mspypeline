@@ -13,8 +13,9 @@ class MQGUI(tk.Tk):
         self._start_dir = ""
         self.yaml_options = ["default"]
         self.plot_names = ["plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
-            "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_proportions",
-            "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results"]
+            "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline", "plot_pathway_proportions",
+            "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
+            "plot_venn_groups", "plot_r_volcano"]
 
         self.mqinit = MQInitializer("", "default", loglevel=loglevel)
 
@@ -105,9 +106,12 @@ class MQGUI(tk.Tk):
         self.update_listboxes()
 
     def start_button(self):
+        self.running_text.set("Creating Plots")
+        self.update()
         self.update_button()
         mqplots = MQPlots.from_MQInitializer(self.mqinit)
         mqplots.create_results()
+        self.running_text.set("Please press Start")
 
     def make_layout(self):
         self.title("MaxQuant Analyzer Pipeline")
@@ -157,24 +161,35 @@ class MQGUI(tk.Tk):
 
         intensity_label = tk.Label(self, text="Intensity").grid(row=5, column=1)
 
-        self.detection_counts_int, self.detection_counts_var = plot_row(self, "Detection counts", 6 , "raw")
-        self.number_of_detected_proteins_int, self.number_of_detected_proteins_var = plot_row(self, "Number of detected proteins", 7, "raw")
-        self.intensity_histograms_int, self.intensity_histograms_var = plot_row(self, "Intensity histogram", 8, "raw")
-        self.relative_std_int, self.relative_std_var = plot_row(self, "Relative std", 9, "raw")
-        self.rank_int, self.rank_var = plot_row(self, "Rank", 10, "raw")
-        self.pathway_analysis_int, self.pathway_analysis_var = plot_row(self, "Pathway Analysis", 11, "raw")
-        self.pathway_proportions_int, self.pathway_proportions_var = plot_row(self, "Pathway proportions", 12, "raw")
-        self.scatter_replicates_int, self.scatter_replicates_var = plot_row(self, "Scatter replicates", 13, "raw")
-        self.experiment_comparison_int, self.experiment_comparison_var = plot_row(self, "Experiment comparison", 15, "raw")
-        self.go_analysis_int, self.go_analysis_var = plot_row(self, "Go analysis", 16, "raw")
-        self.venn_results_int, self.venn_results_var = plot_row(self, "Venn diagrams", 17, "raw")
+        heading_length = 5
 
+        self.detection_counts_int, self.detection_counts_var = plot_row(self, "Detection counts", heading_length + 1, "raw_log2")
+        self.number_of_detected_proteins_int, self.number_of_detected_proteins_var = plot_row(self, "Number of detected proteins", heading_length + 2, "raw_log2")
+        self.intensity_histograms_int, self.intensity_histograms_var = plot_row(self, "Intensity histogram", heading_length + 3, "raw")
+        self.relative_std_int, self.relative_std_var = plot_row(self, "Relative std", heading_length + 4, "raw_log2")
+        self.rank_int, self.rank_var = plot_row(self, "Rank", heading_length + 5, "raw_log2")
+        self.pathway_analysis_int, self.pathway_analysis_var = plot_row(self, "Pathway Analysis", heading_length + 6, "raw_log2")
+        self.pathway_timeline_int, self.pathway_timeline_var = plot_row(self, "Pathway Timeline", heading_length + 7, "raw_log2")
+        self.pathway_proportions_int, self.pathway_proportions_var = plot_row(self, "Pathway proportions", heading_length + 8, "raw_log2")
+        self.scatter_replicates_int, self.scatter_replicates_var = plot_row(self, "Scatter replicates", heading_length + 9, "raw_log2")
+        self.experiment_comparison_int, self.experiment_comparison_var = plot_row(self, "Experiment comparison", heading_length + 10, "raw_log2")
+        self.go_analysis_int, self.go_analysis_var = plot_row(self, "Go analysis", heading_length + 11, "raw_log2")
+        self.venn_results_int, self.venn_results_var = plot_row(self, "Venn diagrams", heading_length + 12, "raw_log2")
+        self.venn_groups_int, self.venn_groups_var = plot_row(self, "Group diagrams", heading_length + 13, "raw_log2")
+        self.r_volcano_int, self.r_volcano_var = plot_row(self, "Volcano plot (R)", heading_length + 14, "raw_log2")
+
+        plot_length = 14
+
+        total_length = heading_length + plot_length
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
-        update_button.grid(row=18, column=0)
+        update_button.grid(row=total_length + 1, column=0)
 
         start_button = tk.Button(self, text="Start",
                                  command=lambda: self.start_button())
-        start_button.grid(row=18, column=1)
+        start_button.grid(row=total_length + 1, column=1)
+
+        self.running_text = tk.StringVar(value="Please press Start")
+        self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=1)
 
 
 def main():
@@ -258,7 +273,7 @@ def main():
             has_replicates = bool_dict[args.has_replicates.lower()]
 
         # create initializer which reads all required files
-        mqinit = MQInitializer(start_dir, has_replicates, args.yml_file, loglevel=loglevel)
+        mqinit = MQInitializer(start_dir, args.yml_file, loglevel=loglevel)
         mqinit.init_config()
         mqinit.prepare_stuff()
         # create plotter from initializer
@@ -271,11 +286,13 @@ def main():
 
         gui.mainloop()
 
+
 def browsefunc(fn, var, fn_params: dict = None):
     if fn_params is None:
         fn_params = {}
     filename = fn(**fn_params)
     var.set(filename)
+
 
 def plot_row(frame, text: str, row, intensity_default: str):
     int_var = tk.IntVar(value=1)
@@ -283,12 +300,9 @@ def plot_row(frame, text: str, row, intensity_default: str):
 
     intensity_var = tk.StringVar(value=intensity_default)
 
-    intensity_menu = tk.OptionMenu(frame, intensity_var, "lfq", "raw", "ibaq").grid(row=row, column=1)
+    intensity_menu = tk.OptionMenu(frame, intensity_var, "lfq", "raw", "ibaq", "lfq_log2", "raw_log2", "ibaq_log2").grid(row=row, column=1)
     return int_var, intensity_var
 
-
-def plot_tk_buttons():
-    pass
 
 if __name__ == "__main__":
     main()

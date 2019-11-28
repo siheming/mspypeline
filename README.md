@@ -10,14 +10,14 @@ The repository can be downloaded for example via
 ## Usage
 This pipeline can be used via the command line and needs a python
 installation with certain packages. A virtual environment is recommended
-with all packages specified in the `environment.yml` file or `environment-windows.yml` . This can be
+with all packages specified in the `environment.yml` file. This can be
 done for example via:
 ```bash
 conda env create python=3.7 -f environment.yml
 ```
 which can then be activated and deactivated via:
 ```bash
-conda activate maxquantpipeline # activation
+conda activate mqpipeline # activation
 conda deactivate  # deactivation
 ```
 When the environment is activated or the default python installation
