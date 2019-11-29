@@ -5,7 +5,10 @@ import os
 import sys
 from Logger import Logger
 from collections import defaultdict as ddict
-from ruamel_yaml import YAML
+try:
+    from ruamel_yaml import YAML
+except ModuleNotFoundError:
+    from ruamel.yaml import YAML
 from tkinter import filedialog
 from shutil import copy2
 import logging
