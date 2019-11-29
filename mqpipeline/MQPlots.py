@@ -234,8 +234,6 @@ class MQPlots(Logger):
             loglevel = mqinti_instance.logger.getEffectiveLevel()
             )
 
-    @staticmethod
-
     @property
     def replicate_representation(self):
         if self._replicate_representation is None:
