@@ -1,13 +1,13 @@
 import pandas as pd
 import numpy as np
 import os
-from Logger import Logger
+from mqpipeline.Logger import Logger
 from matplotlib_venn import venn3, venn2
 import matplotlib.pyplot as plt
 from scipy import stats
 from itertools import combinations
 from collections import defaultdict as ddict
-from Utils import barplot_annotate_brackets, get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, \
+from mqpipeline.Utils import barplot_annotate_brackets, get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, \
     string_similarity_ratio
 import logging
 import warnings
@@ -31,7 +31,7 @@ class MQPlots(Logger):
         df_protein_names, df_peptide_names,
         interesting_proteins, go_analysis_gene_names,
         loglevel=logging.DEBUG
-        ):
+    ):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
         # property variables
         self._replicate_representation = None
@@ -233,6 +233,8 @@ class MQPlots(Logger):
             go_analysis_gene_names = mqinti_instance.go_analysis_gene_names,
             loglevel = mqinti_instance.logger.getEffectiveLevel()
             )
+
+    @staticmethod
 
     @property
     def replicate_representation(self):
@@ -925,7 +927,7 @@ class MQPlots(Logger):
         pandas2ri.activate()
 
         # install r packages
-        from Utils import install_r_dependencies
+        from mqpipeline.Utils import install_r_dependencies
         r_package_names = ("BiocManager", )
         r_bioconducter_package_names = ("limma", )
         install_r_dependencies(r_package_names, r_bioconducter_package_names)

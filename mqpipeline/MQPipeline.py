@@ -1,5 +1,5 @@
-from MQInitializer import MQInitializer
-from MQPlots import MQPlots
+from mqpipeline.MQInitializer import MQInitializer
+from mqpipeline.MQPlots import MQPlots
 import argparse
 import tkinter as tk
 from tkinter import filedialog
