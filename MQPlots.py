@@ -933,6 +933,12 @@ class MQPlots(Logger):
         # import r packages
         limma = importr("limma")
 
+        #self.experiment_groups = {
+        #    "Group_1": ["P01_rep0", "P02_rep0", "P03_rep0", "P04_rep0", "P05_rep0", "P06_rep0"],
+        #    "Group_2": ["P07_rep0", "P08_rep0", "P09_rep0", "P10_rep0", "P11_rep0", "P12_rep0", "P13_rep0", "P14_rep0",
+        #                "P15_rep0"]
+        #}
+
         for g1, g2 in combinations(self.experiment_groups, 2):
             # get groups based on name
             v1 = self.all_intensities_dict[df_to_use].loc[
@@ -971,12 +977,34 @@ class MQPlots(Logger):
             # save all values
             # save significant values
 
+            def get_volcano_color(fchange, pval):
+                if pval > 0.05:
+                    return "gray"
+                elif fchange >= 0:
+                    return "blue"
+                elif fchange < 0:
+                    return "red"
+                else:
+                    raise ValueError("heisenbug")
             # plot
             fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+            ax_unique = ax.twinx()
 
-            ax.scatter(ress["logFC"], -np.log10(ress["adj.P.Val"]))  # TODO color
+            # non sign gray, left side significant blue right side red
+            color = [get_volcano_color(log_fold_change, p_val)
+                     for log_fold_change, p_val in zip(ress["logFC"], ress["adj.P.Val"])]
+            ax.scatter(ress["logFC"], -np.log10(ress["adj.P.Val"]), color=color)  # TODO color
+            # add line at significance threshold
+            ax.axhline(-np.log10(0.05), linestyle="--", color="black", alpha=0.6)
+            xmin, xmax = ax.get_xbound()
+            abs_max = max(abs(xmin), abs(xmax))
+            # plot unique values with mean intensity at over maximum
+            ax_unique.scatter([-(abs_max * 1.05)] * exclusive_1.sum(), v1[exclusive_1].mean(axis=1))
+            ax_unique.scatter([abs_max * 1.05] * exclusive_2.sum(), v2[exclusive_2].mean(axis=1))
+            # figure stuff
             fig.suptitle(f"{g1} vs {g2}")
             ax.set_xlabel("fold change")
             ax.set_ylabel("- log10 p-value")
+            ax_unique.set_ylabel(self.intensity_label_names[df_to_use])
             res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
