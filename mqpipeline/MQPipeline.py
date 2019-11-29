@@ -12,10 +12,6 @@ class MQGUI(tk.Tk):
 
         self._start_dir = ""
         self.yaml_options = ["default"]
-        self.plot_names = ["plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
-            "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline", "plot_pathway_proportions",
-            "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
-            "plot_venn_groups", "plot_r_volcano"]
 
         self.mqinit = MQInitializer("", "default", loglevel=loglevel)
 
@@ -77,8 +73,7 @@ class MQGUI(tk.Tk):
             self.mqinit.file_path_yaml = "default"
         else:
             raise ValueError(f"Unkown setting for yaml text {self.yaml_text.get()}")
-        # TODO this should be dynamic
-        for plot_name in self.plot_names:
+        for plot_name in MQPlots.possible_plots:
             plot_intensity = plot_name + "_intensity"
             var_name = plot_name.replace("plot_", "") + "_var"
             int_name = var_name.replace("_var", "_int")
@@ -88,7 +83,7 @@ class MQGUI(tk.Tk):
         self.update_listboxes()
 
     def update_button(self):
-        for plot_name in self.plot_names:
+        for plot_name in MQPlots.possible_plots:
             plot_intensity = plot_name + "_intensity"
             var_name = plot_name.replace("plot_", "") + "_var"
             int_name = var_name.replace("_var", "_int")

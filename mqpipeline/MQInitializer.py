@@ -12,6 +12,15 @@ import logging
 
 
 class MQInitializer(Logger):
+    # set all file names that are required
+    yml_file_name_tmp = "config_tmp.yml"
+    yml_file_name = "config.yml"
+    default_yml_name = "ms_analysis_default.yml"
+    go_path = "go_terms"
+    pathway_path = "pathways"
+    proteins_txt = "proteinGroups.txt"
+    peptides_txt = "peptides.txt"
+
     def __init__(self, dir_: str, file_path_yml: str = None, loglevel=logging.DEBUG):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
         self.yaml = YAML()
@@ -26,16 +35,8 @@ class MQInitializer(Logger):
         self.path_pipeline_config = os.path.join(self.script_loc, "config")
         self.logger.debug("Script location %s", self.script_loc)
 
-        # set all file names that are required
-        self.yml_file_name_tmp = "config_tmp.yml"
-        self.yml_file_name = "config.yml"
-        self.default_yml_name = "ms_analysis_default.yml"
-        self.go_path = "go_terms"
-        self.pathway_path = "pathways"
-        self.proteins_txt = "proteinGroups.txt"
-        self.peptides_txt = "peptides.txt"
-        self.possible_gos = sorted([x for x in os.listdir(os.path.join(self.path_pipeline_config , self.go_path)) if x.endswith(".txt")])
-        self.possible_pathways = sorted([x for x in os.listdir(os.path.join(self.path_pipeline_config , self.pathway_path)) if x.endswith(".txt")])
+        self.possible_gos = sorted([x for x in os.listdir(os.path.join(self.path_pipeline_config , MQInitializer.go_path)) if x.endswith(".txt")])
+        self.possible_pathways = sorted([x for x in os.listdir(os.path.join(self.path_pipeline_config , MQInitializer.pathway_path)) if x.endswith(".txt")])
 
         self._start_dir = None
         self.start_dir = dir_
@@ -69,7 +70,7 @@ class MQInitializer(Logger):
         if file_path_yml.lower() == "default":
             self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml.lower() == "file":
-            self._file_path_yaml = os.path.join(self.start_dir, "config", self.yml_file_name)
+            self._file_path_yaml = os.path.join(self.start_dir, "config", MQInitializer.yml_file_name)
         elif file_path_yml is None:
             self._file_path_yaml = self.init_yml_path()
         self.logger.debug(f"yml file location: {self._file_path_yaml}")
@@ -90,15 +91,15 @@ class MQInitializer(Logger):
         if "config" in os.listdir(self.start_dir):
             self.logger.debug("Found config dir")
             config_dir = os.path.join(self.start_dir, "config")
-            if self.yml_file_name in os.listdir(config_dir):
+            if MQInitializer.yml_file_name in os.listdir(config_dir):
                 self.logger.debug("Found config.yml file in config dir")
                 return True
         return False
 
     def get_default_yml_path(self) -> str:
         self.logger.debug("Loading default yml file from: %s, since no file was selected", self.script_loc)
-        if self.default_yml_name in os.listdir(self.path_pipeline_config):
-            yaml_file = os.path.join(self.path_pipeline_config, self.default_yml_name)
+        if MQInitializer.default_yml_name in os.listdir(self.path_pipeline_config):
+            yaml_file = os.path.join(self.path_pipeline_config, MQInitializer.default_yml_name)
         else:
             raise ValueError("Could not find default yaml file. Please select one.")
         return yaml_file
@@ -115,7 +116,7 @@ class MQInitializer(Logger):
             return yaml_file
 
         if self.has_yml_file():
-            yaml_file = os.path.join(self.start_dir, "config", self.yml_file_name)
+            yaml_file = os.path.join(self.start_dir, "config", MQInitializer.yml_file_name)
         else:
             yaml_file = yml_file_dialog()
         return yaml_file
@@ -124,18 +125,18 @@ class MQInitializer(Logger):
         file_dir_txt = os.path.join(self.start_dir, "txt")
         if not os.path.isdir(file_dir_txt):
             raise ValueError("Directory does not contain a txt dir")
-        file_dir_protein_names = os.path.join(file_dir_txt, self.proteins_txt)
-        file_dir_peptides_names = os.path.join(file_dir_txt, self.peptides_txt)
+        file_dir_protein_names = os.path.join(file_dir_txt, MQInitializer.proteins_txt)
+        file_dir_peptides_names = os.path.join(file_dir_txt, MQInitializer.peptides_txt)
         # make sure protein groups file exists
         if not os.path.isfile(file_dir_protein_names):
-            raise ValueError(f"txt directory does not contain a {self.proteins_txt} file")
+            raise ValueError(f"txt directory does not contain a {MQInitializer.proteins_txt} file")
         if os.path.isfile(file_dir_peptides_names):
             df_peptide_names = pd.read_csv(file_dir_peptides_names, sep="\t")
         else:
             df_peptide_names = pd.DataFrame()
         # read protein groups file
         df_protein_names = pd.read_csv(file_dir_protein_names, sep="\t")
-        self.logger.debug("%s shape: %s", self.proteins_txt, df_protein_names.shape)
+        self.logger.debug("%s shape: %s", MQInitializer.proteins_txt, df_protein_names.shape)
 
         # TODO can the Intensity column always be expected in the file?
         # TODO will the column names always be the same between Intensity and LFQ intensity?
@@ -148,7 +149,7 @@ class MQInitializer(Logger):
             experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
             if any(experiment_analysis_overlap):
                 unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
-                raise ValueError(f"Found replicates in {self.proteins_txt}, but not in {self.peptides_txt}: " +
+                raise ValueError(f"Found replicates in {MQInitializer.proteins_txt}, but not in {MQInitializer.peptides_txt}: " +
                                  ", ".join(unmatched))
 
         # try to automatically determine experimental setup
@@ -210,7 +211,7 @@ class MQInitializer(Logger):
             not_found_replicates = [x not in found_replicates for x in intens_cols]
             if any(not_found_replicates):
                 unmatched = [x for x in intens_cols if not_found_replicates]
-                raise ValueError(f"Found replicates in {self.proteins_txt}, but not in {self.peptides_txt}: " +
+                raise ValueError(f"Found replicates in {MQInitializer.proteins_txt}, but not in {MQInitializer.peptides_txt}: " +
                                  ", ".join(unmatched))
 
         # filter all contaminants by removing all rows where any of the 3 columns contains a +
@@ -218,7 +219,7 @@ class MQInitializer(Logger):
                                 ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
         self.logger.debug("Removing %s rows from %s because they are marked as contaminant",
-                          (~not_contaminants).sum(), self.proteins_txt)
+                          (~not_contaminants).sum(), MQInitializer.proteins_txt)
         df_protein_names = df_protein_names[not_contaminants]
         # split the fasta headers
         colon_start = df_protein_names["Fasta headers"].str.startswith(";")
@@ -255,31 +256,31 @@ class MQInitializer(Logger):
             if not is_numeric_dtype(df_protein_names[col]):
                 df_protein_names[col] = df_protein_names[col].apply(lambda x: x.replace(",", ".")).fillna(0)
                 df_protein_names[col] = df_protein_names[col].astype("int64")
-        self.logger.debug("%s shape after preprocessing: %s", self.proteins_txt, df_protein_names.shape)
+        self.logger.debug("%s shape after preprocessing: %s", MQInitializer.proteins_txt, df_protein_names.shape)
         return df_protein_names, df_peptide_names
 
     def init_interest_from_txt(self):
         dict_pathway = {}
         dict_go = {}
         for pathway in self.configs.get("pathways"):
-            name, proteins = self.read_config_txt_file(self.pathway_path, pathway)
+            name, proteins = self.read_config_txt_file(MQInitializer.pathway_path, pathway)
             dict_pathway[name] = proteins
 
         for go in self.configs.get("go_terms"):
-            name, proteins = self.read_config_txt_file(self.go_path, go)
+            name, proteins = self.read_config_txt_file(MQInitializer.go_path, go)
             dict_go[name] = proteins
         return dict_pathway, dict_go
 
     def read_config_txt_file(self, path, file):
         fullpath = os.path.join(self.path_pipeline_config, path, file)
-        if path == self.pathway_path:
+        if path == MQInitializer.pathway_path:
             with open(fullpath) as f:
                 name = f.readline().strip()
                 f.readline()
                 proteins = []
                 for line in f:
                     proteins.append(line.strip())
-        elif path == self.go_path:
+        elif path == MQInitializer.go_path:
             name = file.replace(".txt", "")
             with open(fullpath) as f:
                 proteins = []
@@ -292,13 +293,13 @@ class MQInitializer(Logger):
     def update_config_file(self):
         # store the config file as tmp
         self.logger.debug("Updating yml settings file")
-        yml_file_loc_tmp = os.path.join(self.path_config, self.yml_file_name_tmp)
+        yml_file_loc_tmp = os.path.join(self.path_config, MQInitializer.yml_file_name_tmp)
         with open(yml_file_loc_tmp, "w") as outfile:
             self.yaml.dump(self.configs, outfile)
 
         # delete non tmp if exists
-        yml_file_loc = os.path.join(self.path_config, self.yml_file_name)
-        if self.yml_file_name in os.listdir(self.path_config):
+        yml_file_loc = os.path.join(self.path_config, MQInitializer.yml_file_name)
+        if MQInitializer.yml_file_name in os.listdir(self.path_config):
             os.remove(yml_file_loc)
 
         # rename to non tmp
@@ -306,11 +307,10 @@ class MQInitializer(Logger):
 
     def prepare_stuff(self):
         # read the proteins_txt and peptides_txt
-        self.logger.info("Reading %s, and %s", self.proteins_txt, self.peptides_txt)
+        self.logger.info("Reading %s, and %s", MQInitializer.proteins_txt, MQInitializer.peptides_txt)
         self.df_protein_names, self.df_peptide_names = self.init_dfs_from_txts()
 
         # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")
-        # self.interesting_proteins, self.interesting_receptors, self.go_analysis_gene_names = self.init_interest_from_xlsx()
         self.interesting_proteins, self.go_analysis_gene_names = self.init_interest_from_txt()
         self.update_config_file()

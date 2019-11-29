@@ -26,6 +26,13 @@ VENN_SUBSET_LABEL_FONT_SIZE = 14
 
 
 class MQPlots(Logger):
+    possible_plots = [
+        "plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
+        "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline", "plot_pathway_proportions",
+        "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
+        "plot_venn_groups", "plot_r_volcano"
+    ]
+
     def __init__(
         self, start_dir, replicates, configs,
         df_protein_names, df_peptide_names,
@@ -261,12 +268,11 @@ class MQPlots(Logger):
         return self._max_number_replicates
 
     def create_results(self):
-        for plot in self.possible_plots:
-            plot_name = str(plot).split(" ")[2].split(".")[1]
+        for plot_name in MQPlots.possible_plots:
             intensity_name = plot_name + "_intensity"
             if self.configs.get(plot_name, False):
                 self.logger.debug(f"creating plot {plot_name}")
-                plot(self.configs.get(intensity_name, "raw"))
+                getattr(self, plot_name)(self.configs.get(intensity_name, "raw"))
         self.logger.info("Done creating plots")
 
     def save_venn(self, ex: str, sets, set_names):
