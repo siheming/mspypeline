@@ -235,9 +235,10 @@ class MQInitializer(Logger):
         # add protein name from fasta description col
         df_protein_names["Protein name"] = fasta_col["description"].str.split("_", expand=True)[0]
         # filter all entries with duplicate Gene name fasta
-        if any(df_protein_names.duplicated(subset="Gene name fasta")):
-            self.logger.warning("Found duplicates in Gene name fasta column. Dropping all %s duplicates.",
-                                df_protein_names.duplicated(subset="Gene name fasta", keep=False).sum())
+        duplicates = df_protein_names.duplicated(subset="Gene name fasta", keep=False)
+        if any(duplicates):
+            self.logger.warning("Found duplicates in Gene name fasta column. Dropping all %s duplicates. Duplicate Gene names: %s",
+                                duplicates.sum(), ", ".join(df_protein_names[duplicates].loc[:, "Gene name fasta"]))
             df_protein_names = df_protein_names.drop_duplicates(subset="Gene name fasta", keep=False)
         # convert all non numeric intensities
         for col in [col for col in df_protein_names.columns if 'Intensity ' in col or "LFQ " in col or "iBAQ " in col]:
