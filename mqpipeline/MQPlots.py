@@ -50,12 +50,6 @@ class MQPlots(Logger):
         self.start_dir = start_dir
         self.replicates = replicates
         self.configs = configs
-        self.possible_plots = [
-            self.plot_detection_counts, self.plot_number_of_detected_proteins, self.plot_intensity_histograms,
-            self.plot_relative_std, self.plot_rank, self.plot_pathway_analysis, self.plot_pathway_timeline,
-            self.plot_pathway_proportions, self.plot_scatter_replicates, self.plot_experiment_comparison,
-            self.plot_go_analysis, self.plot_venn_results, self.plot_r_volcano
-        ]
         self.int_mapping = {
             "raw": "Intensity ", "raw_log2": "Intensity ",
             "lfq": "LFQ intensity ", "lfq_log2": "LFQ intensity ",

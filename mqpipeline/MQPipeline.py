@@ -7,17 +7,31 @@ import logging
 
 
 class MQGUI(tk.Tk):
-    def __init__(self, no_gui, loglevel=logging.DEBUG):
+    def __init__(self, args, loglevel=logging.DEBUG):
         super().__init__()
 
         self.yaml_options = ["default"]
 
         self.mqinit = MQInitializer("", "default", loglevel=loglevel)
+        self.number_of_plots = 0
 
-        if no_gui:
+        if args.no_gui:
             self.withdraw()
+            start_dir, has_replicates = self.ensure_arguments(args)
+            # create initializer which reads all required files
+            mqinit = MQInitializer(start_dir, args.yml_file, loglevel=loglevel)
+            mqinit.init_config()
+            mqinit.configs.update("has_replicates", has_replicates)
+            mqinit.prepare_stuff()
+            # create plotter from initializer
+            mqplots = MQPlots.from_MQInitializer(mqinit)
+            # create all plots and other results
+            mqplots.create_results()
         else:
             self.make_layout()
+            if args.dir:
+                self.dir_text.set(args.dir)
+            self.mainloop()
 
     def dir_setter(self, *args):
         self.mqinit.start_dir = self.dir_text.get()
@@ -146,26 +160,24 @@ class MQGUI(tk.Tk):
 
         intensity_label = tk.Label(self, text="Intensity").grid(row=5, column=1)
 
-        heading_length = 5
+        self.heading_length = 5
 
-        self.detection_counts_int, self.detection_counts_var = plot_row(self, "Detection counts", heading_length + 1, "raw_log2")
-        self.number_of_detected_proteins_int, self.number_of_detected_proteins_var = plot_row(self, "Number of detected proteins", heading_length + 2, "raw_log2")
-        self.intensity_histograms_int, self.intensity_histograms_var = plot_row(self, "Intensity histogram", heading_length + 3, "raw")
-        self.relative_std_int, self.relative_std_var = plot_row(self, "Relative std", heading_length + 4, "raw_log2")
-        self.rank_int, self.rank_var = plot_row(self, "Rank", heading_length + 5, "raw_log2")
-        self.pathway_analysis_int, self.pathway_analysis_var = plot_row(self, "Pathway Analysis", heading_length + 6, "raw_log2")
-        self.pathway_timeline_int, self.pathway_timeline_var = plot_row(self, "Pathway Timeline", heading_length + 7, "raw_log2")
-        self.pathway_proportions_int, self.pathway_proportions_var = plot_row(self, "Pathway proportions", heading_length + 8, "raw_log2")
-        self.scatter_replicates_int, self.scatter_replicates_var = plot_row(self, "Scatter replicates", heading_length + 9, "raw_log2")
-        self.experiment_comparison_int, self.experiment_comparison_var = plot_row(self, "Experiment comparison", heading_length + 10, "raw_log2")
-        self.go_analysis_int, self.go_analysis_var = plot_row(self, "Go analysis", heading_length + 11, "raw_log2")
-        self.venn_results_int, self.venn_results_var = plot_row(self, "Venn diagrams", heading_length + 12, "raw_log2")
-        self.venn_groups_int, self.venn_groups_var = plot_row(self, "Group diagrams", heading_length + 13, "raw_log2")
-        self.r_volcano_int, self.r_volcano_var = plot_row(self, "Volcano plot (R)", heading_length + 14, "raw_log2")
+        self.detection_counts_int, self.detection_counts_var = self.plot_row("Detection counts", "raw_log2")
+        self.number_of_detected_proteins_int, self.number_of_detected_proteins_var = self.plot_row("Number of detected proteins", "raw_log2")
+        self.intensity_histograms_int, self.intensity_histograms_var = self.plot_row("Intensity histogram", "raw")
+        self.relative_std_int, self.relative_std_var = self.plot_row("Relative std", "raw_log2")
+        self.rank_int, self.rank_var = self.plot_row("Rank", "raw_log2")
+        self.pathway_analysis_int, self.pathway_analysis_var = self.plot_row("Pathway Analysis", "raw_log2")
+        self.pathway_timeline_int, self.pathway_timeline_var = self.plot_row("Pathway Timeline", "raw_log2")
+        self.pathway_proportions_int, self.pathway_proportions_var = self.plot_row("Pathway proportions", "raw_log2")
+        self.scatter_replicates_int, self.scatter_replicates_var = self.plot_row("Scatter replicates", "raw_log2")
+        self.experiment_comparison_int, self.experiment_comparison_var = self.plot_row("Experiment comparison", "raw_log2")
+        self.go_analysis_int, self.go_analysis_var = self.plot_row("Go analysis", "raw_log2")
+        self.venn_results_int, self.venn_results_var = self.plot_row("Venn diagrams", "raw_log2")
+        self.venn_groups_int, self.venn_groups_var = self.plot_row("Group diagrams", "raw_log2")
+        self.r_volcano_int, self.r_volcano_var = self.plot_row("Volcano plot (R)", "raw_log2")
 
-        plot_length = 14
-
-        total_length = heading_length + plot_length
+        total_length = self.heading_length + self.number_of_plots
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
         update_button.grid(row=total_length + 1, column=0)
 
@@ -175,6 +187,41 @@ class MQGUI(tk.Tk):
 
         self.running_text = tk.StringVar(value="Please press Start")
         self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=1)
+
+    def ensure_arguments(self, args):
+        # if no dir was specified ask for one
+        if args.dir is None:
+            start_dir = filedialog.askdirectory(title="Please select a directory with MaxQuant result files")
+            if not start_dir:
+                raise ValueError("Please select a directory")
+        else:
+            start_dir = args.dir
+
+        bool_dict = {"yes": True, "y": True, "true": True, "no": False, "n": False, "false": False}
+        # ask if the file has replicates with yes as default
+        if args.has_replicates is None:
+            has_replicates = input("Please specify if you have replicates in your data [Y/n]: ")
+            if not has_replicates:
+                has_replicates = True
+            else:
+                has_replicates = has_replicates.lower()
+                if has_replicates not in bool_dict:
+                    raise ValueError(f"Please use a valid answer({', '.join(bool_dict.keys())})")
+                has_replicates = bool_dict[has_replicates]
+        else:
+            has_replicates = bool_dict[args.has_replicates.lower()]
+        return start_dir, has_replicates
+
+    def plot_row(self, text: str, intensity_default: str):
+        int_var = tk.IntVar(value=1)
+        plot_button = tk.Checkbutton(self, text=text, variable=int_var).grid(row=self.heading_length + self.number_of_plots, column=0)
+
+        intensity_var = tk.StringVar(value=intensity_default)
+
+        intensity_menu = tk.OptionMenu(self, intensity_var, "lfq", "raw", "ibaq", "lfq_log2", "raw_log2",
+                                       "ibaq_log2").grid(row=self.heading_length + self.number_of_plots, column=1)
+        self.number_of_plots += 1
+        return int_var, intensity_var
 
 
 class MQParser(argparse.ArgumentParser):
@@ -224,118 +271,8 @@ class MQParser(argparse.ArgumentParser):
         self.args_dict = vars(self.args)
 
 
-def main():
-    # create arg parser to handle different options
-    parser = argparse.ArgumentParser(description="A pipeline to analyze result files from a MaxQuant report. "
-                                                 "The required result files are in the txt directory.")
-    parser.add_argument(
-        '--dir',
-        dest='dir',
-        action='store',
-        help="Path to directory of analysis which should be analyzed."
-             "If not set the program will open a prompt and ask to select one."
-    )
-    parser.add_argument(
-        '--yml-file',
-        dest='yml_file',
-        action='store',
-        help="Path to yml file which should be used for analysis, or 'default'. "
-             "If not set the program will open a prompt and ask to select one, "
-             "but if canceled the default yml file will be used."
-    )
-    parser.add_argument(
-        "--loglevel",
-        dest="loglevel",
-        action="store",
-        default=logging.WARNING,
-        help="Logging level of analysis. Should be from options (lowest to highest): DEBUG < INFO < WARNING < ERROR. "
-             "The higher the logging level the fewer messages are shown. Default: WARNING"
-    )
-    parser.add_argument(
-        "--has-replicates",
-        dest="has_replicates",
-        action="store",
-        default=None,
-        help="If you have replicates of each experiment enter y else enter n"
-             "Replicates need to be enumerated in a way that numbers are added at the end of the name"
-             "If no replicates are in data set no venn diagrams will be generated"
-    )
-    parser.add_argument(
-        "--no-gui",
-        default=False,
-        const=True,
-        nargs="?",
-        help="specify this if no gui should be opened"
-    )
-    args = parser.parse_args()
-    args_dict = vars(args)
-
-    # determine logging level
-    try:
-        loglevel = getattr(logging, args.loglevel.upper())
-    except AttributeError:
-        try:
-            loglevel = int(args.loglevel)
-        except ValueError:
-            loglevel = logging.DEBUG
-
-    # disable most ui things
-    gui = MQGUI(args.no_gui, loglevel=loglevel)
-    if args.no_gui:
-        # if no dir was specified ask for one
-        if args.dir is None:
-            start_dir = filedialog.askdirectory(title="Please select a directory with MaxQuant result files")
-            if not start_dir:
-                raise ValueError("Please select a directory")
-        else:
-            start_dir = args.dir
-
-        bool_dict = {"yes": True, "y": True, "true": True, "no": False, "n": False, "false": False}
-        # ask if the file has replicates with yes as default
-        if args.has_replicates is None:
-            has_replicates = input("Please specify if you have replicates in your data [Y/n]: ")
-            if not has_replicates:
-                has_replicates = True
-            else:
-                has_replicates = has_replicates.lower()
-                if has_replicates not in bool_dict:
-                    raise ValueError(f"Please use a valid answer({', '.join(bool_dict.keys())})")
-                has_replicates = bool_dict[has_replicates]
-        else:
-            has_replicates = bool_dict[args.has_replicates.lower()]
-
-        # create initializer which reads all required files
-        mqinit = MQInitializer(start_dir, args.yml_file, loglevel=loglevel)
-        mqinit.init_config()
-        mqinit.configs.update("has_replicates", has_replicates)
-        mqinit.prepare_stuff()
-        # create plotter from initializer
-        mqplots = MQPlots.from_MQInitializer(mqinit)
-        # create all plots and other results
-        mqplots.create_results()
-    else:
-        if args.dir is not None:
-            gui.dir_text.set(args.dir)
-
-        gui.mainloop()
-
-
 def browsefunc(fn, var, fn_params: dict = None):
     if fn_params is None:
         fn_params = {}
     filename = fn(**fn_params)
     var.set(filename)
-
-
-def plot_row(frame, text: str, row, intensity_default: str):
-    int_var = tk.IntVar(value=1)
-    plot_button = tk.Checkbutton(frame, text=text, variable=int_var).grid(row=row, column=0)
-
-    intensity_var = tk.StringVar(value=intensity_default)
-
-    intensity_menu = tk.OptionMenu(frame, intensity_var, "lfq", "raw", "ibaq", "lfq_log2", "raw_log2", "ibaq_log2").grid(row=row, column=1)
-    return int_var, intensity_var
-
-
-if __name__ == "__main__":
-    main()
