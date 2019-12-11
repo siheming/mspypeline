@@ -11,6 +11,7 @@ from mqpipeline.Utils import barplot_annotate_brackets, get_number_rows_cols_for
     string_similarity_ratio
 import logging
 import warnings
+from adjustText import adjust_text
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
@@ -939,19 +940,28 @@ class MQPlots(Logger):
         # import r packages
         limma = importr("limma")
 
-        #self.experiment_groups = {
-        #    "Group_1": ["P01_rep0", "P02_rep0", "P03_rep0", "P04_rep0", "P05_rep0", "P06_rep0"],
-        #    "Group_2": ["P07_rep0", "P08_rep0", "P09_rep0", "P10_rep0", "P11_rep0", "P12_rep0", "P13_rep0", "P14_rep0",
-        #                "P15_rep0"]
-        #}
-
         for g1, g2 in combinations(self.experiment_groups, 2):
             # get groups based on name
-            v1 = self.all_intensities_dict[df_to_use].loc[
-                :, [self.int_mapping[df_to_use] + rep for exp in self.experiment_groups[g1] for rep in self.replicates[exp]]]
-            v2 = self.all_intensities_dict[df_to_use].loc[
-                :, [self.int_mapping[df_to_use] + rep for exp in self.experiment_groups[g2] for rep in self.replicates[exp]]]
-
+            # calculate the mean of the technical replicates as a proxy for the biological replicate
+            # then use all biological replicates in a group for the limma
+            v1 = {
+                exp:
+                    self.all_intensities_dict[df_to_use].loc[
+                        :, [self.int_mapping[df_to_use] + rep for rep in self.replicates[exp]]
+                    ].mean(axis=1)
+                for exp in self.experiment_groups[g1]
+            }
+            v1 = pd.concat(v1, axis=1)
+            v2 = {
+                exp:
+                    self.all_intensities_dict[df_to_use].loc[:, [self.int_mapping[df_to_use] + rep for rep in self.replicates[exp]]].mean(axis=1)
+                    for exp in self.experiment_groups[g2]
+            }
+            v2 = pd.concat(v2, axis=1)
+            #v1 = self.all_intensities_dict[df_to_use].loc[
+            #    :, [self.int_mapping[df_to_use] + rep for exp in self.experiment_groups[g1] for rep in self.replicates[exp]]]
+            #v2 = self.all_intensities_dict[df_to_use].loc[
+            #    :, [self.int_mapping[df_to_use] + rep for exp in self.experiment_groups[g2] for rep in self.replicates[exp]]]
             # filter entries with too many nans based on function
             non_na_group_1 = get_number_of_non_na_values(v1.shape[1])
             non_na_group_2 = get_number_of_non_na_values(v2.shape[1])
@@ -967,29 +977,48 @@ class MQPlots(Logger):
 
             df = pd.concat([v1[mask], v2[mask]], axis=1)
             design = pd.DataFrame([[0] * v1.shape[1] + [1] * v2.shape[1],
-                                   [1] * v1.shape[1] + [0] * v2.shape[1]], index=[g1, g2]).T
+                                   [1] * v1.shape[1] + [0] * v2.shape[1]], index=[g2, g1]).T
 
             # transform to r objects
             r_df = pandas2ri.py2ri(df)
             r_design = pandas2ri.py2ri(design)
+            r_rownames = pandas2ri.py2ri(df.index)
+            # add the index to the dataframe because it will be sorted
+            r_df.rownames = r_rownames
             # run the r code
             fit = limma.lmFit(r_df, r_design)
-            c_matrix = limma.makeContrasts(f"{g1}-{g2}", levels=r_design)
+            c_matrix = limma.makeContrasts(f"{g2}-{g1}", levels=r_design)
             contrast_fit = limma.contrasts_fit(fit, c_matrix)
             fit_bayes = limma.eBayes(contrast_fit)
             res = limma.topTable(fit_bayes, adjust="BH", number=df.shape[0])
             # transform back to python
-            ress = pandas2ri.ri2py(res)
+            with warnings.catch_warnings():
+                # catch a warning from ri2py where DataFrame.from_items is being used
+                warnings.simplefilter("ignore", FutureWarning)
+                ress = pandas2ri.ri2py(res)
+            # extract index
+            ress.index = pd.Index([x for x in res.rownames], name="Gene_names")
+            col = "adj.P.Val"  # P.Value
+            plot_data = ress.loc[:, ["logFC", col]]
             # save all values
+            plot_data.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_full.csv"))
             # save significant values
+            plot_data[plot_data[col] < 0.05].to_csv(
+                os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_significant.csv"))
+            # calculate mean intensity for unique genes for plotting
+            unique_g1 = v1[exclusive_1].mean(axis=1).rename(f"{df_to_use} mean intensity")
+            unique_g2 = v2[exclusive_2].mean(axis=1).rename(f"{df_to_use} mean intensity")
+            # save unique values
+            unique_g1.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g1}.csv"), header=True)
+            unique_g2.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g2}.csv"), header=True)
 
             def get_volcano_color(fchange, pval):
                 if pval > 0.05:
                     return "gray"
                 elif fchange >= 0:
-                    return "blue"
-                elif fchange < 0:
                     return "red"
+                elif fchange < 0:
+                    return "blue"
                 else:
                     raise ValueError("heisenbug")
             # plot
@@ -998,19 +1027,29 @@ class MQPlots(Logger):
 
             # non sign gray, left side significant blue right side red
             color = [get_volcano_color(log_fold_change, p_val)
-                     for log_fold_change, p_val in zip(ress["logFC"], ress["adj.P.Val"])]
-            ax.scatter(ress["logFC"], -np.log10(ress["adj.P.Val"]), color=color)  # TODO color
+                     for log_fold_change, p_val in zip(plot_data["logFC"], plot_data[col])]
+            ax.scatter(plot_data["logFC"], -np.log10(plot_data[col]), color=color)
             # add line at significance threshold
             ax.axhline(-np.log10(0.05), linestyle="--", color="black", alpha=0.6)
             xmin, xmax = ax.get_xbound()
             abs_max = max(abs(xmin), abs(xmax))
             # plot unique values with mean intensity at over maximum
-            ax_unique.scatter([-(abs_max * 1.05)] * exclusive_1.sum(), v1[exclusive_1].mean(axis=1))
-            ax_unique.scatter([abs_max * 1.05] * exclusive_2.sum(), v2[exclusive_2].mean(axis=1))
+            ax_unique.scatter([-(abs_max * 1.05)] * len(unique_g1), unique_g1, color="royalblue")
+            ax_unique.scatter([abs_max * 1.05] * len(unique_g2), unique_g2, color="lightcoral")
             # figure stuff
             fig.suptitle(f"{g1} vs {g2}")
-            ax.set_xlabel("fold change")
-            ax.set_ylabel("- log10 p-value")
+            ax.set_xlabel(r"$Log_2$ Fold Change")
+            ax.set_ylabel(r"-$Log_{10}$" + " p value")
             ax_unique.set_ylabel(self.intensity_label_names[df_to_use])
-            res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}" + FIG_FORMAT)
+            res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}_no_annotation" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
+            significant_upregulated = plot_data[(plot_data["logFC"] < 0) & (plot_data[col] < 0.05)].sort_values(by=[col], ascending=True).head(10)
+            significant_downregulated = plot_data[(plot_data["logFC"] > 0) & (plot_data[col] < 0.05)].sort_values(by=[col], ascending=True).head(10)
+            significant = pd.concat([significant_upregulated, significant_downregulated])
+            texts = []
+            for log_fold_change, p_val, gene_name in zip(significant["logFC"], significant[col], significant.index):
+                texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center"))
+            adjust_text(texts, arrowprops=dict(width=0.2, headwidth=0, color='black'), ax=ax)
+            res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}_annotation" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
+            # TODO scatter plot of significant genes

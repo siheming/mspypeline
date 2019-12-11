@@ -1,3 +1,4 @@
+import difflib
 from collections.abc import Sized
 from difflib import SequenceMatcher
 from itertools import combinations
@@ -121,3 +122,9 @@ def get_number_of_non_na_values(x):
 
 def string_similarity_ratio(a, b):
     return SequenceMatcher(None, a, b).ratio()
+
+
+def get_overlap(s1, s2):
+    s = difflib.SequenceMatcher(None, s1, s2)
+    pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2))
+    return s1[pos_a:pos_a + size]
