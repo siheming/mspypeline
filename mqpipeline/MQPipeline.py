@@ -12,10 +12,10 @@ class MQGUI(tk.Tk):
 
         self.yaml_options = ["default"]
 
-        self.mqinit = MQInitializer("", "default", loglevel=loglevel)
         self.number_of_plots = 0
 
         if args.no_gui:
+            # get all necessary data, start the analysis and quit
             self.withdraw()
             start_dir, has_replicates = self.ensure_arguments(args)
             # create initializer which reads all required files
@@ -28,6 +28,7 @@ class MQGUI(tk.Tk):
             # create all plots and other results
             mqplots.create_results()
         else:
+            self.mqinit = MQInitializer("", "default", loglevel=loglevel)
             self.make_layout()
             if args.dir:
                 self.dir_text.set(args.dir)

@@ -35,7 +35,7 @@ class MQPlots(Logger):
     ]
 
     def __init__(
-        self, start_dir, replicates, configs,
+        self, start_dir, replicates, experiment_groups, configs,
         df_protein_names, df_peptide_names,
         interesting_proteins, go_analysis_gene_names,
         loglevel=logging.DEBUG
@@ -49,6 +49,7 @@ class MQPlots(Logger):
         # general information
         self.start_dir = start_dir
         self.replicates = replicates
+        self.experiment_groups = experiment_groups
         self.configs = configs
         self.int_mapping = {
             "raw": "Intensity ", "raw_log2": "Intensity ",
@@ -184,28 +185,6 @@ class MQPlots(Logger):
                 exp_prot_ids |= rep_set
             self.whole_experiment_protein_ids[experiment] = exp_prot_ids
 
-        if all(["_" in rep for rep in self.replicates]):
-            self.experiment_groups = ddict(list)
-            for rep in self.replicates:
-                rep_split = rep.split("_")
-                self.experiment_groups[rep_split[0]].append(rep)
-        else:
-            try:
-                # determine grouping
-                similarities = pd.DataFrame([[string_similarity_ratio(e1, e2) for e1 in self.replicates] for e2 in self.replicates],
-                                            columns=self.replicates, index=self.replicates)
-                similarities = similarities > 0.8
-                self.experiment_groups = {}
-                start_index = 0
-                count = 0
-                while start_index < similarities.shape[0]:
-                    matches = similarities.iloc[start_index, :].sum()
-                    self.experiment_groups[f"Group_{count}"] = [similarities.index[i] for i in range(start_index, start_index + matches)]
-                    start_index += matches
-                    count += 1
-            except Exception:
-                self.experiment_groups = {}
-
         # set all result dirs
         # TODO: for now just create all of them
         # path for venn diagrams
@@ -228,6 +207,7 @@ class MQPlots(Logger):
         return cls(
             start_dir = mqinti_instance.start_dir,
             replicates = mqinti_instance.replicates,
+            experiment_groups=mqinti_instance.experiment_groups,
             configs = mqinti_instance.configs,
             df_protein_names = mqinti_instance.df_protein_names,
             df_peptide_names = mqinti_instance.df_peptide_names,
@@ -627,7 +607,7 @@ class MQPlots(Logger):
             fig.legend()
 
             res_path = os.path.join(self.file_dir_descriptive,
-                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rank" + FIG_FORMAT)
+                                    f"{self.replicate_representation[experiment].replace(' ', '_')}_rank" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     def plot_relative_std(self, df_to_use: str = "raw"):

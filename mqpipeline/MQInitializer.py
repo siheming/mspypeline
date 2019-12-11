@@ -1,17 +1,16 @@
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import os
-from mqpipeline.Logger import Logger
 from collections import defaultdict as ddict
-
-from mqpipeline.Utils import get_overlap
-
 try:
     from ruamel_yaml import YAML
 except ModuleNotFoundError:
     from ruamel.yaml import YAML
 from tkinter import filedialog
 import logging
+
+from mqpipeline.Logger import Logger
+from mqpipeline.Utils import get_overlap, string_similarity_ratio
 
 
 class MQInitializer(Logger):
@@ -29,6 +28,7 @@ class MQInitializer(Logger):
         self.yaml = YAML()
         self.yaml.default_flow_style = False
         self.replicates = None
+        self.experiment_groups = None
         self.configs = None
         self.path_config = None
         self.df_protein_names, self.df_peptide_names = None, None
@@ -141,7 +141,13 @@ class MQInitializer(Logger):
         # read protein groups file
         df_protein_names = pd.read_csv(file_dir_protein_names, sep="\t")
         self.logger.debug("%s shape: %s", MQInitializer.proteins_txt, df_protein_names.shape)
+        self.logger.debug("%s shape: %s", MQInitializer.peptides_txt, df_peptide_names.shape)
 
+        self.replicates, self.experiment_groups = self.determine_groupings(df_protein_names, df_peptide_names)
+        df_protein_names, df_peptide_names = self.preprocess_dfs(df_protein_names, df_peptide_names)
+        return df_protein_names, df_peptide_names
+
+    def determine_groupings(self, df_protein_names, df_peptide_names):
         # TODO can the Intensity column always be expected in the file?
         # TODO will the column names always be the same between Intensity and LFQ intensity?
         all_reps = sorted([x.replace('Intensity ', '') for x in df_protein_names.columns
@@ -153,8 +159,9 @@ class MQInitializer(Logger):
             experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
             if any(experiment_analysis_overlap):
                 unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
-                raise ValueError(f"Found replicates in {MQInitializer.proteins_txt}, but not in {MQInitializer.peptides_txt}: " +
-                                 ", ".join(unmatched))
+                raise ValueError(
+                    f"Found replicates in {MQInitializer.proteins_txt}, but not in {MQInitializer.peptides_txt}: " +
+                    ", ".join(unmatched))
 
         # try to automatically determine experimental setup
         if not self.configs.get("experiments", False):
@@ -183,10 +190,9 @@ class MQInitializer(Logger):
                 self.logger.debug("number of replicates per experiment:")
                 self.logger.debug("\n".join([f"{ex}: {len(replicates[ex])}" for ex in replicates]))
                 self.configs["experiments"] = list(replicates.keys())
-                self.replicates = replicates
             else:
                 self.configs["experiments"] = all_reps
-                self.replicates = {rep: [rep] for rep in all_reps}
+                replicates = {rep: [rep] for rep in all_reps}
         else:
             if self.configs.get("has_replicates", True):
                 self.logger.info("Using saved experimental setup")
@@ -198,10 +204,34 @@ class MQInitializer(Logger):
                     )
                     overlap_minimum = overlaps[overlaps >= 0].idxmin()
                     replicates[self.configs.get("experiments")[overlap_minimum]].append(rep)
-                self.replicates = replicates
             else:
-                self.replicates = {rep: [rep] for rep in all_reps}
+                replicates = {rep: [rep] for rep in all_reps}
 
+        if all(["_" in rep for rep in replicates]):
+            experiment_groups = ddict(list)
+            for rep in replicates:
+                rep_split = rep.split("_")
+                experiment_groups[rep_split[0]].append(rep)
+        else:
+            try:
+                # determine grouping
+                similarities = pd.DataFrame([[string_similarity_ratio(e1, e2) for e1 in replicates] for e2 in replicates],
+                                            columns=replicates, index=replicates)
+                similarities = similarities > 0.8
+                experiment_groups = {}
+                start_index = 0
+                count = 0
+                while start_index < similarities.shape[0]:
+                    matches = similarities.iloc[start_index, :].sum()
+                    experiment_groups[f"Group_{count}"] = [similarities.index[i] for i in range(start_index, start_index + matches)]
+                    start_index += matches
+                    count += 1
+            except Exception:
+                experiment_groups = {}
+        return replicates, experiment_groups
+
+    def preprocess_dfs(self, df_protein_names: pd.DataFrame, df_peptide_names: pd.DataFrame)\
+            -> (pd.DataFrame, pd.DataFrame):
         # filter all contaminants by removing all rows where any of the 3 columns contains a +
         not_contaminants = (df_protein_names[
                                 ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
