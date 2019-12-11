@@ -10,7 +10,6 @@ class MQGUI(tk.Tk):
     def __init__(self, no_gui, loglevel=logging.DEBUG):
         super().__init__()
 
-        self._start_dir = ""
         self.yaml_options = ["default"]
 
         self.mqinit = MQInitializer("", "default", loglevel=loglevel)
@@ -20,19 +19,14 @@ class MQGUI(tk.Tk):
         else:
             self.make_layout()
 
-    @property
-    def start_dir(self):
-        return self._start_dir
-
-    @start_dir.setter
-    def start_dir(self, start_dir):
-        self._start_dir = start_dir
-        self.mqinit.start_dir = self.start_dir
+    def dir_setter(self, *args):
+        self.mqinit.start_dir = self.dir_text.get()
+        # write back possible modifications
+        self.dir_text.set(self.mqinit.start_dir)
         if self.mqinit.has_yml_file():
             self.mqinit.file_path_yaml = "file"
             self.yaml_text.set("file")
             self.yaml_options = ["default", "file"]
-            #print(self.mqinit.configs)
             # next steps should also be done hy what the update button does?
         else:
             self.mqinit.file_path_yaml = "default"
@@ -42,9 +36,6 @@ class MQGUI(tk.Tk):
         for op in self.yaml_options:
             self.yaml_button['menu'].add_command(label=op, command=tk._setit(self.yaml_text, op))
 
-    def dir_setter(self, *args):
-        self.start_dir = self.dir_text.get()
-
     def update_listboxes(self):
         if self.mqinit.configs.get("experiments"):
             self.experiments_list.delete(0, "end")
@@ -52,19 +43,18 @@ class MQGUI(tk.Tk):
                 self.experiments_list.insert("end", op)
         else:
             self.experiments_list.delete(0, "end")
-
+        # clear selection then select from configs
+        for i, pathway in enumerate(self.mqinit.possible_pathways):
+            self.pathway_list.select_clear(i)
         if self.mqinit.configs.get("pathways"):
             for pathway in self.mqinit.configs.get("pathways"):
                 self.pathway_list.select_set(self.mqinit.possible_pathways.index(pathway))
-        else:
-            for i, pathway in enumerate(self.mqinit.possible_pathways):
-                self.pathway_list.select_clear(i)
+        # clear selection then select from configs
+        for i, go in enumerate(self.mqinit.possible_gos):
+            self.go_proteins_list.select_clear(i)
         if self.mqinit.configs.get("go_terms"):
             for go in self.mqinit.configs.get("go_terms"):
                 self.go_proteins_list.select_set(self.mqinit.possible_gos.index(go))
-        else:
-            for i, go in enumerate(self.mqinit.possible_gos):
-                self.go_proteins_list.select_clear(i)
 
     def yaml_path_setter(self, *args):
         if self.yaml_text.get() == "file":
@@ -115,7 +105,7 @@ class MQGUI(tk.Tk):
 
         yaml_label = tk.Label(self, text="Yaml file").grid(row=0, column=1)
 
-        self.dir_text = tk.StringVar(value=self.start_dir)
+        self.dir_text = tk.StringVar(value=self.mqinit.start_dir)
         self.dir_text.trace("w", self.dir_setter)
         dir_button = tk.Button(self, textvariable=self.dir_text,
                                command=lambda: browsefunc(filedialog.askdirectory, self.dir_text, fn_params={
@@ -185,6 +175,53 @@ class MQGUI(tk.Tk):
 
         self.running_text = tk.StringVar(value="Please press Start")
         self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=1)
+
+
+class MQParser(argparse.ArgumentParser):
+    def __init__(self):
+        super().__init__(description="A pipeline to analyze result files from a MaxQuant report. "
+                                                   "The required result files are in the txt directory.")
+        self.add_argument(
+            '--dir',
+            dest='dir',
+            action='store',
+            help="Path to directory of analysis which should be analyzed."
+                 "If not set the program will open a prompt and ask to select one."
+        )
+        self.add_argument(
+            '--yml-file',
+            dest='yml_file',
+            action='store',
+            help="Path to yml file which should be used for analysis, or 'default'. "
+                 "If not set the program will open a prompt and ask to select one, "
+                 "but if canceled the default yml file will be used."
+        )
+        self.add_argument(
+            "--loglevel",
+            dest="loglevel",
+            action="store",
+            default=logging.WARNING,
+            help="Logging level of analysis. Should be from options (lowest to highest): DEBUG < INFO < WARNING < ERROR. "
+                 "The higher the logging level the fewer messages are shown. Default: WARNING"
+        )
+        self.add_argument(
+            "--has-replicates",
+            dest="has_replicates",
+            action="store",
+            default=None,
+            help="If you have replicates of each experiment enter y else enter n"
+                 "Replicates need to be enumerated in a way that numbers are added at the end of the name"
+                 "If no replicates are in data set no venn diagrams will be generated"
+        )
+        self.add_argument(
+            "--no-gui",
+            default=False,
+            const=True,
+            nargs="?",
+            help="specify this if no gui should be opened"
+        )
+        self.args = self.parse_args()
+        self.args_dict = vars(self.args)
 
 
 def main():
@@ -270,6 +307,7 @@ def main():
         # create initializer which reads all required files
         mqinit = MQInitializer(start_dir, args.yml_file, loglevel=loglevel)
         mqinit.init_config()
+        mqinit.configs.update("has_replicates", has_replicates)
         mqinit.prepare_stuff()
         # create plotter from initializer
         mqplots = MQPlots.from_MQInitializer(mqinit)

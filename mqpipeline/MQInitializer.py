@@ -3,6 +3,9 @@ from pandas.api.types import is_numeric_dtype
 import os
 from mqpipeline.Logger import Logger
 from collections import defaultdict as ddict
+
+from mqpipeline.Utils import get_overlap
+
 try:
     from ruamel_yaml import YAML
 except ModuleNotFoundError:
@@ -50,10 +53,11 @@ class MQInitializer(Logger):
 
     @start_dir.setter
     def start_dir(self, start_dir):
+        start_dir = os.path.normpath(start_dir)
         # make sure to be on the right level and set starting dir
-        if os.path.split(os.path.split(start_dir)[0])[-1] == "txt":
+        if os.path.split(start_dir)[1] == "txt":
             self.logger.debug("Removing txt ending from path")
-            self._start_dir = os.path.join(os.path.split(os.path.split(start_dir)[0])[0])
+            self._start_dir = os.path.split(start_dir)[0]
         else:
             self._start_dir = start_dir
         self.logger.info(f"Starting dir: {self.start_dir}")
@@ -143,9 +147,9 @@ class MQInitializer(Logger):
         all_reps = sorted([x.replace('Intensity ', '') for x in df_protein_names.columns
                            if x.startswith('Intensity ')], key=len, reverse=True)
         # make sure the two files contain the same replicate names
-        all_reps_peptides = [x.replace('Intensity ', '') for x in df_protein_names.columns
+        all_reps_peptides = [x.replace('Intensity ', '') for x in df_peptide_names.columns
                              if x.startswith('Intensity ')]
-        if df_peptide_names.shape == (0, 0):
+        if df_peptide_names.shape != (0, 0):
             experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
             if any(experiment_analysis_overlap):
                 unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
@@ -155,13 +159,6 @@ class MQInitializer(Logger):
         # try to automatically determine experimental setup
         if not self.configs.get("experiments", False):
             self.logger.info("No experiments specified in settings file. Trying to infer.")
-            # TODO will there every be more than 9 replicates?
-            import difflib
-
-            def get_overlap(s1, s2):
-                s = difflib.SequenceMatcher(None, s1, s2)
-                pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2))
-                return s1[pos_a:pos_a + size]
 
             if self.configs.get("has_replicates", True):
                 #
@@ -181,7 +178,7 @@ class MQInitializer(Logger):
                         rep = replicates.pop(experiment)
                         replicates[rep[0]] = rep
                     elif experiment in unclear_matches:
-                        self.logger.debug(f"unclear match for experiment: {experiment}")
+                        self.logger.warning(f"unclear match for experiment: {experiment}")
                 self.logger.info(f"determined experiments: {replicates.keys()}")
                 self.logger.debug("number of replicates per experiment:")
                 self.logger.debug("\n".join([f"{ex}: {len(replicates[ex])}" for ex in replicates]))
@@ -204,15 +201,6 @@ class MQInitializer(Logger):
                 self.replicates = replicates
             else:
                 self.replicates = {rep: [rep] for rep in all_reps}
-
-        found_replicates = [rep for l in self.replicates.values() for rep in l]
-        for df_cols in [df_peptide_names.columns, df_protein_names.columns]:
-            intens_cols = [x.replace('Intensity ', '') for x in df_cols if x.startswith('Intensity ')]
-            not_found_replicates = [x not in found_replicates for x in intens_cols]
-            if any(not_found_replicates):
-                unmatched = [x for x in intens_cols if not_found_replicates]
-                raise ValueError(f"Found replicates in {MQInitializer.proteins_txt}, but not in {MQInitializer.peptides_txt}: " +
-                                 ", ".join(unmatched))
 
         # filter all contaminants by removing all rows where any of the 3 columns contains a +
         not_contaminants = (df_protein_names[
@@ -252,7 +240,7 @@ class MQInitializer(Logger):
                                 df_protein_names.duplicated(subset="Gene name fasta", keep=False).sum())
             df_protein_names = df_protein_names.drop_duplicates(subset="Gene name fasta", keep=False)
         # convert all non numeric intensities
-        for col in [col for col in df_protein_names.columns if 'ntensity' in col] + [[col for col in df_protein_names.columns if 'iBAQ' in col]]:
+        for col in [col for col in df_protein_names.columns if 'Intensity ' in col or "LFQ " in col or "iBAQ " in col]:
             if not is_numeric_dtype(df_protein_names[col]):
                 df_protein_names[col] = df_protein_names[col].apply(lambda x: x.replace(",", ".")).fillna(0)
                 df_protein_names[col] = df_protein_names[col].astype("int64")
