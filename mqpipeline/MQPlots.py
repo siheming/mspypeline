@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+import functools
 from mqpipeline.Logger import Logger
 from matplotlib_venn import venn3, venn2
 import matplotlib.pyplot as plt
@@ -33,6 +34,17 @@ class MQPlots(Logger):
         "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
         "plot_venn_groups", "plot_r_volcano"
     ]
+
+    def exception_handler(f):
+        @functools.wraps(f)
+        def wrapper(self, *args, **kwargs):
+            try:
+                ret = f(self, *args, **kwargs)
+                return ret
+            except PermissionError:
+                self.logger.warning("Permission error in function %s. Did you forget to close the file?", f.split(" ")[1])
+                return
+        return wrapper
 
     def __init__(
         self, start_dir, replicates, experiment_groups, configs,
@@ -250,6 +262,7 @@ class MQPlots(Logger):
                 getattr(self, plot_name)(self.configs.get(intensity_name, "raw"))
         self.logger.info("Done creating plots")
 
+    @exception_handler
     def save_venn(self, ex: str, sets, set_names):
         creates_figure = True
         plt.close("all")
@@ -289,6 +302,7 @@ class MQPlots(Logger):
             plt.savefig(res_path, dpi=200, bbox_inches="tight")
         plt.close("all")
 
+    @exception_handler
     def save_bar_venn(self, ex: str, named_sets):
         plt.close("all")
         if len(named_sets) > 6:
@@ -334,6 +348,7 @@ class MQPlots(Logger):
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
         plt.close("all")
 
+    @exception_handler
     def save_venn_names(self, named_sets: dict):
         for intersected, unioned, result in venn_names(named_sets):
             # create name based on the intersections and unions that were done
@@ -348,6 +363,7 @@ class MQPlots(Logger):
                 for re in result:
                     out.write(re + "\n")
 
+    @exception_handler
     def plot_venn_results(self, *args):
         # TODO the *args should not be used?
         self.logger.info("Creating venn diagrams")
@@ -379,6 +395,7 @@ class MQPlots(Logger):
         }
         self.save_bar_venn("All experiments union", experiment_union_sets)
 
+    @exception_handler
     def plot_venn_groups(self, *args):
         if self.experiment_groups:
             if len(self.experiment_groups) <= 3:
@@ -425,6 +442,7 @@ class MQPlots(Logger):
         else:
             self.logger.warning("Skipping venn group plot because grouping failed")
 
+    @exception_handler
     def plot_detection_counts(self, df_to_use: str = "raw"):
         plt.close("all")
         # determine number of rows and columns in the plot based on the number of experiments
@@ -453,6 +471,7 @@ class MQPlots(Logger):
         res_path = os.path.join(self.file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_number_of_detected_proteins(self, df_to_use: str = "raw"):
         plt.close("all")
         # determine number of rows and columns in the plot based on the number of experiments
@@ -487,6 +506,7 @@ class MQPlots(Logger):
         res_path = os.path.join(self.file_dir_descriptive, "detection_per_replicate" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_intensity_histograms(self, df_to_use: str = "raw"):
         plt.close("all")
         n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig([x for l in self.replicates.values() for x in l])
@@ -515,6 +535,7 @@ class MQPlots(Logger):
         res_path = os.path.join(self.file_dir_descriptive, "intensity_histograms" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_scatter_replicates(self, df_to_use: str = "raw"):
         # TODO where to put uniquely found proteins
         for experiment in self.replicates:
@@ -543,6 +564,7 @@ class MQPlots(Logger):
                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_scatter" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_rank(self, df_to_use: str = "raw"):
         all_pathway_proteins = set.union(*(set(x) for x in self.interesting_proteins.values()))
         for experiment in self.replicates:
@@ -610,6 +632,7 @@ class MQPlots(Logger):
                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_rank" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_relative_std(self, df_to_use: str = "raw"):
         plt.close("all")
         for experiment in self.replicates:
@@ -651,6 +674,7 @@ class MQPlots(Logger):
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
 
+    @exception_handler
     def plot_pathway_analysis(self, df_to_use: str = "raw"):
         ex_list = list(self.replicates.keys())
         plot_ns = False
@@ -721,6 +745,7 @@ class MQPlots(Logger):
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_pathway_timeline(self, df_to_use: str = "raw"):
         group_colors = {
             "SD": "#808080",
@@ -776,6 +801,7 @@ class MQPlots(Logger):
             res_path = os.path.join(self.file_dir_descriptive, f"pathway_timeline_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_experiment_comparison(self, df_to_use: str = "raw"):
         for ex1, ex2 in combinations(self.replicates, 2):
             plt.close("all")
@@ -830,6 +856,7 @@ class MQPlots(Logger):
                                     f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_total" + FIG_FORMAT)
             plt.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_pathway_proportions(self, df_to_use: str = "raw"):
         plt.close("all")
         experiment_proportion = {
@@ -866,6 +893,7 @@ class MQPlots(Logger):
     def create_report(self):
         pass
 
+    @exception_handler
     def plot_go_analysis(self, df_to_use: str = "raw"):
         self.logger.info("Creating go analysis plots")
         plt.close("all")
@@ -931,6 +959,7 @@ class MQPlots(Logger):
         res_path = os.path.join(self.file_dir_go_analysis, "go_analysis" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    @exception_handler
     def plot_r_volcano(self, df_to_use: str = "lfq_log2"):
         # import r interface package
         from rpy2.robjects.packages import importr
