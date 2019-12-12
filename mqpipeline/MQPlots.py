@@ -42,7 +42,8 @@ class MQPlots(Logger):
                 ret = f(self, *args, **kwargs)
                 return ret
             except PermissionError:
-                self.logger.warning("Permission error in function %s. Did you forget to close the file?", f.split(" ")[1])
+                self.logger.warning("Permission error in function %s. Did you forget to close the file?",
+                                    str(f).split(" ")[1])
                 return
         return wrapper
 
