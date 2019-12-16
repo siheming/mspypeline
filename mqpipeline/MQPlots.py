@@ -94,9 +94,9 @@ class MQPlots(Logger):
         # extract all raw intensites from the dataframe
         self.all_intensities_raw = self.df_protein_names[
             [f"Intensity {rep}" for exp in self.replicates for rep in self.replicates[exp]]
-        ]
-        # filter all rows where all intensities are 0
-        mask = (self.all_intensities_raw != 0).sum(axis=1) != 0
+        ].replace({0: np.nan})
+        # filter all rows where all intensities are nan
+        mask = (~self.all_intensities_raw.isna()).sum(axis=1) != 0
         self.all_intensities_raw = self.all_intensities_raw[mask]
 
         # write all intensities of every experiment to one dict entry
@@ -107,9 +107,9 @@ class MQPlots(Logger):
         }
 
         # add log2 intensities
-        self.all_intensities_raw_log2 = np.log2(self.all_intensities_raw.replace({0: np.nan}))
+        self.all_intensities_raw_log2 = np.log2(self.all_intensities_raw)
         self.intensities_per_experiment_raw_log2 = {
-            experiment: np.log2(df.replace({0: np.nan}))
+            experiment: np.log2(df)
             for experiment, df in self.intensities_per_experiment_raw.items()
         }
 
@@ -117,9 +117,9 @@ class MQPlots(Logger):
             # extract all lfq intensities from the dataframe
             self.all_intensities_lfq = self.df_protein_names[
                 [f"LFQ intensity {rep}" for exp in self.replicates for rep in self.replicates[exp]]
-            ]
-            # filter all rows where all intensities are 0
-            mask = (self.all_intensities_lfq != 0).sum(axis=1) != 0
+            ].replace({0: np.nan})
+            # filter all rows where all intensities are nan
+            mask = (~self.all_intensities_lfq.isna()).sum(axis=1) != 0
             self.all_intensities_lfq = self.all_intensities_lfq[mask]
 
             # write all intensities of every experiment to one dict entry
@@ -130,9 +130,9 @@ class MQPlots(Logger):
             }
 
             # add log2 values
-            self.all_intensities_lfq_log2 = np.log2(self.all_intensities_lfq.replace({0: np.nan}))
+            self.all_intensities_lfq_log2 = np.log2(self.all_intensities_lfq)
             self.intensities_per_experiment_lfq_log2 = {
-                experiment: np.log2(df.replace({0: np.nan}))
+                experiment: np.log2(df)
                 for experiment, df in self.intensities_per_experiment_lfq.items()
             }
 
@@ -146,9 +146,9 @@ class MQPlots(Logger):
             # extract all lfq intensities from the dataframe
             self.all_intensities_ibaq = self.df_protein_names[
                 [f"iBAQ {rep}" for exp in self.replicates for rep in self.replicates[exp]]
-            ]
-            # filter all rows where all intensities are 0
-            mask = (self.all_intensities_ibaq != 0).sum(axis=1) != 0
+            ].replace({0: np.nan})
+            # filter all rows where all intensities are nan
+            mask = (~self.all_intensities_ibaq.isna()).sum(axis=1) != 0
             self.all_intensities_ibaq = self.all_intensities_ibaq[mask]
 
             # write all intensites of every experiment to one dict entry
@@ -159,9 +159,9 @@ class MQPlots(Logger):
             }
 
             # add log2 values
-            self.all_intensities_ibaq_log2 = np.log2(self.all_intensities_ibaq.replace({0: np.nan}))
+            self.all_intensities_ibaq_log2 = np.log2(self.all_intensities_ibaq)
             self.intensities_per_experiment_ibaq_log2 = {
-                experiment: np.log2(df.replace({0: np.nan}))
+                experiment: np.log2(df)
                 for experiment, df in self.intensities_per_experiment_ibaq.items()
             }
 
@@ -574,8 +574,6 @@ class MQPlots(Logger):
             # protein ranks vs intensity
             # calculate mean intensity for the experiment and sort from highest to lowest
             m_intensity = intensities.mean(axis=1).sort_values(ascending=False)
-            # filter all 0
-            m_intensity = m_intensity[m_intensity > 0]
             # create dict to map each protein its respective rank and mean intensity
             dic = {idx: (i, value) for i, (idx, value) in enumerate(m_intensity.items())}
 
