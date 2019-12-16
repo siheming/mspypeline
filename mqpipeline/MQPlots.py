@@ -759,6 +759,9 @@ class MQPlots(Logger):
             "8W": "#4378bb"
         }
         groups = {k: "SD" if "SD" in k else k.split("_")[0] for k in self.replicates}
+        if len(set(groups.keys()) - set(group_colors.keys())):
+            self.logger.warning("Skipping pathway timeline plot because of incorrect match between found groups and target groups")
+            return
         x_values = {k: sum([int(s.replace("W", "")) for s in k.split("_") if s.endswith("W")]) for k in self.replicates}
         max_time = max(x_values.values())
         for pathway in self.interesting_proteins:
@@ -982,6 +985,10 @@ class MQPlots(Logger):
         limma = importr("limma")
 
         for g1, g2 in combinations(self.experiment_groups, 2):
+            if len(self.experiment_groups[g1]) < 2 or len(self.experiment_groups[g2]) < 2:
+                self.logger.warning("Skipping Volcano plot for comparison: %s, %s because the groups contain only "
+                                    "%s and %s experiments", g1, g2, len(self.experiment_groups[g1]), len(self.experiment_groups[g2]))
+                continue
             # get groups based on name
             # calculate the mean of the technical replicates as a proxy for the biological replicate
             # then use all biological replicates in a group for the limma
