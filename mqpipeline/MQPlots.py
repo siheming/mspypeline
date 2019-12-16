@@ -548,10 +548,10 @@ class MQPlots(Logger):
             for rep1, rep2 in combinations(self.replicates[experiment], 2):
                 x1 = self.all_intensities_dict[df_to_use][self.int_mapping[df_to_use] + rep1]
                 x2 = self.all_intensities_dict[df_to_use][self.int_mapping[df_to_use] + rep2]
-                mask = np.logical_or(x1.fillna(0) != 0, x2.fillna(0) != 0)
-                corr_mask = np.logical_and(x1.fillna(0) != 0, x2.fillna(0) != 0)
+                corr_mask = np.logical_and(~x1.isna(), ~x2.isna())
+                plot_mask = np.logical_or(~x1.isna(), ~x2.isna())
                 exp = r"$r^{2}$"
-                ax.scatter(x1[mask] + 1e2, x2[mask] + 1e2, label=f"{rep1} vs {rep2}, "
+                ax.scatter(x1.fillna(x2.min() * 0.95)[plot_mask], x2.fillna(x2.min() * 0.95)[plot_mask], label=f"{rep1} vs {rep2}, "
                            fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
                            alpha=0.5, marker=".")
                 if "log2" in df_to_use:
@@ -727,11 +727,15 @@ class MQPlots(Logger):
                 for e1, e2 in combinations(self.replicates, 2):
                     v1 = self.intensities_per_experiment_dict[df_to_use][e1].loc[protein, :].astype(float)
                     v2 = self.intensities_per_experiment_dict[df_to_use][e2].loc[protein, :].astype(float)
-                    # only perform the test if more than 3 data points are available for both experiments
-                    if len(v1[v1 > 0]) < 3 or len(v2[v2 > 0]) < 3:
-                        # self.logger.debug(f"skipping test for: {protein}, {e1} vs {e2}")
+                    # filter entries with too many nans based on function
+                    non_na_group_1 = get_number_of_non_na_values(v1.shape[0])
+                    non_na_group_2 = get_number_of_non_na_values(v2.shape[0])
+                    mask_1 = (v1 > 0).sum(axis=0) >= non_na_group_1
+                    mask_2 = (v2 > 0).sum(axis=0) >= non_na_group_2
+                    mask = np.logical_and(mask_1, mask_2)
+                    if not mask:
                         continue
-                    test = stats.ttest_ind(v1, v2, equal_var=self.configs.get("equal_var", False))
+                    test = stats.ttest_ind(v1[~v1.isna()], v2[~v2.isna()], equal_var=self.configs.get("equal_var", False))
                     if plot_ns or test[1] < threshhold:
                         # barplot_annotate_brackets(ax, ex_list.index(e1), ex_list.index(e2), test[1], range(len(ex_list)),
                         #                          all_heights[protein], dh=0.05 + 0.1 * n_annotations)
