@@ -161,7 +161,7 @@ class MQGUI(tk.Tk):
 
         intensity_label = tk.Label(self, text="Intensity").grid(row=5, column=1)
 
-        self.heading_length = 5
+        self.heading_length = 6
 
         self.detection_counts_int, self.detection_counts_var = self.plot_row("Detection counts", "raw_log2")
         self.number_of_detected_proteins_int, self.number_of_detected_proteins_var = self.plot_row("Number of detected proteins", "raw_log2")
