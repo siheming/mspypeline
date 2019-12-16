@@ -199,20 +199,22 @@ class MQPlots(Logger):
             self.whole_experiment_protein_ids[experiment] = exp_prot_ids
 
         # set all result dirs
+        # create file structure and folders
         # TODO: for now just create all of them
         # path for venn diagrams
         self.file_dir_venn = os.path.join(self.start_dir, "venn")
-        # create file structure and folder
         os.makedirs(self.file_dir_venn, exist_ok=True)
         # path for descriptive plots
         self.file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
-        # create file structure and folder
         os.makedirs(self.file_dir_descriptive, exist_ok=True)
+        # path for pathway analysis
+        self.file_dir_pathway = os.path.join(self.start_dir, "pathway_analysis")
+        os.makedirs(self.file_dir_pathway, exist_ok=True)
+        # path for go analysis
         self.file_dir_go_analysis = os.path.join(self.start_dir, "go_analysis")
-        # create file structure and folder
         os.makedirs(self.file_dir_go_analysis, exist_ok=True)
+        # path for volcano plots
         self.file_dir_volcano = os.path.join(self.start_dir, "volcano")
-        # create file structure and folder
         os.makedirs(self.file_dir_volcano, exist_ok=True)
 
     @classmethod
@@ -713,7 +715,7 @@ class MQPlots(Logger):
             #handles, labels = axiterator[0].get_legend_handles_labels()
             #fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-            res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}_no_labels" + FIG_FORMAT)
+            res_path = os.path.join(self.file_dir_pathway, f"pathway_analysis_{pathway}_no_labels" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
             try:
                 axiterator = axarr.flat
@@ -736,12 +738,12 @@ class MQPlots(Logger):
                         n_annotations += 1
                         significances.append((protein, e1, e2, test[1]))
             df = pd.DataFrame(significances, columns=["protein", "experiment1", "experiment2", "pvalue"])
-            df.to_csv(os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}_table.csv"), index=False)
+            df.to_csv(os.path.join(self.file_dir_pathway, f"pathway_analysis_{pathway}_table.csv"), index=False)
 
             #handles, labels = axiterator[0].get_legend_handles_labels()
             #fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-            res_path = os.path.join(self.file_dir_descriptive, f"pathway_analysis_{pathway}" + FIG_FORMAT)
+            res_path = os.path.join(self.file_dir_pathway, f"pathway_analysis_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     @exception_handler
@@ -797,7 +799,7 @@ class MQPlots(Logger):
             handles, labels = axiterator[0].get_legend_handles_labels()
             fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-            res_path = os.path.join(self.file_dir_descriptive, f"pathway_timeline_{pathway}" + FIG_FORMAT)
+            res_path = os.path.join(self.file_dir_pathway, f"pathway_timeline_{pathway}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     @exception_handler
