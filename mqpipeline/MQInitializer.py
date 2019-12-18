@@ -22,6 +22,7 @@ class MQInitializer(Logger):
     pathway_path = "pathways"
     proteins_txt = "proteinGroups.txt"
     peptides_txt = "peptides.txt"
+    mapping_txt = "sample_mapping.txt"
 
     def __init__(self, dir_: str, file_path_yml: str = None, loglevel=logging.DEBUG):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
@@ -143,6 +144,9 @@ class MQInitializer(Logger):
         self.logger.debug("%s shape: %s", MQInitializer.proteins_txt, df_protein_names.shape)
         self.logger.debug("%s shape: %s", MQInitializer.peptides_txt, df_peptide_names.shape)
 
+        # if rename mapping exists read it and rename the columns
+        if MQInitializer.mapping_txt in os.listdir(self.start_dir):
+            df_protein_names.columns, df_peptide_names.columns = self.rename_protein_df_columns(df_protein_names.columns, df_peptide_names.columns)
         self.replicates, self.experiment_groups = self.determine_groupings(df_protein_names, df_peptide_names)
         df_protein_names, df_peptide_names = self.preprocess_dfs(df_protein_names, df_peptide_names)
         return df_protein_names, df_peptide_names
@@ -239,25 +243,35 @@ class MQInitializer(Logger):
         self.logger.debug("Removing %s rows from %s because they are marked as contaminant",
                           (~not_contaminants).sum(), MQInitializer.proteins_txt)
         df_protein_names = df_protein_names[not_contaminants]
-        # split the fasta headers
-        colon_start = df_protein_names["Fasta headers"].str.startswith(";")
-        df_protein_names.loc[colon_start, "Fasta headers"] = df_protein_names.loc[colon_start, "Fasta headers"].str.lstrip(";")
-        # first split all fasta headers that contain multiple entries
-        sep_ind = df_protein_names["Fasta headers"].str.contains(";").fillna(False)
-        # replace all fasta headers with multiple entries with only the first one
-        # TODO will there always be a fasta header?
-        df_protein_names.loc[sep_ind, "Fasta headers"] = df_protein_names.loc[sep_ind, "Fasta headers"].str.split(";").apply(pd.Series)[0]
-        # split the fasta headers with the pipe symbol
-        fasta_col = df_protein_names["Fasta headers"].str.split("|", n=2).apply(pd.Series)
-        fasta_col.columns = ["trash", "protein id", "description"]
-        # extract the gene name from the description eg: "GN=abcd"
-        gene_names_fasta = fasta_col["description"].str.extract(r"(GN=(.*?)(\s|$))")[1]
-        gene_names_fasta.name = "Gene name fasta"
+        if any(df_protein_names["Fasta headers"].isna()):
+            gene_names_fasta = df_protein_names["Gene names"]
+            gene_names_fasta.name = "Gene name fasta"
+            fasta_col = pd.DataFrame({
+                "description": ["Missing"] * gene_names_fasta.shape[0],
+                "protein id": ["Missing"] * gene_names_fasta.shape[0]
+            }, index=gene_names_fasta.index)
+        else:
+            # split the fasta headers
+            colon_start = df_protein_names["Fasta headers"].str.startswith(";")
+            df_protein_names.loc[colon_start, "Fasta headers"] = df_protein_names.loc[colon_start, "Fasta headers"].str.lstrip(";")
+            # first split all fasta headers that contain multiple entries
+            sep_ind = df_protein_names["Fasta headers"].str.contains(";").fillna(False)
+            # replace all fasta headers with multiple entries with only the first one
+            # TODO will there always be a fasta header?
+            df_protein_names.loc[sep_ind, "Fasta headers"] = df_protein_names.loc[sep_ind, "Fasta headers"].str.split(";").apply(pd.Series)[0]
+            # split the fasta headers with the pipe symbol
+            fasta_col = df_protein_names["Fasta headers"].str.split("|", n=2).apply(pd.Series)
+            fasta_col.columns = ["trash", "protein id", "description"]
+            # extract the gene name from the description eg: "GN=abcd"
+            gene_names_fasta = fasta_col["description"].str.extract(r"(GN=(.*?)(\s|$))")[1]
+            gene_names_fasta.name = "Gene name fasta"
         # remove all rows without gene names
         mask = ~pd.isna(gene_names_fasta)
         gene_names_fasta = gene_names_fasta.loc[mask]
         fasta_col = fasta_col.loc[mask]
         df_protein_names = df_protein_names.loc[mask]
+        if ~mask.sum() > 0:
+            self.logger.warning("Removing %s rows because the gene names are missing", ~mask.sum())
         # added upper() function to avoid that non-human gene names are not recognized
         gene_names_fasta = gene_names_fasta.str.upper()
         # concat all important columns with the original dataframe
@@ -277,6 +291,37 @@ class MQInitializer(Logger):
                 df_protein_names[col] = df_protein_names[col].astype("int64")
         self.logger.debug("%s shape after preprocessing: %s", MQInitializer.proteins_txt, df_protein_names.shape)
         return df_protein_names, df_peptide_names
+
+    def rename_protein_df_columns(self, col_names_proteins: list, col_names_peptides: list) -> (list, list):
+        mapping_txt = pd.read_csv(os.path.join(self.start_dir, MQInitializer.mapping_txt),
+                                  sep="\t", header=0, index_col=None)
+        if mapping_txt.shape[1] != 2:
+            raise ValueError(f"{MQInitializer.mapping_txt} should have two columns")
+        duplicated_old = mapping_txt.iloc[:, 0].duplicated(keep=False)
+        duplicated_new = mapping_txt.iloc[:, 1].duplicated(keep=False)
+        if any(duplicated_new) or any(duplicated_old):
+            raise ValueError(f"{MQInitializer.mapping_txt} should only contain unique rows, "
+                             f"{mapping_txt.iloc[:, 0][duplicated_old]}, {mapping_txt.iloc[:, 1][duplicated_new]}")
+        mapping_dict = {old_name: new_name for old_name, new_name in zip(mapping_txt.iloc[:, 0], mapping_txt.iloc[:, 1])}
+
+        def find_key_match(col):
+            matches = []
+            for key in mapping_dict:
+                if key in col:
+                    matches.append(key)
+            matches = sorted(matches, key=len)
+            if len(matches) == 0:
+                return ""
+            else:
+                return matches[-1]
+        match_list_proteins = [find_key_match(col) for col in col_names_proteins]
+        match_list_peptides = [find_key_match(col) for col in col_names_peptides]
+        # add a replace value for the default string
+        mapping_dict[""] = ""
+        return ([col_names_proteins[i].replace(match_list_proteins[i], mapping_dict[match_list_proteins[i]])
+                for i in range(len(col_names_proteins))],
+                [col_names_peptides[i].replace(match_list_peptides[i], mapping_dict[match_list_peptides[i]])
+                for i in range(len(col_names_peptides))])
 
     def init_interest_from_txt(self):
         dict_pathway = {}

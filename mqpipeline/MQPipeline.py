@@ -133,7 +133,7 @@ class MQGUI(tk.Tk):
         self.yaml_button.grid(row=1, column=1)
 
         self.replicate_var = tk.IntVar(value=1)
-        replicate_button = tk.Checkbutton(self, text="Does the file have replicates?", variable=self.replicate_var).grid(
+        replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?", variable=self.replicate_var).grid(
             row=2, column=0)
 
         self.experiments_list = tk.Listbox(self, height=3)
