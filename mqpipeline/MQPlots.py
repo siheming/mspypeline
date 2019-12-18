@@ -953,6 +953,7 @@ class MQPlots(Logger):
         limma = importr("limma")
 
         for g1, g2 in combinations(self.experiment_groups, 2):
+            plt.close("all")
             if len(self.experiment_groups[g1]) < 2 or len(self.experiment_groups[g2]) < 2:
                 self.logger.warning("Skipping Volcano plot for comparison: %s, %s because the groups contain only "
                                     "%s and %s experiments", g1, g2, len(self.experiment_groups[g1]), len(self.experiment_groups[g2]))
@@ -1011,16 +1012,18 @@ class MQPlots(Logger):
             with warnings.catch_warnings():
                 # catch a warning from ri2py where DataFrame.from_items is being used
                 warnings.simplefilter("ignore", FutureWarning)
+                # positive is upregulated in v2 / g2
                 ress = pandas2ri.ri2py(res)
             # extract index
             ress.index = pd.Index([x for x in res.rownames], name="Gene_names")
-            col = "adj.P.Val"  # P.Value
-            plot_data = ress.loc[:, ["logFC", col]]
+            col = "adj.P.Val"  # "P.Value"
+            col_mapping = {"adj.P.Val": "adjusted p value", "P.Value": "unadjusted p value"}
+            plot_data = ress.loc[:, ["logFC", "AveExpr", "P.Value", "adj.P.Val"]]
             # save all values
-            plot_data.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_full.csv"))
+            plot_data.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_full_{col_mapping[col].replace(' ', '_')}.csv"))
             # save significant values
             plot_data[plot_data[col] < 0.05].to_csv(
-                os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_significant.csv"))
+                os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_significant_{col_mapping[col].replace(' ', '_')}.csv"))
             # calculate mean intensity for unique genes for plotting
             unique_g1 = v1[exclusive_1].mean(axis=1).rename(f"{df_to_use} mean intensity")
             unique_g2 = v2[exclusive_2].mean(axis=1).rename(f"{df_to_use} mean intensity")
@@ -1028,36 +1031,44 @@ class MQPlots(Logger):
             unique_g1.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g1}.csv"), header=True)
             unique_g2.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g2}.csv"), header=True)
 
-            def get_volcano_color(fchange, pval):
+            def get_volcano_significances(fchange, pval):
                 if pval > 0.05:
-                    return "gray"
+                    return "ns"
                 elif fchange >= 0:
-                    return "red"
+                    return "up"
                 elif fchange < 0:
-                    return "blue"
+                    return "down"
                 else:
                     raise ValueError("heisenbug")
+
+            significance_to_color = {"ns": "gray", "up": "red", "down": "blue"}
+            significance_to_label = {"ns": "non-significant", "up": f"upgregulated in {g2}", "down": f"upregulated in {g1}"}
+
             # plot
             fig, ax = plt.subplots(1, 1, figsize=(7, 7))
             ax_unique = ax.twinx()
 
             # non sign gray, left side significant blue right side red
-            color = [get_volcano_color(log_fold_change, p_val)
-                     for log_fold_change, p_val in zip(plot_data["logFC"], plot_data[col])]
-            ax.scatter(plot_data["logFC"], -np.log10(plot_data[col]), color=color)
+            significances_plot = [get_volcano_significances(log_fold_change, p_val)
+                                  for log_fold_change, p_val in zip(plot_data["logFC"], plot_data[col])]
+            for regulation in significance_to_color:
+                mask = [x == regulation for x in significances_plot]
+                ax.scatter(plot_data["logFC"][mask], -np.log10(plot_data[col])[mask],
+                           color=significance_to_color[regulation], label=significance_to_label[regulation])
             # add line at significance threshold
             ax.axhline(-np.log10(0.05), linestyle="--", color="black", alpha=0.6)
             xmin, xmax = ax.get_xbound()
             abs_max = max(abs(xmin), abs(xmax))
             # plot unique values with mean intensity at over maximum
-            ax_unique.scatter([-(abs_max * 1.05)] * len(unique_g1), unique_g1, color="royalblue")
-            ax_unique.scatter([abs_max * 1.05] * len(unique_g2), unique_g2, color="lightcoral")
+            ax_unique.scatter([-(abs_max * 1.05)] * len(unique_g1), unique_g1, color="royalblue", label=f"unique in {g1}")
+            ax_unique.scatter([abs_max * 1.05] * len(unique_g2), unique_g2, color="lightcoral", label=f"unique in {g2}")
             # figure stuff
             fig.suptitle(f"{g1} vs {g2}")
             ax.set_xlabel(r"$Log_2$ Fold Change")
-            ax.set_ylabel(r"-$Log_{10}$" + " p value")
+            ax.set_ylabel(r"-$Log_{10}$" + f" {col_mapping[col]}")
             ax_unique.set_ylabel(self.intensity_label_names[df_to_use])
-            res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}_no_annotation" + FIG_FORMAT)
+            fig.legend()
+            res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}_no_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
             significant_upregulated = plot_data[(plot_data["logFC"] < 0) & (plot_data[col] < 0.05)].sort_values(by=[col], ascending=True).head(10)
             significant_downregulated = plot_data[(plot_data["logFC"] > 0) & (plot_data[col] < 0.05)].sort_values(by=[col], ascending=True).head(10)
@@ -1066,6 +1077,6 @@ class MQPlots(Logger):
             for log_fold_change, p_val, gene_name in zip(significant["logFC"], significant[col], significant.index):
                 texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center"))
             adjust_text(texts, arrowprops=dict(width=0.2, headwidth=0, color='black'), ax=ax)
-            res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}_annotation" + FIG_FORMAT)
+            res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
             # TODO scatter plot of significant genes
