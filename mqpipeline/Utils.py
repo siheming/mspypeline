@@ -117,7 +117,7 @@ def install_r_dependencies(r_package_names, r_bioconducter_package_names):
 def get_number_of_non_na_values(x):
     import numpy as np
     percentage = 1 / (1 + np.exp(0.5 * x - 3.5)) * 0.5 + 0.5
-    return int(np.round(percentage * x))
+    return max(int(np.round(percentage * x)), 3)
 
 
 def string_similarity_ratio(a, b):
