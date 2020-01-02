@@ -502,27 +502,23 @@ class MQPlots(Logger):
         fig, axarr = plt.subplots(n_rows_replicates, n_cols_replicates,
                                   figsize=(5 * n_cols_replicates, 5 * n_rows_replicates))
         fig.suptitle(f"Replicate {self.intensity_label_names[df_to_use]} histograms")
-        for experiment, ax in zip(self.replicates, axarr.flat):
-            intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
-            for col in intensities:
-                mask = intensities[col] > 0
 
-                if "log2" in df_to_use:
-                    bins = np.linspace(intensities[col][mask].min(), intensities[col][mask].max(),
-                                       25)
-                else:
-                    bins = np.logspace(np.log2(intensities[col][mask].min()),
-                                       np.log2(intensities[col][mask].max()),
-                                       25, base=2)
+        for col, ax in zip(self.all_intensities_dict[df_to_use].columns, axarr.flat):
+            intensities = self.all_intensities_dict[df_to_use][col]
 
-                ax.set_title(f"{col}".replace(self.int_mapping[df_to_use], ""))
-                ax.hist(intensities[col][mask],
-                        bins=bins
-                        )
-                if "log2" not in df_to_use:
-                    ax.set_xscale("log", basex=2)
-                ax.set_xlabel(f"{self.intensity_label_names[df_to_use]}")
-                ax.set_ylabel("Counts")
+            if "log2" in df_to_use:
+                bins = np.linspace(intensities.min(), intensities.max(), 25)
+            else:
+                bins = np.logspace(np.log2(intensities.min()), np.log2(intensities.max()), 25, base=2)
+
+            ax.set_title(f"{col}".replace(self.int_mapping[df_to_use], ""))
+            ax.hist(intensities,
+                    bins=bins
+                    )
+            if "log2" not in df_to_use:
+                ax.set_xscale("log", basex=2)
+            ax.set_xlabel(f"{self.intensity_label_names[df_to_use]}")
+            ax.set_ylabel("Counts")
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
         res_path = os.path.join(self.file_dir_descriptive, "intensity_histograms" + FIG_FORMAT)
@@ -555,7 +551,10 @@ class MQPlots(Logger):
 
     @exception_handler
     def plot_rank(self, df_to_use: str = "raw"):
-        all_pathway_proteins = set.union(*(set(x) for x in self.interesting_proteins.values()))
+        if self.interesting_proteins.values():
+            all_pathway_proteins = set.union(*(set(x) for x in self.interesting_proteins.values()))
+        else:
+            all_pathway_proteins = set()
         for experiment in self.replicates:
             plt.close("all")
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
