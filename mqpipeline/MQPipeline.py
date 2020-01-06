@@ -137,14 +137,12 @@ class MQUI(tk.Tk):
         yaml_label = tk.Label(self, text="Yaml file").grid(row=0, column=1)
 
         self.dir_text = tk.StringVar(value=self.mqinit.start_dir)
-        self.dir_text.trace("w", self.dir_setter)
         dir_button = tk.Button(self, textvariable=self.dir_text,
                                command=lambda: browsefunc(filedialog.askdirectory, self.dir_text, fn_params={
                                    "title": "Please select a directory with MaxQuant result files"}))
         dir_button.grid(row=1, column=0)
 
         self.yaml_text = tk.StringVar()
-        self.yaml_text.trace("w", self.yaml_path_setter)
         self.yaml_button = tk.OptionMenu(self, self.yaml_text, *self.yaml_options)
         self.yaml_button.grid(row=1, column=1)
 
@@ -205,29 +203,9 @@ class MQUI(tk.Tk):
         self.running_text = tk.StringVar(value="Please press Start")
         self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=1)
 
-    def ensure_arguments(self, args):
-        # if no dir was specified ask for one
-        if args.dir is None:
-            start_dir = filedialog.askdirectory(title="Please select a directory with MaxQuant result files")
-            if not start_dir:
-                raise ValueError("Please select a directory")
-        else:
-            start_dir = args.dir
-
-        bool_dict = {"yes": True, "y": True, "true": True, "no": False, "n": False, "false": False}
-        # ask if the file has replicates with yes as default
-        if args.has_replicates is None:
-            has_replicates = input("Please specify if you have replicates in your data [Y/n]: ")
-            if not has_replicates:
-                has_replicates = True
-            else:
-                has_replicates = has_replicates.lower()
-                if has_replicates not in bool_dict:
-                    raise ValueError(f"Please use a valid answer({', '.join(bool_dict.keys())})")
-                has_replicates = bool_dict[has_replicates]
-        else:
-            has_replicates = bool_dict[args.has_replicates.lower()]
-        return start_dir, has_replicates
+        # add all tracing to the variables
+        self.dir_text.trace("w", self.dir_setter)
+        self.yaml_text.trace("w", self.yaml_path_setter)
 
     def plot_row(self, text: str, intensity_default: str):
         int_var = tk.IntVar(value=1)
