@@ -6,32 +6,49 @@ from tkinter import filedialog
 import logging
 
 
-class MQGUI(tk.Tk):
-    def __init__(self, args, loglevel=logging.DEBUG):
+class MQUI(tk.Tk):
+    def __init__(self, file_dir, yml_file="default", gui=False, loglevel=logging.DEBUG, configs: dict = None):
         super().__init__()
 
+        # determine logging level
+        try:
+            loglevel = getattr(logging, loglevel.upper())
+        except AttributeError:
+            try:
+                loglevel = int(loglevel)
+            except ValueError:
+                loglevel = logging.DEBUG
+
+        base_config = {
+            "has_replicates": False,
+            "has_groups": False,
+        }
+        if configs is None:
+            configs = {}
+        base_config.update(**configs)
+        configs = base_config
         self.yaml_options = ["default"]
 
         self.number_of_plots = 0
 
-        if args.no_gui:
+        if not gui:
             # get all necessary data, start the analysis and quit
             self.withdraw()
-            start_dir, has_replicates = self.ensure_arguments(args)
             # create initializer which reads all required files
-            mqinit = MQInitializer(start_dir, args.yml_file, loglevel=loglevel)
+            mqinit = MQInitializer(file_dir, yml_file, loglevel=loglevel)
             mqinit.init_config()
-            mqinit.configs.update("has_replicates", has_replicates)
+            mqinit.configs.update(configs)
             mqinit.prepare_stuff()
             # create plotter from initializer
             mqplots = MQPlots.from_MQInitializer(mqinit)
             # create all plots and other results
             mqplots.create_results()
         else:
-            self.mqinit = MQInitializer("", "default", loglevel=loglevel)
+            self.mqinit = MQInitializer("", yml_file, loglevel=loglevel)
             self.make_layout()
-            if args.dir:
-                self.dir_text.set(args.dir)
+            if file_dir:
+                self.dir_text.set(file_dir)
+            self.mqinit.configs.update(configs)
             self.mainloop()
 
     def dir_setter(self, *args):
@@ -49,7 +66,7 @@ class MQGUI(tk.Tk):
             self.yaml_options = ["default"]
         self.yaml_button["menu"].delete(0, "end")
         for op in self.yaml_options:
-            self.yaml_button['menu'].add_command(label=op, command=tk._setit(self.yaml_text, op))
+            self.yaml_button["menu"].add_command(label=op, command=tk._setit(self.yaml_text, op))
 
     def update_listboxes(self):
         if self.mqinit.configs.get("experiments"):
@@ -231,8 +248,9 @@ class MQParser(argparse.ArgumentParser):
                                                    "The required result files are in the txt directory.")
         self.add_argument(
             '--dir',
-            dest='dir',
+            dest='file_dir',
             action='store',
+            default="",
             help="Path to directory of analysis which should be analyzed."
                  "If not set the program will open a prompt and ask to select one."
         )
@@ -240,9 +258,8 @@ class MQParser(argparse.ArgumentParser):
             '--yml-file',
             dest='yml_file',
             action='store',
-            help="Path to yml file which should be used for analysis, or 'default'. "
-                 "If not set the program will open a prompt and ask to select one, "
-                 "but if canceled the default yml file will be used."
+            default="file",
+            help="Path to yml file which should be used for analysis, or 'default' / 'file'."
         )
         self.add_argument(
             "--loglevel",
@@ -255,21 +272,34 @@ class MQParser(argparse.ArgumentParser):
         self.add_argument(
             "--has-replicates",
             dest="has_replicates",
-            action="store",
-            default=None,
-            help="If you have replicates of each experiment enter y else enter n"
+            default=False,
+            const=True,
+            nargs="?",
+            help="If you have replicates of each experiment specify this"
                  "Replicates need to be enumerated in a way that numbers are added at the end of the name"
                  "If no replicates are in data set no venn diagrams will be generated"
         )
         self.add_argument(
-            "--no-gui",
+            "--has-groups",
+            dest="has_groups",
             default=False,
             const=True,
             nargs="?",
-            help="specify this if no gui should be opened"
+            help="If you have groups of experiments specify this"
+                 "Replicates need to be enumerated in a way that numbers are added at the end of the name"
+                 "If no replicates are in data set no venn diagrams will be generated"
+        )
+        self.add_argument(
+            "--gui",
+            default=False,
+            const=True,
+            nargs="?",
+            help="specify this if a gui should be opened"
         )
         self.args = self.parse_args()
         self.args_dict = vars(self.args)
+        move_to_config = ["has_replicates", "has_groups"]
+        self.args_dict["configs"] = {k: self.args_dict.pop(k) for k in move_to_config}
 
 
 def browsefunc(fn, var, fn_params: dict = None):

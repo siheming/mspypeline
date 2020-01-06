@@ -6,7 +6,6 @@ try:
     from ruamel_yaml import YAML
 except ModuleNotFoundError:
     from ruamel.yaml import YAML
-from tkinter import filedialog
 import logging
 
 from mqpipeline.Logger import Logger
@@ -24,7 +23,7 @@ class MQInitializer(Logger):
     peptides_txt = "peptides.txt"
     mapping_txt = "sample_mapping.txt"
 
-    def __init__(self, dir_: str, file_path_yml: str = None, loglevel=logging.DEBUG):
+    def __init__(self, dir_: str, file_path_yml: str = "default", loglevel=logging.DEBUG):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
         self.yaml = YAML()
         self.yaml.default_flow_style = False
@@ -75,9 +74,14 @@ class MQInitializer(Logger):
         if file_path_yml.lower() == "default":
             self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml.lower() == "file":
-            self._file_path_yaml = os.path.join(self.start_dir, "config", MQInitializer.yml_file_name)
+            if self.has_yml_file():
+                self._file_path_yaml = os.path.join(self.start_dir, "config", MQInitializer.yml_file_name)
+            else:
+                self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml is None:
-            self._file_path_yaml = self.init_yml_path()
+            raise ValueError("yaml file is none")
+        else:
+            self._file_path_yaml = file_path_yml
         self.logger.debug(f"yml file location: {self._file_path_yaml}")
 
         # load the config from the yml file
@@ -107,23 +111,6 @@ class MQInitializer(Logger):
             yaml_file = os.path.join(self.path_pipeline_config, MQInitializer.default_yml_name)
         else:
             raise ValueError("Could not find default yaml file. Please select one.")
-        return yaml_file
-
-    def init_yml_path(self) -> str:
-        def yml_file_dialog() -> str:
-            file_path = filedialog.askopenfilename(filetypes=[(".yaml", ".yml")],
-                                                   title='Please select a yml / yaml settings file')
-            self.logger.debug(f"selected file path: {file_path}")
-            if not file_path:
-                yaml_file = self.get_default_yml_path()
-            else:
-                yaml_file = file_path
-            return yaml_file
-
-        if self.has_yml_file():
-            yaml_file = os.path.join(self.start_dir, "config", MQInitializer.yml_file_name)
-        else:
-            yaml_file = yml_file_dialog()
         return yaml_file
 
     def init_dfs_from_txts(self) -> (pd.DataFrame, pd.DataFrame):
