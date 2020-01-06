@@ -9,10 +9,10 @@ experiments: false
 # - Urea_Urea_Pellet_0
 # - RIPA_SDS_0
 
-pathways: false
+pathways: []
 # list of pathways which should be analyzed
 
-go_terms: false
+go_terms: []
 # list of go_terms which should be analyzed
 
 has_replicates: true
@@ -39,8 +39,8 @@ plot_rank_intensity: "raw"
 plot_pathway_analysis: true
 plot_pathway_analysis_intensity: "raw"
 
-plot_pathway_proportions: true
-plot_pathway_proportions_intensity: "raw"
+# plot_pathway_proportions: true
+# plot_pathway_proportions_intensity: "raw"
 
 plot_scatter_replicates: true
 plot_scatter_replicates_intensity: "raw"

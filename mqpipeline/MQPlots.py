@@ -30,7 +30,7 @@ VENN_SUBSET_LABEL_FONT_SIZE = 14
 class MQPlots(Logger):
     possible_plots = [
         "plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
-        "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline", "plot_pathway_proportions",
+        "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline",
         "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
         "plot_venn_groups", "plot_r_volcano"
     ]

@@ -187,7 +187,7 @@ class MQUI(tk.Tk):
         self.rank_int, self.rank_var = self.plot_row("Rank", "raw_log2")
         self.pathway_analysis_int, self.pathway_analysis_var = self.plot_row("Pathway Analysis", "raw_log2")
         self.pathway_timeline_int, self.pathway_timeline_var = self.plot_row("Pathway Timeline", "raw_log2")
-        self.pathway_proportions_int, self.pathway_proportions_var = self.plot_row("Pathway proportions", "raw_log2")
+        # self.pathway_proportions_int, self.pathway_proportions_var = self.plot_row("Pathway proportions", "raw_log2")
         self.scatter_replicates_int, self.scatter_replicates_var = self.plot_row("Scatter replicates", "raw_log2")
         self.experiment_comparison_int, self.experiment_comparison_var = self.plot_row("Experiment comparison", "raw_log2")
         self.go_analysis_int, self.go_analysis_var = self.plot_row("Go analysis", "raw_log2")
