@@ -61,6 +61,7 @@ class MQInitializer(Logger):
             self._start_dir = start_dir
         self.logger.info(f"Starting dir: {self.start_dir}")
         self.replicates = None
+        self.experiment_groups = None
         self.path_config = os.path.join(self.start_dir, "config")
 
     @property
@@ -152,6 +153,17 @@ class MQInitializer(Logger):
                 raise ValueError(
                     f"Found replicates in {MQInitializer.proteins_txt}, but not in {MQInitializer.peptides_txt}: " +
                     ", ".join(unmatched))
+        # does the name follow the convention
+        naming_convention = all(len(rep.split("_")) == 3 for rep in all_reps)
+        # create a mapping template if the convention is not followed and the file doesn't exist
+        mapping_template_name = os.path.join(self.start_dir, MQInitializer.mapping_txt.replace("ing", "ing_template"))
+        if not naming_convention:
+            self.logger.warning("Naming of experiments does not follow naming convention, "
+                                "please consider using the %s file", MQInitializer.mapping_txt)
+            if not os.path.isfile(mapping_template_name):
+                mapping = pd.DataFrame({"old name": all_reps,
+                                        "new name": ["groupname_experimentname_techrepname"] * len(all_reps)})
+                mapping.to_csv(mapping_template_name, header=True, index=False, sep="\t")
 
         # try to automatically determine experimental setup
         if not self.configs.get("experiments", False):
@@ -234,7 +246,7 @@ class MQInitializer(Logger):
             gene_names_fasta.name = "Gene name fasta"
             fasta_col = pd.DataFrame({
                 "description": ["Missing"] * gene_names_fasta.shape[0],
-                "protein id": ["Missing"] * gene_names_fasta.shape[0]
+                "protein id": df_protein_names["Protein name"]
             }, index=gene_names_fasta.index)
         else:
             # split the fasta headers
@@ -243,7 +255,6 @@ class MQInitializer(Logger):
             # first split all fasta headers that contain multiple entries
             sep_ind = df_protein_names["Fasta headers"].str.contains(";").fillna(False)
             # replace all fasta headers with multiple entries with only the first one
-            # TODO will there always be a fasta header?
             df_protein_names.loc[sep_ind, "Fasta headers"] = df_protein_names.loc[sep_ind, "Fasta headers"].str.split(";").apply(pd.Series)[0]
             # split the fasta headers with the pipe symbol
             fasta_col = df_protein_names["Fasta headers"].str.split("|", n=2).apply(pd.Series)
