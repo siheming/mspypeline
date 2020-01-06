@@ -22,6 +22,10 @@ class MQInitializer(Logger):
     proteins_txt = "proteinGroups.txt"
     peptides_txt = "peptides.txt"
     mapping_txt = "sample_mapping.txt"
+    script_loc = os.path.dirname(os.path.realpath(__file__))
+    path_pipeline_config = os.path.join(script_loc, "config")
+    possible_gos = sorted([x for x in os.listdir(os.path.join(path_pipeline_config, go_path)) if x.endswith(".txt")])
+    possible_pathways = sorted([x for x in os.listdir(os.path.join(path_pipeline_config, pathway_path)) if x.endswith(".txt")])
 
     def __init__(self, dir_: str, file_path_yml: str = "default", loglevel=logging.DEBUG):
         super().__init__(self.__class__.__name__, loglevel=loglevel)
@@ -34,12 +38,7 @@ class MQInitializer(Logger):
         self.df_protein_names, self.df_peptide_names = None, None
         self.interesting_proteins, self.go_analysis_gene_names = None, None
 
-        self.script_loc = os.path.dirname(os.path.realpath(__file__))
-        self.path_pipeline_config = os.path.join(self.script_loc, "config")
-        self.logger.debug("Script location %s", self.script_loc)
-
-        self.possible_gos = sorted([x for x in os.listdir(os.path.join(self.path_pipeline_config , MQInitializer.go_path)) if x.endswith(".txt")])
-        self.possible_pathways = sorted([x for x in os.listdir(os.path.join(self.path_pipeline_config , MQInitializer.pathway_path)) if x.endswith(".txt")])
+        self.logger.debug("Script location %s", MQInitializer.script_loc)
 
         self._start_dir = None
         self.start_dir = dir_
@@ -106,9 +105,9 @@ class MQInitializer(Logger):
         return False
 
     def get_default_yml_path(self) -> str:
-        self.logger.debug("Loading default yml file from: %s, since no file was selected", self.script_loc)
-        if MQInitializer.default_yml_name in os.listdir(self.path_pipeline_config):
-            yaml_file = os.path.join(self.path_pipeline_config, MQInitializer.default_yml_name)
+        self.logger.debug("Loading default yml file from: %s, since no file was selected", MQInitializer.script_loc)
+        if MQInitializer.default_yml_name in os.listdir(MQInitializer.path_pipeline_config):
+            yaml_file = os.path.join(MQInitializer.path_pipeline_config, MQInitializer.default_yml_name)
         else:
             raise ValueError("Could not find default yaml file. Please select one.")
         return yaml_file
@@ -323,7 +322,7 @@ class MQInitializer(Logger):
         return dict_pathway, dict_go
 
     def read_config_txt_file(self, path, file):
-        fullpath = os.path.join(self.path_pipeline_config, path, file)
+        fullpath = os.path.join(MQInitializer.path_pipeline_config, path, file)
         if path == MQInitializer.pathway_path:
             with open(fullpath) as f:
                 name = f.readline().strip()

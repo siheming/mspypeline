@@ -69,24 +69,23 @@ class MQUI(tk.Tk):
             self.yaml_button["menu"].add_command(label=op, command=tk._setit(self.yaml_text, op))
 
     def update_listboxes(self):
+        # delete all experiments then add from file
+        self.experiments_list.delete(0, "end")
         if self.mqinit.configs.get("experiments"):
-            self.experiments_list.delete(0, "end")
             for op in self.mqinit.configs.get("experiments"):
                 self.experiments_list.insert("end", op)
-        else:
-            self.experiments_list.delete(0, "end")
         # clear selection then select from configs
-        for i, pathway in enumerate(self.mqinit.possible_pathways):
+        for i, pathway in enumerate(MQInitializer.possible_pathways):
             self.pathway_list.select_clear(i)
         if self.mqinit.configs.get("pathways"):
             for pathway in self.mqinit.configs.get("pathways"):
-                self.pathway_list.select_set(self.mqinit.possible_pathways.index(pathway))
+                self.pathway_list.select_set(MQInitializer.possible_pathways.index(pathway))
         # clear selection then select from configs
-        for i, go in enumerate(self.mqinit.possible_gos):
+        for i, go in enumerate(MQInitializer.possible_gos):
             self.go_proteins_list.select_clear(i)
         if self.mqinit.configs.get("go_terms"):
             for go in self.mqinit.configs.get("go_terms"):
-                self.go_proteins_list.select_set(self.mqinit.possible_gos.index(go))
+                self.go_proteins_list.select_set(MQInitializer.possible_gos.index(go))
 
     def yaml_path_setter(self, *args):
         if self.yaml_text.get() == "file":
@@ -112,9 +111,9 @@ class MQUI(tk.Tk):
             self.mqinit.configs.update({plot_intensity: getattr(self, var_name).get()})
             self.mqinit.configs.update({plot_name: bool(getattr(self, int_name).get())})
         gos = self.go_proteins_list.curselection()
-        gos = [self.mqinit.possible_gos[int(go)] for go in gos]
+        gos = [MQInitializer.possible_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()
-        pathways = [self.mqinit.possible_pathways[int(pathway)] for pathway in pathways]
+        pathways = [MQInitializer.possible_pathways[int(pathway)] for pathway in pathways]
         self.mqinit.configs["go_terms"] = gos
         self.mqinit.configs["pathways"] = pathways
         self.mqinit.configs["has_replicates"] = bool(self.replicate_var.get())
@@ -162,14 +161,14 @@ class MQUI(tk.Tk):
 
         self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mqinit.possible_gos, key=len)))
         self.go_proteins_list.configure(exportselection=False)
-        for x in self.mqinit.possible_gos:
+        for x in MQInitializer.possible_gos:
             self.go_proteins_list.insert("end", x)
 
         self.go_proteins_list.grid(row=4, column=0)
 
-        self.pathway_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mqinit.possible_pathways, key=len)))
+        self.pathway_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(MQInitializer.possible_pathways, key=len)))
         self.pathway_list.configure(exportselection=False)
-        for x in self.mqinit.possible_pathways:
+        for x in MQInitializer.possible_pathways:
             self.pathway_list.insert("end", x)
 
         self.pathway_list.grid(row=4, column=1)
