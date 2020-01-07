@@ -514,9 +514,7 @@ class MQPlots(Logger):
                 bins = np.logspace(np.log2(intensities.min()), np.log2(intensities.max()), 25, base=2)
 
             ax.set_title(f"{col}".replace(self.int_mapping[df_to_use], ""))
-            ax.hist(intensities,
-                    bins=bins
-                    )
+            ax.hist(intensities, bins=bins)
             if "log2" not in df_to_use:
                 ax.set_xscale("log", basex=2)
             ax.set_xlabel(f"{self.intensity_label_names[df_to_use]}")
@@ -528,7 +526,6 @@ class MQPlots(Logger):
 
     @exception_handler
     def plot_scatter_replicates(self, df_to_use: str = "raw"):
-        # TODO where to put uniquely found proteins
         for experiment in self.replicates:
             plt.close("all")
             # scatter plot of all replicates vs all replicates
@@ -546,6 +543,9 @@ class MQPlots(Logger):
                 ax.set_ylabel(f"{self.intensity_label_names[df_to_use]}")
 
             fig.legend(frameon=False)
+            if "log2" not in df_to_use:
+                ax.set_xscale("log")
+                ax.set_yscale("log")
 
             res_path = os.path.join(self.file_dir_descriptive,
                                     f"{self.replicate_representation[experiment].replace(' ', '_')}_scatter" + FIG_FORMAT)
@@ -609,6 +609,8 @@ class MQPlots(Logger):
 
             ax.set_xlabel("Protein rank")
             ax.set_ylabel(f"{self.intensity_label_names[df_to_use]} mean")
+            if "log2" not in df_to_use:
+                ax.set_yscale("log")
             fig.legend()
 
             res_path = os.path.join(self.file_dir_descriptive,
@@ -620,28 +622,28 @@ class MQPlots(Logger):
         plt.close("all")
         for experiment in self.replicates:
             intensities = self.intensities_per_experiment_dict[df_to_use][experiment]
-            y = intensities.copy()
-            # below cutoff remove zeros, above threshold include 0
-            cutoff = 1e6 if "log2" not in df_to_use else np.log2(1e6)
-            index = y.replace(0, np.nan).mean(axis=1) < cutoff
-            y[index] = y[index].replace(0, np.nan)
-            relative_std_percent = y.std(axis=1) / y.mean(axis=1) * 100
+            non_na = get_number_of_non_na_values(intensities.shape[1])
+            mask = (intensities > 0).sum(axis=1) >= non_na
+            intensities = intensities[mask]
+            relative_std_percent = intensities.std(axis=1) / intensities.mean(axis=1) * 100
 
             bins = np.array([10, 20, 30])
+            if "log2" in df_to_use:
+                bins = np.log2(bins)
             inds = np.digitize(relative_std_percent, bins).astype(int)
 
             cm = {0: "navy", 1: "royalblue", 2: "skyblue", 3: "darkgray"}
             colors = pd.Series([cm.get(x, "black") for x in inds], index=relative_std_percent.index)
             color_counts = {color: (colors == color).sum() for color in colors.unique()}
-            mask = ~relative_std_percent.isna()
 
             # intensity vs relative standard deviation
             # TODO show only experiments with full amount of intensities found
             fig, ax = plt.subplots(1, 1, figsize=(14, 7))
-            ax.scatter(y.mean(axis=1)[mask], relative_std_percent[mask], c=colors[mask], marker="o", s=(2* 72./fig.dpi)**2, alpha=0.8)
+            ax.scatter(intensities.mean(axis=1), relative_std_percent, c=colors, marker="o", s=(2* 72./fig.dpi)**2, alpha=0.8)
             ax.set_xlabel(f"Mean {self.intensity_label_names[df_to_use]}")
             ax.set_ylabel("Relative Standard deviation [%]")
-            ax.axvline(cutoff, color="black", alpha=0.5)
+            if "log2" not in df_to_use:
+                ax.set_xscale('log')
             xmin, xmax = ax.get_xbound()
             cumulative_count = 0
             for i, bin_ in enumerate(bins):
@@ -668,7 +670,7 @@ class MQPlots(Logger):
                 self.logger.warning("Skipping pathway %s in pathway analysis because no proteins were found", pathway)
                 continue
             n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
-            fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, n_rows * int(len(self.replicates) / 3)))
+            fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(self.replicates) / 2)))
             fig.suptitle(pathway)
             all_heights = {}
             try:
@@ -687,7 +689,8 @@ class MQPlots(Logger):
                 ax.set_ylim((-1, len(self.replicates)))
 
                 ax.set_yticks([i for i in range(len(self.replicates))])
-                ax.set_yticklabels(sorted(self.replicates, reverse=True))
+                ax.set_yticklabels([self.replicate_representation[r] for r in sorted(self.replicates, reverse=True)])
+                ax.set_xlabel(self.intensity_label_names[df_to_use])
             #handles, labels = axiterator[0].get_legend_handles_labels()
             #fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -787,28 +790,54 @@ class MQPlots(Logger):
         for ex1, ex2 in combinations(self.replicates, 2):
             plt.close("all")
             protein_intensities_ex1 = self.intensities_per_experiment_dict[df_to_use][ex1]
-            counts_ex1 = (protein_intensities_ex1 > 0).sum(axis=1) == len(protein_intensities_ex1.columns)
             protein_intensities_ex2 = self.intensities_per_experiment_dict[df_to_use][ex2]
-            counts_ex2 = (protein_intensities_ex2 > 0).sum(axis=1) == len(protein_intensities_ex2.columns)
-            # combine intersections
-            intersection = pd.concat(
-                [protein_intensities_ex1.mean(axis=1).rename("ex1"), protein_intensities_ex2.mean(axis=1).rename("ex2")]
-                , axis=1)
-            intersection = intersection[counts_ex1 & counts_ex2]
-            fig6, ax6 = plt.subplots(1, 1, figsize=(7, 7))
-            # plot intersection
-            ax6.scatter(intersection["ex1"], intersection["ex2"], s=8, alpha=0.6, marker=".")
-            xmin, xmax = ax6.get_xbound()
-            ymin, ymax = ax6.get_ybound()
-            ax6.set_xlim(min(xmin, ymin), max(xmax, ymax))
-            ax6.set_ylim(min(xmin, ymin), max(xmax, ymax))
-            ax6.set_xlabel(ex1)
-            ax6.set_ylabel(ex2)
+            non_na_group_1 = get_number_of_non_na_values(protein_intensities_ex1.shape[1])
+            non_na_group_2 = get_number_of_non_na_values(protein_intensities_ex1.shape[1])
+            mask_1 = (protein_intensities_ex1 > 0).sum(axis=1) >= non_na_group_1
+            mask_2 = (protein_intensities_ex2 > 0).sum(axis=1) >= non_na_group_2
+            mask = np.logical_and(mask_1, mask_2)
+            # determine missing
+            missing_1 = (protein_intensities_ex1 > 0).sum(axis=1) == 0
+            missing_2 = (protein_intensities_ex2 > 0).sum(axis=1) == 0
+            # determine exclusive
+            exclusive_1 = np.logical_and(mask_1, missing_2)
+            exclusive_2 = np.logical_and(mask_2, missing_1)
+            # flatten all replicates
+            exclusive_ex1 = protein_intensities_ex1[exclusive_1].mean(axis=1)
+            exclusive_ex2 = protein_intensities_ex2[exclusive_2].mean(axis=1)
+            protein_intensities_ex1 = protein_intensities_ex1[mask].mean(axis=1)
+            protein_intensities_ex2 = protein_intensities_ex2[mask].mean(axis=1)
+            # calculate r
+            try:
+                r = stats.pearsonr(protein_intensities_ex1, protein_intensities_ex2)
+            except ValueError:
+                self.logger.warning("Could not calculate pearson r for %s vs %s", ex1, ex2)
+                r = (np.nan, )
 
-            # TODO add r2
+            fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+            exp = r"$r^{2}$"
+            ax.scatter(protein_intensities_ex1, protein_intensities_ex2, s=8, alpha=0.6, marker=".",
+                       label=f"{self.replicate_representation[ex1]} vs {self.replicate_representation[ex2]}, {exp}: {r[0] ** 2:.4f}")
+            ax.scatter(exclusive_ex1, [np.min(protein_intensities_ex2) * 0.95] * exclusive_ex1.shape[0],
+                       s=8, alpha=0.6, marker=".", label=f"exclusive for {self.replicate_representation[ex1]}")
+            ax.scatter([np.min(protein_intensities_ex1) * 0.95] * exclusive_ex2.shape[0], exclusive_ex2,
+                       s=8, alpha=0.6, marker=".", label=f"exclusive for {self.replicate_representation[ex2]}")
+
+            ax.set_xlabel(self.replicate_representation[ex1])
+            ax.set_ylabel(self.replicate_representation[ex2])
+            fig.legend(frameon=False)
+            if "log2" not in df_to_use:
+                ax.set_xscale("log")
+                ax.set_yscale("log")
+
+            xmin, xmax = ax.get_xbound()
+            ymin, ymax = ax.get_ybound()
+            ax.set_xlim(min(xmin, ymin), max(xmax, ymax))
+            ax.set_ylim(min(xmin, ymin), max(xmax, ymax))
+
             res_path = os.path.join(self.file_dir_descriptive,
-                                    f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}_intersection" + FIG_FORMAT)
-            fig6.savefig(res_path, dpi=200, bbox_inches="tight")
+                                    f"{self.replicate_representation[ex1].replace(' ', '_')}_vs_{self.replicate_representation[ex2].replace(' ', '_')}" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
             plt.close("all")
             # combine total
             protein_intensities_ex1 = protein_intensities_ex1.mean(axis=1).rename("ex1")
