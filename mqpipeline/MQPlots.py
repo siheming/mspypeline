@@ -241,7 +241,9 @@ class MQPlots(Logger):
                     experiment_rep = " ".join(experiment_rep.split("_"))
                     d[experiment] = experiment_rep
                 else:
-                    d[experiment] = experiment
+                    experiment_rep = experiment.replace("_Rep", "").replace("_rep", "")
+                    experiment_rep = " ".join(experiment_rep.split("_"))
+                    d[experiment] = experiment_rep
             self._replicate_representation = d
         return self._replicate_representation
 
