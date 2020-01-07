@@ -1,4 +1,3 @@
-import logging
 from mqpipeline import MQParser, MQUI
 
 if __name__ == "__main__":
