@@ -1072,7 +1072,7 @@ class MQPlots(Logger):
                     raise ValueError("heisenbug")
 
             significance_to_color = {"ns": "gray", "up": "red", "down": "blue"}
-            significance_to_label = {"ns": "non-significant", "up": f"upgregulated in {g2}", "down": f"upregulated in {g1}"}
+            significance_to_label = {"ns": "non-significant", "up": f"upregulated in {g2}", "down": f"upregulated in {g1}"}
 
             # plot
             fig, ax = plt.subplots(1, 1, figsize=(7, 7))
