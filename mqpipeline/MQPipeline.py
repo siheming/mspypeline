@@ -88,28 +88,39 @@ class MQUI(tk.Tk):
                 self.go_proteins_list.select_set(MQInitializer.possible_gos.index(go))
 
     def yaml_path_setter(self, *args):
-        if self.yaml_text.get() == "file":
-            self.mqinit.file_path_yaml = "file"
-        elif self.yaml_text.get() == "default":
-            self.mqinit.file_path_yaml = "default"
-        else:
-            raise ValueError(f"Unkown setting for yaml text {self.yaml_text.get()}")
+        self.mqinit.file_path_yaml = self.yaml_text.get()
+        level_names = self.mqinit.configs.get("level_names", [])
+        level_names = {i: name for i, name in enumerate(level_names)}
+        levels = self.mqinit.configs.get("levels", 3)
         for plot_name in MQPlots.possible_plots:
-            plot_intensity = plot_name + "_intensity"
+            plot_settings_name = plot_name + "_settings"
+            plot_settings = self.mqinit.configs.get(plot_settings_name, {})
             var_name = plot_name.replace("plot_", "") + "_var"
-            int_name = var_name.replace("_var", "_int")
-            getattr(self, var_name).set(self.mqinit.configs.get(plot_intensity, "raw"))
-            getattr(self, int_name).set(self.mqinit.configs.get(plot_name, False))
+            int_name = var_name.replace("var", "int")
+            levels_name = var_name.replace("var", "levels")
+            getattr(self, var_name).set(plot_settings.get("intensity", "raw"))
+            getattr(self, int_name).set(plot_settings.get("create_plot", False))
+            selected_levels = getattr(self, levels_name)
+            selected_levels.delete(0, "end")
+            for level in range(levels):
+                selected_levels.insert("end", level_names.get(level, level))
+            for level in plot_settings.get("levels", []):
+                selected_levels.select_set(level)
         self.replicate_var.set(self.mqinit.configs.get("has_replicates", True))
         self.update_listboxes()
 
     def update_button(self):
         for plot_name in MQPlots.possible_plots:
-            plot_intensity = plot_name + "_intensity"
+            plot_settings = plot_name + "_settings"
             var_name = plot_name.replace("plot_", "") + "_var"
-            int_name = var_name.replace("_var", "_int")
-            self.mqinit.configs.update({plot_intensity: getattr(self, var_name).get()})
-            self.mqinit.configs.update({plot_name: bool(getattr(self, int_name).get())})
+            int_name = var_name.replace("var", "int")
+            levels_name = var_name.replace("var", "levels")
+            selected_settings = {
+                "create_plot": bool(getattr(self, int_name).get()),
+                "df_to_use": getattr(self, var_name).get(),
+                "levels": [int(x) for x in getattr(self, levels_name).curselection()]
+            }
+            self.mqinit.configs.update({plot_settings: selected_settings})
         gos = self.go_proteins_list.curselection()
         gos = [MQInitializer.possible_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()
@@ -175,22 +186,24 @@ class MQUI(tk.Tk):
 
         intensity_label = tk.Label(self, text="Intensity").grid(row=5, column=1)
 
+        levels_label = tk.Label(self, text="Levels").grid(row=5, column=2)
+
         self.heading_length = 6
 
-        self.detection_counts_int, self.detection_counts_var = self.plot_row("Detection counts", "raw_log2")
-        self.number_of_detected_proteins_int, self.number_of_detected_proteins_var = self.plot_row("Number of detected proteins", "raw_log2")
-        self.intensity_histograms_int, self.intensity_histograms_var = self.plot_row("Intensity histogram", "raw")
-        self.relative_std_int, self.relative_std_var = self.plot_row("Relative std", "raw_log2")
-        self.rank_int, self.rank_var = self.plot_row("Rank", "raw_log2")
-        self.pathway_analysis_int, self.pathway_analysis_var = self.plot_row("Pathway Analysis", "raw_log2")
-        self.pathway_timeline_int, self.pathway_timeline_var = self.plot_row("Pathway Timeline", "raw_log2")
+        self.detection_counts_int, self.detection_counts_var, self.detection_counts_levels = self.plot_row("Detection counts", "raw_log2")
+        self.number_of_detected_proteins_int, self.number_of_detected_proteins_var, self.number_of_detected_proteins_levels = self.plot_row("Number of detected proteins", "raw_log2")
+        self.intensity_histograms_int, self.intensity_histograms_var, self.intensity_histograms_levels = self.plot_row("Intensity histogram", "raw")
+        self.relative_std_int, self.relative_std_var, self.relative_std_levels = self.plot_row("Relative std", "raw_log2")
+        self.rank_int, self.rank_var, self.rank_levels = self.plot_row("Rank", "raw_log2")
+        self.pathway_analysis_int, self.pathway_analysis_var, self.pathway_analysis_levels = self.plot_row("Pathway Analysis", "raw_log2")
+        self.pathway_timeline_int, self.pathway_timeline_var, self.pathway_timeline_levels = self.plot_row("Pathway Timeline", "raw_log2")
         # self.pathway_proportions_int, self.pathway_proportions_var = self.plot_row("Pathway proportions", "raw_log2")
-        self.scatter_replicates_int, self.scatter_replicates_var = self.plot_row("Scatter replicates", "raw_log2")
-        self.experiment_comparison_int, self.experiment_comparison_var = self.plot_row("Experiment comparison", "raw_log2")
-        self.go_analysis_int, self.go_analysis_var = self.plot_row("Go analysis", "raw_log2")
-        self.venn_results_int, self.venn_results_var = self.plot_row("Venn diagrams", "raw_log2")
-        self.venn_groups_int, self.venn_groups_var = self.plot_row("Group diagrams", "raw_log2")
-        self.r_volcano_int, self.r_volcano_var = self.plot_row("Volcano plot (R)", "raw_log2")
+        self.scatter_replicates_int, self.scatter_replicates_var, self.scatter_replicates_levels = self.plot_row("Scatter replicates", "raw_log2")
+        self.experiment_comparison_int, self.experiment_comparison_var, self.experiment_comparison_levels = self.plot_row("Experiment comparison", "raw_log2")
+        self.go_analysis_int, self.go_analysis_var, self.go_analysis_levels = self.plot_row("Go analysis", "raw_log2")
+        self.venn_results_int, self.venn_results_var, self.venn_results_levels = self.plot_row("Venn diagrams", "raw_log2")
+        self.venn_groups_int, self.venn_groups_var, self.venn_groups_levels = self.plot_row("Group diagrams", "raw_log2")
+        self.r_volcano_int, self.r_volcano_var, self.r_volcano_levels = self.plot_row("Volcano plot (R)", "raw_log2")
 
         total_length = self.heading_length + self.number_of_plots
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
@@ -208,21 +221,27 @@ class MQUI(tk.Tk):
         self.yaml_text.trace("w", self.yaml_path_setter)
 
     def plot_row(self, text: str, intensity_default: str):
+        row = self.heading_length + self.number_of_plots
         int_var = tk.IntVar(value=1)
-        plot_button = tk.Checkbutton(self, text=text, variable=int_var).grid(row=self.heading_length + self.number_of_plots, column=0)
+        plot_button = tk.Checkbutton(self, text=text, variable=int_var).grid(row=row, column=0)
 
         intensity_var = tk.StringVar(value=intensity_default)
 
         intensity_menu = tk.OptionMenu(self, intensity_var, "lfq", "raw", "ibaq", "lfq_log2", "raw_log2",
-                                       "ibaq_log2").grid(row=self.heading_length + self.number_of_plots, column=1)
+                                       "ibaq_log2").grid(row=row, column=1)
+        level_list = tk.Listbox(self, selectmode="multiple", height=2)
+        level_list.grid(row=row, column=2)
+        level_list.configure(exportselection=False)
+        for op in [0, 1, 2]:
+            level_list.insert("end", op)
         self.number_of_plots += 1
-        return int_var, intensity_var
+        return int_var, intensity_var, level_list
 
 
 class MQParser(argparse.ArgumentParser):
     def __init__(self):
         super().__init__(description="A pipeline to analyze result files from a MaxQuant report. "
-                                                   "The required result files are in the txt directory.")
+                                     "The required result files are in the txt directory.")
         self.add_argument(
             '--dir',
             dest='file_dir',

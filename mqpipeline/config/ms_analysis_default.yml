@@ -1,7 +1,7 @@
 # ##### MAIN SETTINGS ########
 # settings that effect which results will be created
 
-experiments: false
+analysis_design: false
 # list of experiment names in the max quant file
 # if false it will try to infer the experiments automatically
 # TODO naming convention
@@ -19,49 +19,76 @@ has_replicates: true
 # does the file have replicates
 # can be "true" or "false"
 
+levels: 3
+
+level_names: ["biological group", "biological replicate", "technical replicate"]
+
 # ###### PLOT CREATION SETTINGS #######
 
-plot_detection_counts: true
-plot_detection_counts_intensity: "raw"
+plot_detection_counts_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_number_of_detected_proteins: true
-plot_number_of_detected_proteins_intensity: "raw"
+plot_number_of_detected_proteins_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_intensity_histograms: true
-plot_intensity_histograms_intensity: "raw"
+plot_intensity_histograms_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_relative_std: true
-plot_relative_std_intensity: "raw"
+plot_relative_std_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_rank: true
-plot_rank_intensity: "raw"
+plot_rank_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_pathway_analysis: true
-plot_pathway_analysis_intensity: "raw"
+plot_pathway_analysis_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-# plot_pathway_proportions: true
-# plot_pathway_proportions_intensity: "raw"
+plot_scatter_replicates_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_scatter_replicates: true
-plot_scatter_replicates_intensity: "raw"
+plot_experiment_comparison_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_experiment_comparison: true
-plot_experiment_comparison_intensity: "raw"
+plot_go_analysis_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_go_analysis: true
-plot_go_analysis_intensity: "raw"
+plot_venn_results_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_venn_results: true
-plot_venn_results_intensity: "raw"
+plot_pathway_timeline_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_venn_groups: true
-plot_venn_groups_intensity: "raw"
+plot_r_volcano_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
-plot_pathway_timeline: true
-plot_pathway_timeline_intensity: "raw"
-
-plot_r_volcano: true
-plot_r_volcano_intensity: "raw"
+plot_venn_groups_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
 
 use_protein_id: false
 # should the protein id be used, or TODO
