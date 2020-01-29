@@ -1,16 +1,12 @@
-import pandas as pd
-from pandas.api.types import is_numeric_dtype
 import os
-from collections import defaultdict as ddict
 try:
     from ruamel_yaml import YAML
 except ModuleNotFoundError:
     from ruamel.yaml import YAML
-from mqpipeline.Logger import get_logger
 import logging
 
-from mqpipeline.Utils import get_overlap, string_similarity_ratio
-
+from mqpipeline.Logger import get_logger
+from mqpipeline.file_reader.MQReader import MQReader
 
 
 class MQInitializer:
@@ -134,248 +130,6 @@ class MQInitializer:
             raise ValueError("Could not find default yaml file. Please select one.")
         return yaml_file
 
-    def init_dfs_from_txts(self) -> (pd.DataFrame, pd.DataFrame):
-        file_dir_txt = os.path.join(self.start_dir, "txt")
-        if not os.path.isdir(file_dir_txt):
-            raise ValueError("Directory does not contain a txt dir")
-        file_dir_protein_names = os.path.join(file_dir_txt, MQInitializer.proteins_txt)
-        file_dir_peptides_names = os.path.join(file_dir_txt, MQInitializer.peptides_txt)
-        # make sure protein groups file exists
-        if not os.path.isfile(file_dir_protein_names):
-            raise ValueError(f"txt directory does not contain a {MQInitializer.proteins_txt} file")
-        if os.path.isfile(file_dir_peptides_names):
-            df_peptide_names = pd.read_csv(file_dir_peptides_names, sep="\t")
-        else:
-            df_peptide_names = pd.DataFrame()
-        # read protein groups file
-        df_protein_names = pd.read_csv(file_dir_protein_names, sep="\t")
-        self.logger.debug("%s shape: %s", MQInitializer.proteins_txt, df_protein_names.shape)
-        self.logger.debug("%s shape: %s", MQInitializer.peptides_txt, df_peptide_names.shape)
-
-        old_df_protein_name_columns = df_protein_names.columns
-        # if rename mapping exists read it and rename the columns
-        if MQInitializer.mapping_txt in os.listdir(self.start_dir):
-            self.logger.debug("Found %s file", MQInitializer.mapping_txt)
-            df_protein_names.columns, df_peptide_names.columns = self.rename_protein_df_columns(df_protein_names.columns, df_peptide_names.columns)
-        self.check_naming_convention(df_protein_names, old_df_protein_name_columns)
-        self.analysis_design, self.all_replicates = self.determine_groupings(df_protein_names, df_peptide_names)
-        df_protein_names, df_peptide_names = self.preprocess_dfs(df_protein_names, df_peptide_names)
-        return df_protein_names, df_peptide_names
-
-    def check_naming_convention(self, df_protein_names: pd.DataFrame, old_column_names):
-        all_reps = sorted([x.replace('Intensity ', '') for x in df_protein_names.columns
-                           if x.startswith('Intensity ')], key=len, reverse=True)
-        all_reps_old = sorted([x.replace('Intensity ', '') for x in old_column_names
-                               if x.startswith('Intensity ')], key=len, reverse=True)
-        # does the name follow the convention
-        first_rep_split = len(all_reps[0].split("_"))
-        self.naming_convention = all(len(rep.split("_")) == first_rep_split for rep in all_reps)  # this could having the same number in all entries
-        # create a mapping template if the convention is not followed and the file doesn't exist
-        mapping_template_name = os.path.join(self.start_dir, MQInitializer.mapping_txt.replace("ing", "ing_template"))
-
-        if not self.naming_convention:
-            self.logger.warning("Naming of experiments does not follow naming convention, "
-                                "please consider using a %s file", MQInitializer.mapping_txt)
-            if os.path.isfile(mapping_template_name):
-                self.logger.warning("Currently unused %s file in the directory", mapping_template_name)
-            else:
-                self.logger.warning("Creating %s file. Please provide a mapping that follows "
-                                    "the indicated naming convention", mapping_template_name)
-                # dump the names that still correspond to the names in the txt files
-                mapping = pd.DataFrame({"old name": all_reps_old,
-                                        "new name": ["groupname_experimentname_techrepname"] * len(all_reps)})
-                mapping.to_csv(mapping_template_name, header=True, index=False, sep="\t")
-
-    def determine_groupings(self, df_protein_names, df_peptide_names):
-        # TODO can the Intensity column always be expected in the file?
-        # TODO will the column names always be the same between Intensity and LFQ intensity?
-        all_reps = sorted([x.replace('Intensity ', '') for x in df_protein_names.columns
-                           if x.startswith('Intensity ')], key=len, reverse=True)
-        # make sure the two files contain the same replicate names
-        all_reps_peptides = [x.replace('Intensity ', '') for x in df_peptide_names.columns
-                             if x.startswith('Intensity ')]
-        if df_peptide_names.shape != (0, 0):
-            experiment_analysis_overlap = [x not in all_reps for x in all_reps_peptides]
-            if any(experiment_analysis_overlap):
-                unmatched = [x for x in all_reps_peptides if experiment_analysis_overlap]
-                raise ValueError(
-                    f"Found replicates in {MQInitializer.proteins_txt}, but not in {MQInitializer.peptides_txt}: " +
-                    ", ".join(unmatched))
-        # drop potentially unwanted columns
-        to_drop = self.configs.get("drop_columns", [])
-        if to_drop:
-            if not isinstance(to_drop, list):  # TODO iterable?
-                to_drop = [to_drop]
-            all_reps = [x for x in all_reps if x not in to_drop]
-            all_reps_peptides = [x for x in all_reps_peptides if x not in to_drop]
-
-        # try to automatically determine experimental setup
-        if not self.configs.get("analysis_design", False):
-            if self.naming_convention:
-                factory = lambda: ddict(factory)
-                analysis_design = factory()
-
-                def fill_dict(d: dict, s: str, s_split=None):
-                    if s_split is None:
-                        s_split = s.split("_")
-                    if len(s_split) > 1:
-                        fill_dict(d[s_split[0]], s, s_split[1:])
-                    else:
-                        d[s_split[0]] = s
-
-                def default_to_regular(d: dict):
-                    if isinstance(d, ddict):
-                        d = {k: default_to_regular(v) for k, v in d.items()}
-                    return d
-
-                for name in all_reps:
-                    fill_dict(analysis_design, name)
-
-                analysis_design = default_to_regular(analysis_design)
-            else:
-                # try to match stuff
-                analysis_design = self.guess_analysis_design(all_reps)
-            self.configs["analysis_design"] = analysis_design
-        else:
-            analysis_design = self.configs.get("analysis_design")
-        return analysis_design, all_reps
-
-    def guess_analysis_design(self, all_reps):
-        # TODO update all of this
-        if self.configs.get("has_replicates", True):
-            #
-            overlap = [[get_overlap(re1, re2) if re1 != re2 else "" for re1 in all_reps] for re2 in all_reps]
-            overlap_matrix = pd.DataFrame(overlap, columns=all_reps, index=all_reps)
-            unclear_matches = []
-            replicates = ddict(list)
-            for col in overlap_matrix:
-                sorted_matches = sorted(overlap_matrix[col].values, key=len, reverse=True)
-                best_match = sorted_matches[0]
-                replicates[best_match].append(col)
-                # check if any other match with the same length could be found
-                if any([len(best_match) == len(match) and best_match != match for match in sorted_matches]):
-                    unclear_matches.append(best_match)
-            for experiment in replicates:
-                if len(replicates[experiment]) == 1:
-                    rep = replicates.pop(experiment)
-                    replicates[rep[0]] = rep
-                elif experiment in unclear_matches:
-                    self.logger.warning(f"unclear match for experiment: {experiment}")
-            self.logger.info(f"determined experiments: {replicates.keys()}")
-            self.logger.debug("number of replicates per experiment:")
-            self.logger.debug("\n".join([f"{ex}: {len(replicates[ex])}" for ex in replicates]))
-        else:
-            replicates = {rep: [rep] for rep in all_reps}
-
-        try:
-            # determine grouping
-            similarities = pd.DataFrame([[string_similarity_ratio(e1, e2) for e1 in replicates] for e2 in replicates],
-                                        columns=replicates, index=replicates)
-            similarities = similarities > 0.8
-            experiment_groups = {}
-            start_index = 0
-            count = 0
-            while start_index < similarities.shape[0]:
-                matches = similarities.iloc[start_index, :].sum()
-                experiment_groups[f"Group_{count}"] = [similarities.index[i] for i in
-                                                       range(start_index, start_index + matches)]
-                start_index += matches
-                count += 1
-        except Exception:
-            experiment_groups = {}
-
-    def preprocess_dfs(self, df_protein_names: pd.DataFrame, df_peptide_names: pd.DataFrame)\
-            -> (pd.DataFrame, pd.DataFrame):
-        # filter all contaminants by removing all rows where any of the 3 columns contains a +
-        not_contaminants = (df_protein_names[
-                                ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
-                            ).sum(axis=1) == 0
-        self.logger.debug("Removing %s rows from %s because they are marked as contaminant",
-                          (~not_contaminants).sum(), MQInitializer.proteins_txt)
-        df_protein_names = df_protein_names[not_contaminants]
-        if any(df_protein_names["Fasta headers"].isna()):
-            self.logger.warning("Missing fasta headers using default columns for information")
-            gene_names_fasta = df_protein_names["Gene names"]
-            gene_names_fasta.name = "Gene name fasta"
-            sep_ind = gene_names_fasta.str.contains(";").fillna(False)
-            gene_names_fasta[sep_ind] = gene_names_fasta[sep_ind].str.split(";").apply(pd.Series)[0]
-            fasta_col = pd.DataFrame({
-                "description": ["Missing"] * gene_names_fasta.shape[0],
-                "protein id": df_protein_names["Protein names"]
-            }, index=gene_names_fasta.index)
-        else:
-            # split the fasta headers
-            colon_start = df_protein_names["Fasta headers"].str.startswith(";")
-            df_protein_names.loc[colon_start, "Fasta headers"] = df_protein_names.loc[colon_start, "Fasta headers"].str.lstrip(";")
-            # first split all fasta headers that contain multiple entries
-            sep_ind = df_protein_names["Fasta headers"].str.contains(";").fillna(False)
-            # replace all fasta headers with multiple entries with only the first one
-            df_protein_names.loc[sep_ind, "Fasta headers"] = df_protein_names.loc[sep_ind, "Fasta headers"].str.split(";").apply(pd.Series)[0]
-            # split the fasta headers with the pipe symbol
-            fasta_col = df_protein_names["Fasta headers"].str.split("|", n=2).apply(pd.Series)
-            fasta_col.columns = ["trash", "protein id", "description"]
-            # extract the gene name from the description eg: "GN=abcd"
-            gene_names_fasta = fasta_col["description"].str.extract(r"(GN=(.*?)(\s|$))")[1]
-            gene_names_fasta.name = "Gene name fasta"
-        # remove all rows without gene names
-        mask = ~pd.isna(gene_names_fasta)
-        gene_names_fasta = gene_names_fasta.loc[mask]
-        fasta_col = fasta_col.loc[mask]
-        df_protein_names = df_protein_names.loc[mask]
-        if ~mask.sum() > 0:
-            self.logger.warning("Removing %s rows because the gene names are missing", ~mask.sum())
-        # added upper() function to avoid that non-human gene names are not recognized
-        gene_names_fasta = gene_names_fasta.str.upper()
-        # concat all important columns with the original dataframe
-        df_protein_names = pd.concat([df_protein_names, fasta_col["protein id"], gene_names_fasta], axis=1)
-        # add protein name from fasta description col
-        df_protein_names["Protein name"] = fasta_col["description"].str.split("_", expand=True)[0]
-        # filter all entries with duplicate Gene name fasta
-        duplicates = df_protein_names.duplicated(subset="Gene name fasta", keep=False)
-        if any(duplicates):
-            self.logger.warning("Found duplicates in Gene name fasta column. Dropping all %s duplicates. Duplicate Gene names: %s",
-                                duplicates.sum(), ", ".join(df_protein_names[duplicates].loc[:, "Gene name fasta"]))
-            df_protein_names = df_protein_names.drop_duplicates(subset="Gene name fasta", keep=False)
-        # convert all non numeric intensities
-        for col in [col for col in df_protein_names.columns if 'Intensity ' in col or "LFQ " in col or "iBAQ " in col]:
-            if not is_numeric_dtype(df_protein_names[col]):
-                df_protein_names[col] = df_protein_names[col].apply(lambda x: x.replace(",", ".")).fillna(0)
-                df_protein_names[col] = df_protein_names[col].astype("int64")
-        self.logger.debug("%s shape after preprocessing: %s", MQInitializer.proteins_txt, df_protein_names.shape)
-        return df_protein_names, df_peptide_names
-
-    def rename_protein_df_columns(self, col_names_proteins: list, col_names_peptides: list) -> (list, list):
-        mapping_txt = pd.read_csv(os.path.join(self.start_dir, MQInitializer.mapping_txt),
-                                  sep="\t", header=0, index_col=None)
-        if mapping_txt.shape[1] != 2:
-            raise ValueError(f"{MQInitializer.mapping_txt} should have two columns")
-        duplicated_old = mapping_txt.iloc[:, 0].duplicated(keep=False)
-        duplicated_new = mapping_txt.iloc[:, 1].duplicated(keep=False)
-        if any(duplicated_new) or any(duplicated_old):
-            raise ValueError(f"{MQInitializer.mapping_txt} should only contain unique rows, "
-                             f"{mapping_txt.iloc[:, 0][duplicated_old]}, {mapping_txt.iloc[:, 1][duplicated_new]}")
-        mapping_dict = {old_name: new_name for old_name, new_name in zip(mapping_txt.iloc[:, 0], mapping_txt.iloc[:, 1])}
-
-        self.logger.info("Renaming columns using %s", MQInitializer.mapping_txt)
-        def find_key_match(col):
-            matches = []
-            for key in mapping_dict:
-                if key in col:
-                    matches.append(key)
-            matches = sorted(matches, key=len)
-            if len(matches) == 0:
-                return ""
-            else:
-                return matches[-1]
-        match_list_proteins = [find_key_match(col) for col in col_names_proteins]
-        match_list_peptides = [find_key_match(col) for col in col_names_peptides]
-        # add a replace value for the default string
-        mapping_dict[""] = ""
-        return ([col_names_proteins[i].replace(match_list_proteins[i], mapping_dict[match_list_proteins[i]])
-                for i in range(len(col_names_proteins))],
-                [col_names_peptides[i].replace(match_list_peptides[i], mapping_dict[match_list_peptides[i]])
-                for i in range(len(col_names_peptides))])
-
     def init_interest_from_txt(self):
         dict_pathway = {}
         dict_go = {}
@@ -424,8 +178,14 @@ class MQInitializer:
 
     def prepare_stuff(self):
         # read the proteins_txt and peptides_txt
-        self.logger.info("Reading %s, and %s", MQInitializer.proteins_txt, MQInitializer.peptides_txt)
-        self.df_protein_names, self.df_peptide_names = self.init_dfs_from_txts()
+        self.logger.info("Reading %s, and %s", MQReader.proteins_txt, MQReader.peptides_txt)
+        # TODO make this work properly
+        mqreader = MQReader(self.start_dir, self.configs)
+        self.df_protein_names = mqreader.full_data[MQReader.proteins_txt]
+        self.df_peptide_names = mqreader.full_data[MQReader.peptides_txt]
+        self.all_replicates = mqreader.all_samples
+        self.analysis_design = mqreader.analysis_design
+        self.configs = mqreader.configs
 
         # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")

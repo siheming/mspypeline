@@ -91,7 +91,7 @@ def barplot_annotate_brackets(ax, num1, num2, data, center, height, yerr=None, d
 def plot_annotate_line(ax, row1, row2, x, data,  fs=None, maxasterix=None):
     """
     adjusted function
-    From: https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph
+    from: https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph
     Annotate plot with p-values with line indicators.
 
     :param ax: axis of plot to put the annotaion line
