@@ -13,10 +13,11 @@ from mqpipeline.Utils import get_number_rows_cols_for_fig, venn_names, get_numbe
     get_intersection_and_unique
 import logging
 import warnings
+from typing import Dict
 from adjustText import adjust_text
 from mqpipeline import MQInitializer
 # TODO why does the import from mqpipeline not work?
-from .DataStructure import DataTree
+from mqpipeline.DataStructure import DataTree
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
@@ -138,15 +139,15 @@ class MQPlots(Logger):
             self.all_intensities_ibaq_log2 = self.all_intensities_raw_log2
 
         # create a dict matching the raw and lfq dfs by string
-        self.all_intensities_dict = {
+        self.all_intensities_dict: Dict[str, pd.DataFrame] = {
             "lfq": self.all_intensities_lfq, "lfq_log2": self.all_intensities_lfq_log2,
             "raw": self.all_intensities_raw, "raw_log2": self.all_intensities_raw_log2,
             "ibaq": self.all_intensities_ibaq, "ibaq_log2": self.all_intensities_ibaq_log2
         }
 
         # create the data trees
-        self.all_tree_dict = {
-            intensity: DataTree().from_analysis_design(self.analysis_design, data)
+        self.all_tree_dict: Dict[str, DataTree] = {
+            intensity: DataTree.from_analysis_design(self.analysis_design, data)
             for intensity, data in self.all_intensities_dict.items()
         }
 

@@ -75,8 +75,21 @@ class MQInitializer(Logger):
         return self._file_path_yaml
 
     @file_path_yaml.setter
-    def file_path_yaml(self, file_path_yml):
-        # if no yml file is passed try to guess it or ask for one
+    def file_path_yaml(self, file_path_yml: str):
+        """
+
+        Parameters
+        ----------
+        file_path_yml
+
+        Raises
+        ------
+        ValueError
+            if no valid value was provided
+        FileNotFoundError
+            if the file specified by the file_path_yml was not found
+
+        """
         if file_path_yml.lower() == "default":
             self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml.lower() == "file":
@@ -85,10 +98,10 @@ class MQInitializer(Logger):
             else:
                 self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml.lower().endswith(('.yml', '.yaml')):
-            self._file_path_yaml = file_path_yml
+            self._file_path_yaml = os.path.normpath(file_path_yml)
         else:
-            raise ValueError(f"Invalid value provided for yaml file {file_path_yml}")
-        self.logger.debug(f"yml file location: {self._file_path_yaml}")
+            raise ValueError(f"Invalid value provided for yaml file: {file_path_yml}")
+        self.logger.debug("yml file location: %s", self._file_path_yaml)
 
         # load the config from the yml file
         self.logger.info("loading yml file")

@@ -1,10 +1,26 @@
 from collections import defaultdict as ddict
 from collections import deque
 import pandas as pd
+from typing import Union, Callable, Dict
 
 
 class DataNode:
-    def __init__(self, name="", level=0, parent=None, data=None, children=None):
+    def __init__(self, name: str = "",
+                 level: int = 0,
+                 parent: "DataNode" = None,
+                 data: pd.Series = None,
+                 children: Dict[str, "DataNode"] = None):
+        """
+        Default parameters will return a root node
+
+        Parameters
+        ----------
+        name
+        level
+        parent
+        data
+        children
+        """
         self.name = name
         self.parent = parent
         self.data = data
@@ -32,7 +48,26 @@ class DataNode:
         for child in self.__iter__():
             return child
 
-    def aggregate(self, method="mean", go_max_depth=False, index=None):
+    def aggregate(self,
+                  method: Union[None, str, Callable] = "mean",
+                  go_max_depth: bool = False,
+                  index=None):
+        """
+
+        Parameters
+        ----------
+        method
+            If None no aggregation will be applied. Otherwise needs to be accepted by pd.aggregate.
+        go_max_depth
+            If technical replicates were aggregated, this can be specified to use the unaggregated values instead.
+        index
+            Index to subset the data with.
+
+        Returns
+        -------
+        Union[pd.Series, pd.DataFrame]
+            Result of the aggregation
+        """
         queue = deque([self])
         data = []
         while queue:
@@ -52,15 +87,62 @@ class DataNode:
             data = data.aggregate(method, axis=1).rename(self.full_name, axis=1)
         return data
 
+    # TODO
+    def groupby(self, method="mean", go_max_depth=False, index=None):
+        """
+        consider each child a group then aggregate all children
+        Parameters
+        ----------
+        method: Union[str, Callable]
+            Will be passed to aggregate.
+        go_max_depth: bool
+            Will be passed to aggregate.
+        index:
+            Will be passed to aggregate.
+
+        Returns
+        -------
+        Union[pd.Series, pd.DataFrame]
+            Result of the grouping
+
+        See Also
+        aggregate : Will be called on each of the groups
+
+        """
+        data = {child.name: child.aggregate(method, go_max_depth, index) for child in self}
+        data = pd.concat(data, axis=1)
+        new_col_names = [self.full_name]
+        if method is None:
+            new_col_names.append("level_1")
+        data.columns = data.columns.set_names(new_col_names)
+        return data
+
 
 class DataTree:
-    def __init__(self, root=None):
+    """Summary line
+
+    Attributes
+    ----------
+    root: DataNode
+        Does stuff
+    level_keys_full_name: ddict(list)
+        Has all DataNode.full_name of a depth level of all levels
+
+    """
+    def __init__(self, root):
+        """
+
+        Parameters
+        ----------
+        root: DataNode
+            The root node of the Tree.
+        """
         self.root = root
         self.level_keys_full_name = ddict(list)
         # TODO self.level_keys_name = ddict(list)?
         # TODO self.methods ?
 
-    def __getitem__(self, key, sep="_"):
+    def __getitem__(self, key: str, sep: str = "_"):
         key_split = key.split(sep)
         start = self.root
         for k in key_split:
@@ -68,7 +150,24 @@ class DataTree:
         return start
 
     @classmethod
-    def from_analysis_design(cls, analysis_design, data=None, should_aggregate_technical_replicates=True):
+    def from_analysis_design(cls,
+                             analysis_design,
+                             data: pd.DataFrame = None,
+                             should_aggregate_technical_replicates: bool = True):
+        """
+
+        Parameters
+        ----------
+        analysis_design
+        data
+            Will be passed to add_data
+        should_aggregate_technical_replicates
+
+        Returns
+        -------
+        cls
+
+        """
         root = DataNode()
         c = cls(root)
         queue = deque([(0, root, analysis_design)])
@@ -88,6 +187,14 @@ class DataTree:
         return c
 
     def add_data(self, data):
+        """
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Data which will be used to fill the nodes with a Series.
+
+        """
         queue = deque([self.root])
         while queue:
             parent = queue.popleft()
