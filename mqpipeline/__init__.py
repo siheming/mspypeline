@@ -2,16 +2,13 @@ from .version import __version__
 from .MQInitializer import MQInitializer
 from .MQPlots import MQPlots
 from .MQPipeline import MQParser, MQUI
-from .DataStructure import DataNode, DataTree
 
 # import for "from package import *"
 __all__ = [
     "MQPlots",
     "MQInitializer",
     "MQParser",
-    "MQUI",
-    "DataNode",
-    "DataTree"
+    "MQUI"
 ]
 
 if __name__ == "__main__":

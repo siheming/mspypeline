@@ -5,8 +5,8 @@ except ModuleNotFoundError:
     from ruamel.yaml import YAML
 import logging
 
-from mqpipeline.Logger import get_logger
-from mqpipeline.file_reader.MQReader import MQReader
+from mqpipeline.helpers import get_logger
+from mqpipeline.file_reader import MQReader
 
 
 class MQInitializer:

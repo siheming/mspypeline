@@ -2,22 +2,20 @@ import pandas as pd
 import numpy as np
 import os
 import functools
-from mqpipeline.Logger import get_logger
 from matplotlib_venn import venn3, venn2
 import matplotlib.pyplot as plt
 from scipy import stats
 from itertools import combinations
 from collections import defaultdict as ddict
 from collections.abc import Iterable
-from mqpipeline.Utils import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, plot_annotate_line,\
-    get_intersection_and_unique
 import logging
 import warnings
 from typing import Dict
 from adjustText import adjust_text
+
 from mqpipeline import MQInitializer
-# TODO why does the import from mqpipeline not work?
-from mqpipeline.DataStructure import DataTree
+from mqpipeline.helpers import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, plot_annotate_line,\
+    get_intersection_and_unique, DataTree, get_logger
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
@@ -871,7 +869,7 @@ class MQPlots:
         pandas2ri.activate()
 
         # install r packages
-        from mqpipeline.Utils import install_r_dependencies
+        from mqpipeline.helpers.Utils import install_r_dependencies
         r_package_names = ("BiocManager", )
         r_bioconducter_package_names = ("limma", )
         install_r_dependencies(r_package_names, r_bioconducter_package_names)

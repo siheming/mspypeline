@@ -3,9 +3,9 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import logging
 from collections import defaultdict as ddict
-from mqpipeline.Logger import get_logger
+from mqpipeline.helpers import get_logger
 from mqpipeline.file_reader import BaseReader
-from mqpipeline.Utils import get_overlap, string_similarity_ratio
+from mqpipeline.helpers import get_overlap, string_similarity_ratio
 
 
 class MQReader(BaseReader):

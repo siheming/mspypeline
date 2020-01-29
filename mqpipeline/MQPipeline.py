@@ -1,9 +1,10 @@
-from mqpipeline.MQInitializer import MQInitializer
-from mqpipeline.MQPlots import MQPlots
 import argparse
 import tkinter as tk
 from tkinter import filedialog
 import logging
+
+from mqpipeline.MQInitializer import MQInitializer
+from mqpipeline.MQPlots import MQPlots
 
 
 class MQUI(tk.Tk):
