@@ -6,43 +6,45 @@ try:
     from ruamel_yaml import YAML
 except ModuleNotFoundError:
     from ruamel.yaml import YAML
+from mqpipeline.Logger import get_logger
 import logging
 
-from mqpipeline.Logger import Logger
 from mqpipeline.Utils import get_overlap, string_similarity_ratio
 
 
-class MQInitializer(Logger):
+
+class MQInitializer:
     # set all file names that are required
     yml_file_name_tmp = "config_tmp.yml"
     yml_file_name = "config.yml"
     default_yml_name = "ms_analysis_default.yml"
     go_path = "go_terms"
     pathway_path = "pathways"
-    proteins_txt = "proteinGroups.txt"
-    peptides_txt = "peptides.txt"
-    mapping_txt = "sample_mapping.txt"
     script_loc = os.path.dirname(os.path.realpath(__file__))
     path_pipeline_config = os.path.join(script_loc, "config")
     possible_gos = sorted([x for x in os.listdir(os.path.join(path_pipeline_config, go_path)) if x.endswith(".txt")])
     possible_pathways = sorted([x for x in os.listdir(os.path.join(path_pipeline_config, pathway_path)) if x.endswith(".txt")])
 
     def __init__(self, dir_: str, file_path_yml: str = "default", loglevel=logging.DEBUG):
-        super().__init__(self.__class__.__name__, loglevel=loglevel)
+        self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
+        # create a yaml file reader
         self.yaml = YAML()
         # self.yaml.indent(mapping=2, sequence=4, offset=2)
         self.yaml.indent(offset=2)
         self.yaml.default_flow_style = False
+
+        # attributes that change upon changing the starting dir
         self.analysis_design = None
         self.all_replicates = None
         self.configs = None
         self.path_config = None
         self.naming_convention = None
+
         self.df_protein_names, self.df_peptide_names = None, None
         self.interesting_proteins, self.go_analysis_gene_names = None, None
 
         self.logger.debug("Script location %s", MQInitializer.script_loc)
-
+        # properties
         self._start_dir = None
         self.start_dir = dir_
 
@@ -113,7 +115,7 @@ class MQInitializer(Logger):
         os.makedirs(self.path_config, exist_ok=True)
         self.update_config_file()
 
-    def has_yml_file(self):
+    def has_yml_file(self) -> bool:
         if not self.start_dir:
             return False
         if "config" in os.listdir(self.start_dir):

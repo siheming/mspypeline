@@ -9,16 +9,6 @@ import logging
 class MQUI(tk.Tk):
     def __init__(self, file_dir, yml_file="default", gui=False, loglevel=logging.DEBUG, configs: dict = None):
         super().__init__()
-
-        # determine logging level
-        try:
-            loglevel = getattr(logging, loglevel.upper())
-        except AttributeError:
-            try:
-                loglevel = int(loglevel)
-            except ValueError:
-                loglevel = logging.DEBUG
-
         base_config = {
             "has_replicates": False,
             "has_groups": False,

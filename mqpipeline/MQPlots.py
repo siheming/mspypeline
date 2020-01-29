@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import functools
-from mqpipeline.Logger import Logger
+from mqpipeline.Logger import get_logger
 from matplotlib_venn import venn3, venn2
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -32,7 +32,7 @@ VENN_SUBSET_LABEL_FONT_SIZE = 14
 # descriptive plots settings
 
 
-class MQPlots(Logger):
+class MQPlots:
     possible_plots = [
         "plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
         "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline",
@@ -58,12 +58,7 @@ class MQPlots(Logger):
         interesting_proteins, go_analysis_gene_names,
         loglevel=logging.DEBUG
     ):
-        super().__init__(self.__class__.__name__, loglevel=loglevel)
-        # property variables
-        self._replicate_representation = None
-        self._min_number_replicates = None
-        self._max_number_replicates = None
-        self._replicates_representation = None
+        self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # general information
         self.start_dir = start_dir
         self.all_replicates = all_replicates

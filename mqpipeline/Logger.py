@@ -1,24 +1,45 @@
 import logging
 import datetime
+from typing import Union
 
-loglevel = logging.DEBUG
 
+def get_logger(name: str = None, loglevel: Union[int, str] = logging.DEBUG) -> logging.Logger:
+    """
 
-class Logger:
-    def __init__(self, name=None, loglevel=loglevel):
-        if name is None:
-            name = __name__
+    Parameters
+    ----------
+    name
+        name of the logger, if none the filename will be used instead
+    loglevel
+        loglevel of the logger, either an int or the str level names of the logging module
 
-        self.logger = logging.getLogger(name)
+    Returns
+    -------
+    logging.Logger
+        A logger with respective level and formatted output
 
-        if not self.logger.handlers:
-            ch = logging.StreamHandler()
-            ch.setLevel(loglevel)
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            ch.setFormatter(formatter)
+    """
+    if name is None:
+        name = __name__
+    logger = logging.getLogger(name)
 
-            self.logger.setLevel(loglevel)
-            self.logger.addHandler(ch)
+    # determine logging level
+    try:
+        loglevel = getattr(logging, loglevel.upper())
+    except AttributeError:
+        try:
+            loglevel = int(loglevel)
+        except ValueError:
+            loglevel = logging.DEBUG
 
+    if not logger.handlers:
+        ch = logging.StreamHandler()
+        ch.setLevel(loglevel)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        ch.setFormatter(formatter)
+
+        logger.setLevel(loglevel)
+        logger.addHandler(ch)
+    return logger
