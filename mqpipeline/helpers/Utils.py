@@ -3,6 +3,7 @@ import pandas as pd
 from collections.abc import Sized
 from difflib import SequenceMatcher
 from itertools import combinations
+from collections import deque
 import numpy as np
 
 
@@ -194,3 +195,17 @@ def get_overlap(s1, s2):
     s = difflib.SequenceMatcher(None, s1, s2)
     pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2))
     return s1[pos_a:pos_a + size]
+
+
+def dict_depth(d: dict):
+    level = 1
+    queue = deque([(id(d), d, level)])
+    memo = set()
+    while queue:
+        id_, o, level = queue.popleft()
+        if id_ in memo:
+            continue
+        memo.add(id_)
+        if isinstance(o, dict):
+            queue += ((id(v), v, level + 1) for v in o.values())
+    return level

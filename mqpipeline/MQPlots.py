@@ -21,6 +21,7 @@ from mqpipeline.helpers import get_number_rows_cols_for_fig, venn_names, get_num
 
 # plt.style.use('ggplot')
 
+# TODO move these to the yml file
 FIG_FORMAT = ".pdf"
 # Venn diagram settings
 # TODO figsize
@@ -51,16 +52,13 @@ class MQPlots:
         return wrapper
 
     def __init__(
-        self, start_dir, all_replicates, analysis_design, configs,
-        df_protein_names, df_peptide_names,
+        self, start_dir, configs, reader_data,
         interesting_proteins, go_analysis_gene_names,
         loglevel=logging.DEBUG
     ):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # general information
         self.start_dir = start_dir
-        self.all_replicates = all_replicates
-        self.analysis_design = analysis_design
         self.configs = configs
         self.int_mapping = {
             "raw": "Intensity ", "raw_log2": "Intensity ",
@@ -72,6 +70,10 @@ class MQPlots:
             "lfq": "LFQ intensity", "lfq_log2": r"$Log_2$ LFQ intensity",
             "ibaq": "iBAQ intensity", "ibaq_log2": r"$Log_2$ iBAQ intensity",
         }
+        # TODO atm only one reader is being used. All required information is read here atm
+        df_protein_names = reader_data["mqreader"]["proteinGroups.txt"]
+        self.all_replicates = self.configs["all_replicates"]
+        self.analysis_design = self.configs["analysis_design"]
         # data frames
         self.df_protein_names = df_protein_names.set_index(df_protein_names["Gene name fasta"], drop=False)
         if any((col.startswith("LFQ intensity") for col in self.df_protein_names)):
@@ -84,7 +86,7 @@ class MQPlots:
         else:
             self.has_ibaq = False
             self.logger.warning("iBAQ intensities were not found. Raw intensities are used for all plots")
-        self.df_peptide_names = df_peptide_names
+        # self.df_peptide_names = df_peptide_names
         # dicts
         self.interesting_proteins = interesting_proteins
         self.go_analysis_gene_names = go_analysis_gene_names
@@ -182,11 +184,8 @@ class MQPlots:
     def from_MQInitializer(cls, mqinti_instance: MQInitializer):
         return cls(
             start_dir = mqinti_instance.start_dir,
-            all_replicates = mqinti_instance.all_replicates,
-            analysis_design = mqinti_instance.analysis_design,
             configs = mqinti_instance.configs,
-            df_protein_names = mqinti_instance.df_protein_names,
-            df_peptide_names = mqinti_instance.df_peptide_names,
+            reader_data = mqinti_instance.reader_data,
             interesting_proteins = mqinti_instance.interesting_proteins,
             go_analysis_gene_names = mqinti_instance.go_analysis_gene_names,
             loglevel = mqinti_instance.logger.getEffectiveLevel()
@@ -306,6 +305,7 @@ class MQPlots:
 
     @exception_handler
     def plot_venn_results(self, *args):
+        return
         # TODO the *args should not be used?
         self.logger.info("Creating venn diagrams")
 
@@ -338,6 +338,7 @@ class MQPlots:
 
     @exception_handler
     def plot_venn_groups(self, *args):
+        return
         # TODO create based on formular
         if self.experiment_groups:
             for g1, g2 in combinations(self.experiment_groups, 2):
@@ -442,7 +443,8 @@ class MQPlots:
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     @exception_handler
-    def plot_intensity_histograms(self, df_to_use: str = "raw", show_suptitle: bool = False):
+    def plot_intensity_histograms(self, df_to_use: str = "raw", show_suptitle: bool = False, levels=()):
+        # TODO levels should overlay histograms
         plt.close("all")
         n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig(self.all_replicates)
         # make a intensity histogram for every replicate

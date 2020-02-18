@@ -29,7 +29,7 @@ class MQUI(tk.Tk):
             mqinit = MQInitializer(file_dir, yml_file, loglevel=loglevel)
             mqinit.init_config()
             mqinit.configs.update(configs)
-            mqinit.prepare_stuff()
+            mqinit.read_data()
             # create plotter from initializer
             mqplots = MQPlots.from_MQInitializer(mqinit)
             # create all plots and other results
@@ -86,17 +86,18 @@ class MQUI(tk.Tk):
         for plot_name in MQPlots.possible_plots:
             plot_settings_name = plot_name + "_settings"
             plot_settings = self.mqinit.configs.get(plot_settings_name, {})
+            plot_levels = plot_settings.get("levels", [])
             var_name = plot_name.replace("plot_", "") + "_var"
             int_name = var_name.replace("var", "int")
             levels_name = var_name.replace("var", "levels")
-            getattr(self, var_name).set(plot_settings.get("intensity", "raw"))
+            getattr(self, var_name).set(plot_settings.get("df_to_use", "raw"))
             getattr(self, int_name).set(plot_settings.get("create_plot", False))
             selected_levels = getattr(self, levels_name)
             selected_levels.delete(0, "end")
             for level in range(levels):
                 selected_levels.insert("end", level_names.get(level, level))
-            for level in plot_settings.get("levels", []):
-                selected_levels.select_set(level)
+                if level in plot_levels:
+                    selected_levels.select_set(level)
         self.replicate_var.set(self.mqinit.configs.get("has_replicates", True))
         self.update_listboxes()
 
@@ -120,7 +121,7 @@ class MQUI(tk.Tk):
         self.mqinit.configs["pathways"] = pathways
         self.mqinit.configs["has_replicates"] = bool(self.replicate_var.get())
         self.mqinit.init_config()
-        self.mqinit.prepare_stuff()
+        self.mqinit.read_data()
         self.update_listboxes()
 
     def start_button(self):

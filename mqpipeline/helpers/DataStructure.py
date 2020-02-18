@@ -143,6 +143,7 @@ class DataTree:
         # TODO self.methods ?
 
     def __getitem__(self, key: str, sep: str = "_"):
+        # TODO maybe this should be moved to the data node
         key_split = key.split(sep)
         start = self.root
         for k in key_split:
@@ -185,6 +186,45 @@ class DataTree:
         if should_aggregate_technical_replicates:
             c.aggregate_technical_replicates()
         return c
+
+    def aggregate(self,
+                  key: Union[None, str] = None,
+                  method: Union[None, str, Callable] = "mean",
+                  go_max_depth: bool = False,
+                  index=None):
+        if key is None:
+            return self.root.aggregate(method, go_max_depth, index)
+        elif isinstance(key, str):
+            return self[key].aggregate(method, go_max_depth, index)
+        else:
+            raise ValueError(f"Invalid input for key: {key}, with type: {type(key)}")
+
+    def groupby(self,
+                key_or_index: Union[None, str, int] = None,
+                new_col_name: str = None,
+                method: Union[None, str, Callable] = "mean",
+                go_max_depth: bool = False,
+                index=None):
+        if key_or_index is None:
+            return self.root.groupby(method, go_max_depth, index)
+        elif isinstance(key_or_index, str):
+            return self.root[key_or_index].groupby(method, go_max_depth, index)
+        elif isinstance(key_or_index, int):
+            data = {
+                child_name: self[child_name].aggregate(method, go_max_depth, index)
+                for child_name in self.level_keys_full_name[key_or_index]
+            }
+            data = pd.concat(data, axis=1)
+            if new_col_name is None:
+                new_col_names = ["level_0"]
+            else:
+                new_col_names = [new_col_name]
+            if method is None:
+                new_col_names.append("level_1")
+            data.columns = data.columns.set_names(new_col_names)
+            return data
+        else:
+            raise ValueError(f"Invalid input for key: {key_or_index}, with type: {type(key_or_index)}")
 
     def add_data(self, data):
         """

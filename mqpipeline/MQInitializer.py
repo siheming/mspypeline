@@ -1,4 +1,5 @@
 import os
+from typing import Tuple, Dict, Type
 try:
     from ruamel_yaml import YAML
 except ModuleNotFoundError:
@@ -6,7 +7,7 @@ except ModuleNotFoundError:
 import logging
 
 from mqpipeline.helpers import get_logger
-from mqpipeline.file_reader import MQReader
+from mqpipeline.file_reader import MQReader, MissingFilesException, BaseReader
 
 
 class MQInitializer:
@@ -30,13 +31,11 @@ class MQInitializer:
         self.yaml.default_flow_style = False
 
         # attributes that change upon changing the starting dir
-        self.analysis_design = None
-        self.all_replicates = None
         self.configs = None
         self.path_config = None
         self.naming_convention = None
 
-        self.df_protein_names, self.df_peptide_names = None, None
+        self.reader_data = {}
         self.interesting_proteins, self.go_analysis_gene_names = None, None
 
         self.logger.debug("Script location %s", MQInitializer.script_loc)
@@ -61,10 +60,10 @@ class MQInitializer:
         else:
             self._start_dir = start_dir
         self.logger.info(f"Starting dir: {self.start_dir}")
-        self.analysis_design = None
-        self.all_replicates = None
+        # set all attributes back None that where file specific
         self.naming_convention = None
         self.configs = None
+        # just set the path to file, since if not found the default will be used
         self.file_path_yaml = "file"
         self.path_config = os.path.join(self.start_dir, "config")
 
@@ -79,6 +78,10 @@ class MQInitializer:
         Parameters
         ----------
         file_path_yml
+            can be either:
+                - "default"
+                - "file"
+                - a path to a yml file
 
         Raises
         ------
@@ -123,14 +126,15 @@ class MQInitializer:
         return False
 
     def get_default_yml_path(self) -> str:
-        self.logger.debug("Loading default yml file from: %s, since no file was selected", MQInitializer.script_loc)
+        self.logger.debug("Loading default yml file from: %s, since no (valid) file was selected",
+                          MQInitializer.script_loc)
         if MQInitializer.default_yml_name in os.listdir(MQInitializer.path_pipeline_config):
             yaml_file = os.path.join(MQInitializer.path_pipeline_config, MQInitializer.default_yml_name)
         else:
             raise ValueError("Could not find default yaml file. Please select one.")
         return yaml_file
 
-    def init_interest_from_txt(self):
+    def init_interest_from_txt(self) -> Tuple[Dict[str, list], Dict[str, list]]:
         dict_pathway = {}
         dict_go = {}
         for pathway in self.configs.get("pathways"):
@@ -142,7 +146,7 @@ class MQInitializer:
             dict_go[name] = proteins
         return dict_pathway, dict_go
 
-    def read_config_txt_file(self, path, file):
+    def read_config_txt_file(self, path, file) -> Tuple[str, list]:
         fullpath = os.path.join(MQInitializer.path_pipeline_config, path, file)
         if path == MQInitializer.pathway_path:
             with open(fullpath) as f:
@@ -176,16 +180,20 @@ class MQInitializer:
         # rename to non tmp
         os.rename(yml_file_loc_tmp, yml_file_loc)
 
-    def prepare_stuff(self):
+    def read_data(self):
         # read the proteins_txt and peptides_txt
         self.logger.info("Reading %s, and %s", MQReader.proteins_txt, MQReader.peptides_txt)
-        # TODO make this work properly
-        mqreader = MQReader(self.start_dir, self.configs)
-        self.df_protein_names = mqreader.full_data[MQReader.proteins_txt]
-        self.df_peptide_names = mqreader.full_data[MQReader.peptides_txt]
-        self.all_replicates = mqreader.all_samples
-        self.analysis_design = mqreader.analysis_design
-        self.configs = mqreader.configs
+        for Reader in BaseReader.__subclasses__():
+            Reader: Type[BaseReader]  # for IDE hints
+            try:
+                reader = Reader(self.start_dir, self.configs.get(Reader.name, {}))
+                self.configs[Reader.name] = reader.reader_config
+                self.update_config_file()
+                self.reader_data[Reader.name] = reader.get_full_data()
+
+            except MissingFilesException:
+                self.logger.debug("No files found for reader: %s", Reader.name)
+        self.configs.update(self.configs.pop("mqreader"))
 
         # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")
