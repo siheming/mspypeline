@@ -1,5 +1,5 @@
-from mqpipeline import MQParser, MQUI
+from mqpipeline.core import MQParser, UIHandler
 
 if __name__ == "__main__":
     mqparser = MQParser()
-    gui = MQUI(**mqparser.args_dict)
+    UIHandler(**mqparser.args_dict)

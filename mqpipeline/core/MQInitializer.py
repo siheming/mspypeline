@@ -6,6 +6,7 @@ except ModuleNotFoundError:
     from ruamel.yaml import YAML
 import logging
 
+import mqpipeline
 from mqpipeline.helpers import get_logger
 from mqpipeline.file_reader import MQReader, MissingFilesException, BaseReader
 
@@ -17,10 +18,8 @@ class MQInitializer:
     default_yml_name = "ms_analysis_default.yml"
     go_path = "go_terms"
     pathway_path = "pathways"
-    script_loc = os.path.dirname(os.path.realpath(__file__))
-    path_pipeline_config = os.path.join(script_loc, "config")
-    possible_gos = sorted([x for x in os.listdir(os.path.join(path_pipeline_config, go_path)) if x.endswith(".txt")])
-    possible_pathways = sorted([x for x in os.listdir(os.path.join(path_pipeline_config, pathway_path)) if x.endswith(".txt")])
+    possible_gos = sorted([x for x in os.listdir(os.path.join(mqpipeline.path_package_config, go_path)) if x.endswith(".txt")])
+    possible_pathways = sorted([x for x in os.listdir(os.path.join(mqpipeline.path_package_config, pathway_path)) if x.endswith(".txt")])
 
     def __init__(self, dir_: str, file_path_yml: str = "default", loglevel=logging.DEBUG):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
@@ -38,7 +37,6 @@ class MQInitializer:
         self.reader_data = {}
         self.interesting_proteins, self.go_analysis_gene_names = None, None
 
-        self.logger.debug("Script location %s", MQInitializer.script_loc)
         # properties
         self._start_dir = None
         self.start_dir = dir_
@@ -127,9 +125,9 @@ class MQInitializer:
 
     def get_default_yml_path(self) -> str:
         self.logger.debug("Loading default yml file from: %s, since no (valid) file was selected",
-                          MQInitializer.script_loc)
-        if MQInitializer.default_yml_name in os.listdir(MQInitializer.path_pipeline_config):
-            yaml_file = os.path.join(MQInitializer.path_pipeline_config, MQInitializer.default_yml_name)
+                          mqpipeline.path_package)
+        if MQInitializer.default_yml_name in os.listdir(mqpipeline.path_package_config):
+            yaml_file = os.path.join(mqpipeline.path_package_config, MQInitializer.default_yml_name)
         else:
             raise ValueError("Could not find default yaml file. Please select one.")
         return yaml_file
@@ -147,7 +145,7 @@ class MQInitializer:
         return dict_pathway, dict_go
 
     def read_config_txt_file(self, path, file) -> Tuple[str, list]:
-        fullpath = os.path.join(MQInitializer.path_pipeline_config, path, file)
+        fullpath = os.path.join(mqpipeline.path_package_config, path, file)
         if path == MQInitializer.pathway_path:
             with open(fullpath) as f:
                 name = f.readline().strip()

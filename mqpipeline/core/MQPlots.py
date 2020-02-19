@@ -13,7 +13,7 @@ import warnings
 from typing import Dict
 from adjustText import adjust_text
 
-from mqpipeline import MQInitializer
+from mqpipeline.core import MQInitializer
 from mqpipeline.helpers import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, plot_annotate_line,\
     get_intersection_and_unique, DataTree, get_logger
 
@@ -29,6 +29,31 @@ VENN_TITLE_FONT_SIZE = 20
 VENN_SET_LABEL_FONT_SIZE = 16
 VENN_SUBSET_LABEL_FONT_SIZE = 14
 # descriptive plots settings
+
+def create_plot():
+    import plotly
+    import plotly.graph_objs as go
+
+    import pandas as pd
+    import numpy as np
+    import json
+
+    N = 40
+    x = np.linspace(0, 1, N)
+    y = np.random.randn(N)
+    df = pd.DataFrame({'x': x, 'y': y}) # creating a sample dataframe
+
+
+    data = [
+        go.Bar(
+            x=df['x'], # assign x as the dataframe column 'x'
+            y=df['y']
+        )
+    ]
+
+    graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return {"kind": "bargraph", "json": graphJSON}
 
 
 class MQPlots:

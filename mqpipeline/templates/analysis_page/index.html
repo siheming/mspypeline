@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Analysis index{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<p >Stuff: {{user_id}}</p>
+<div class="chart" id="bargraph">
+    <script>
+        Plotly.react({{kind | safe}},{{json | safe}},{});
+    </script>
+</div>
+{% endblock %}

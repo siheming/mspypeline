@@ -3,13 +3,14 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 
-from mqpipeline.MQInitializer import MQInitializer
-from mqpipeline.MQPlots import MQPlots
+from mqpipeline.core import MQInitializer
+from mqpipeline.core import MQPlots
+import mqpipeline
+# from mqpipeline import create_app
 
 
-class MQUI(tk.Tk):
-    def __init__(self, file_dir, yml_file="default", gui=False, loglevel=logging.DEBUG, configs: dict = None):
-        super().__init__()
+class UIHandler:
+    def __init__(self, file_dir, yml_file="default", gui=False, host_flask=False, loglevel=logging.DEBUG, configs: dict = None):
         base_config = {
             "has_replicates": False,
             "has_groups": False,
@@ -18,14 +19,15 @@ class MQUI(tk.Tk):
             configs = {}
         base_config.update(**configs)
         configs = base_config
-        self.yaml_options = ["default"]
 
-        self.number_of_plots = 0
-
-        if not gui:
-            # get all necessary data, start the analysis and quit
-            self.withdraw()
-            # create initializer which reads all required files
+        if gui and host_flask:
+            raise ValueError("Can only specify one of host_flask and gui")
+        if gui:
+            MQUI(file_dir=file_dir, yml_file=yml_file, loglevel=loglevel, configs=configs)
+        elif host_flask:
+            app = mqpipeline.create_app()
+            app.run()
+        else:
             mqinit = MQInitializer(file_dir, yml_file, loglevel=loglevel)
             mqinit.init_config()
             mqinit.configs.update(configs)
@@ -34,13 +36,21 @@ class MQUI(tk.Tk):
             mqplots = MQPlots.from_MQInitializer(mqinit)
             # create all plots and other results
             mqplots.create_results()
-        else:
-            self.mqinit = MQInitializer("", yml_file, loglevel=loglevel)
-            self.make_layout()
-            if file_dir:
-                self.dir_text.set(file_dir)
-            self.mqinit.configs.update(configs)
-            self.mainloop()
+
+
+class MQUI(tk.Tk):
+    def __init__(self, file_dir, yml_file="default", loglevel=logging.DEBUG, configs: dict = None):
+        super().__init__()
+        self.yaml_options = ["default"]
+
+        self.number_of_plots = 0
+
+        self.mqinit = MQInitializer("", yml_file, loglevel=loglevel)
+        self.make_layout()
+        if file_dir:
+            self.dir_text.set(file_dir)
+        self.mqinit.configs.update(configs)
+        self.mainloop()
 
     def dir_setter(self, *args):
         self.mqinit.start_dir = self.dir_text.get()
@@ -283,6 +293,14 @@ class MQParser(argparse.ArgumentParser):
             const=True,
             nargs="?",
             help="specify this if a gui should be opened"
+        )
+        self.add_argument(
+            "--host-flask",
+            dest="host_flask",
+            default=False,
+            const=True,
+            nargs="?",
+            help="specify this if a flask server should be hosted"
         )
         self.args = self.parse_args()
         self.args_dict = vars(self.args)
