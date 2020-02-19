@@ -6,9 +6,9 @@
 
 {% block content %}
 <p >Stuff: {{user_id}}</p>
-<div class="chart" id="bargraph">
+<div class="chart" id="plot">
     <script>
-        Plotly.react({{kind | safe}},{{json | safe}},{});
+        Plotly.react("plot",{{json | safe}},{});
     </script>
 </div>
 {% endblock %}

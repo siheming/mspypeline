@@ -53,7 +53,7 @@ def create_plot():
 
     graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return {"kind": "bargraph", "json": graphJSON}
+    return graphJSON
 
 
 class MQPlots:

@@ -40,6 +40,8 @@ def create_app(test_config=None):
     from . import analysis_page
     app.register_blueprint(analysis_page.bp)
 
+    app.add_url_rule('/', view_func=analysis_page.index)
+
     return app
 
 
