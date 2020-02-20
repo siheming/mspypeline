@@ -3,10 +3,8 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 
-from mqpipeline.core import MQInitializer
-from mqpipeline.core import MQPlots
-import mqpipeline
-# from mqpipeline import create_app
+from mqpipeline.core import MQInitializer, MQPlots
+from mqpipeline import create_app
 
 
 class UIHandler:
@@ -25,8 +23,8 @@ class UIHandler:
         if gui:
             MQUI(file_dir=file_dir, yml_file=yml_file, loglevel=loglevel, configs=configs)
         elif host_flask:
-            app = mqpipeline.create_app()
-            app.run()
+            app = create_app()
+            app.run(debug=True)
         else:
             mqinit = MQInitializer(file_dir, yml_file, loglevel=loglevel)
             mqinit.init_config()

@@ -30,31 +30,6 @@ VENN_SET_LABEL_FONT_SIZE = 16
 VENN_SUBSET_LABEL_FONT_SIZE = 14
 # descriptive plots settings
 
-def create_plot():
-    import plotly
-    import plotly.graph_objs as go
-
-    import pandas as pd
-    import numpy as np
-    import json
-
-    N = 40
-    x = np.linspace(0, 1, N)
-    y = np.random.randn(N)
-    df = pd.DataFrame({'x': x, 'y': y}) # creating a sample dataframe
-
-
-    data = [
-        go.Bar(
-            x=df['x'], # assign x as the dataframe column 'x'
-            y=df['y']
-        )
-    ]
-
-    graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
-
-    return graphJSON
-
 
 class MQPlots:
     possible_plots = [
@@ -1010,3 +985,7 @@ class MQPlots:
                 res_path = os.path.join(self.file_dir_volcano, f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
                 fig.savefig(res_path, dpi=200, bbox_inches="tight")
                 # TODO scatter plot of significant genes
+
+    def histogram_data(self, df_to_use="raw"):
+        df = self.all_tree_dict[df_to_use].aggregate(method=None)
+        return df
