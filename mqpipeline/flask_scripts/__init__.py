@@ -32,10 +32,10 @@ def create_app_helper(test_config):
     from mqpipeline.flask_scripts import login_db
     login_db.init_app(app)
 
-    from mqpipeline.flask_scripts import analysis_page
+    from mqpipeline.flask_scripts.blueprints import analysis_page
     app.register_blueprint(analysis_page.bp)
 
-    from mqpipeline.flask_scripts import register_analysis
+    from mqpipeline.flask_scripts.blueprints import register_analysis
     app.register_blueprint(register_analysis.bp)
 
     app.add_url_rule('/', view_func=register_analysis.create_analysis)

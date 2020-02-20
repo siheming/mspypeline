@@ -2,7 +2,9 @@ from .version import __version__
 import os
 # import for "from package import *"
 __all__ = [
-    "create_app"
+    "create_app",
+    "path_package",
+    "path_package_config",
 ]
 
 path_package = script_loc = os.path.dirname(os.path.realpath(__file__))
@@ -15,10 +17,6 @@ def create_app(test_config=None):
 
 
 if __name__ == "__main__":
-    from mqpipeline.core import MQParser, MQUI
+    from mqpipeline.core import MQParser, UIHandler
     mqparser = MQParser()
-    if True:
-    #if mqparser.args_dict.get("host_flask"):
-        app = create_app()
-        app.run()
-    gui = MQUI(**mqparser.args_dict)
+    UIHandler(**mqparser.args_dict)
