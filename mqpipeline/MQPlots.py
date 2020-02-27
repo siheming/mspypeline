@@ -72,6 +72,7 @@ class MQPlots:
         }
         # TODO atm only one reader is being used. All required information is read here atm
         df_protein_names = reader_data["mqreader"]["proteinGroups.txt"]
+        tech_rep = self.configs["has_replicates"]
         self.all_replicates = self.configs["all_replicates"]
         self.analysis_design = self.configs["analysis_design"]
         # data frames
@@ -142,7 +143,7 @@ class MQPlots:
 
         # create the data trees
         self.all_tree_dict: Dict[str, DataTree] = {
-            intensity: DataTree.from_analysis_design(self.analysis_design, data)
+            intensity: DataTree.from_analysis_design(self.analysis_design, data, tech_rep)
             for intensity, data in self.all_intensities_dict.items()
         }
 
@@ -304,7 +305,7 @@ class MQPlots:
                     out.write(re + "\n")
 
     @exception_handler
-    def plot_venn_results(self, *args):
+    def plot_venn_results(self, *args, **kwargs):
         return
         # TODO the *args should not be used?
         self.logger.info("Creating venn diagrams")
@@ -337,7 +338,7 @@ class MQPlots:
         self.save_bar_venn("All experiments union", experiment_union_sets)
 
     @exception_handler
-    def plot_venn_groups(self, *args):
+    def plot_venn_groups(self, *args, **kwargs):
         return
         # TODO create based on formular
         if self.experiment_groups:
@@ -698,9 +699,11 @@ class MQPlots:
                 self.logger.warning("Skipping pathway timeline plot because of incorrect match between found groups and target groups")
                 continue
             x_values = {}
+            # for key in level_keys:
+            #     sample_names = self.all_tree_dict[df_to_use][key].aggregate(None).columns
+            #     x_values.update({sample: sum([int(s.replace("W", "")) for s in sample.split("_") if s.endswith("W")]) for sample in sample_names})
             for key in level_keys:
-                sample_names = self.all_tree_dict[df_to_use][key].aggregate(None).columns
-                x_values.update({sample: sum([int(s.replace("W", "")) for s in sample.split("_") if s.endswith("W")]) for sample in sample_names})
+                x_values.update({key: sum([int(s.replace("W", "")) for s in key.split("_") if s.endswith("W")])})
             max_time = max(x_values.values())
             for pathway in self.interesting_proteins:
                 plt.close("all")
@@ -796,7 +799,7 @@ class MQPlots:
         pass
 
     @exception_handler
-    def plot_go_analysis(self, df_to_use: str = "raw"):
+    def plot_go_analysis(self, df_to_use: str = "raw", levels: Iterable = (0,)):
         self.logger.info("Creating go analysis plots")
         plt.close("all")
 
@@ -805,61 +808,62 @@ class MQPlots:
         heights = ddict(list)
         test_results = ddict(list)
 
-        for compartiment, all_pathway_genes in self.go_analysis_gene_names.items():
-            all_pathway_genes = set(all_pathway_genes)
-            # get all pathway genes that were detected throughout all experiments
-            pathway_genes = all_pathway_genes & background
-            # all genes that are not in the pathway
-            not_pathway_genes = background - pathway_genes
-            # sanity check
-            assert pathway_genes | not_pathway_genes == background
-            heights["background"].append(len(pathway_genes))
-            for experiment in self.replicates:
-                # create df with intensity means for specific experiment over all replicates
-                mean_intensity = self.intensities_per_experiment_dict[df_to_use][experiment].mean(axis=1)
-                # get all proteins with mean intensity > 0
-                experiment_genes = set(mean_intensity[mean_intensity > 0].index)
-                # all other experiments are not detected
-                not_experiment_genes = background - experiment_genes
+        for level in levels:
+            for compartiment, all_pathway_genes in self.go_analysis_gene_names.items():
+                all_pathway_genes = set(all_pathway_genes)
+                # get all pathway genes that were detected throughout all experiments
+                pathway_genes = all_pathway_genes & background
+                # all genes that are not in the pathway
+                not_pathway_genes = background - pathway_genes
                 # sanity check
-                assert experiment_genes | not_experiment_genes == background
-                # append height for the plot
-                heights[experiment].append(len(experiment_genes & pathway_genes))
-                table = pd.DataFrame([
-                            [len(experiment_genes & pathway_genes), len(experiment_genes & not_pathway_genes)],
-                            [len(not_experiment_genes & pathway_genes), len(not_experiment_genes & not_pathway_genes)]
-                ], columns=["in pathway", "not in pathway"], index=["in experiment", "not in experiment"])
-                oddsratio, pvalue = stats.fisher_exact(table, alternative='greater')
-                # chi2, p, dof, ex = stats.chi2_contingency(table, correction=True)
-                # self.logger.debug(f"{chi2}, {dof}, {ex}")
-                # self.logger.debug(f"{compartiment} {experiment}: table: {table} fisher: {pvalue:.4f}, chi2: {p:.4f}")
-                test_results[experiment].append(pvalue)
+                assert pathway_genes | not_pathway_genes == background
+                heights["background"].append(len(pathway_genes))
+                for experiment in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
+                    # create df with intensity means for specific experiment over all replicates
+                    mean_intensity = self.all_tree_dict[df_to_use][experiment].aggregate()
+                    # get all proteins with mean intensity > 0
+                    experiment_genes = set(mean_intensity[mean_intensity > 0].index)
+                    # all other experiments are not detected
+                    not_experiment_genes = background - experiment_genes
+                    # sanity check
+                    assert experiment_genes | not_experiment_genes == background
+                    # append height for the plot
+                    heights[experiment].append(len(experiment_genes & pathway_genes))
+                    table = pd.DataFrame([
+                                [len(experiment_genes & pathway_genes), len(experiment_genes & not_pathway_genes)],
+                                [len(not_experiment_genes & pathway_genes), len(not_experiment_genes & not_pathway_genes)]
+                    ], columns=["in pathway", "not in pathway"], index=["in experiment", "not in experiment"])
+                    oddsratio, pvalue = stats.fisher_exact(table, alternative='greater')
+                    # chi2, p, dof, ex = stats.chi2_contingency(table, correction=True)
+                    # self.logger.debug(f"{chi2}, {dof}, {ex}")
+                    # self.logger.debug(f"{compartiment} {experiment}: table: {table} fisher: {pvalue:.4f}, chi2: {p:.4f}")
+                    test_results[experiment].append(pvalue)
 
-        # TODO only show pvalue when significant
-        # TODO also create table
-        # TODO move labels to bars, remove legend
-        fig, ax = plt.subplots(1, 1, figsize=(7, int(len(self.replicates) * len(self.go_analysis_gene_names) / 3)))
+            # TODO only show pvalue when significant
+            # TODO also create table
+            # TODO move labels to bars, remove legend
+            fig, ax = plt.subplots(1, 1, figsize=(7, int(len(heights) * len(self.go_analysis_gene_names) / 3)))
 
-        bar_width = 0.25
-        for i, experiment in enumerate(heights):
-            y_pos = np.array([(i + (len(heights) + 1) * x) * bar_width for x in range(len(self.go_analysis_gene_names))])
-            ax.barh(y_pos, heights[experiment], height=bar_width, edgecolor='white', label=experiment)
-            for x, y, text in zip(heights[experiment], y_pos, test_results[experiment]):
-                if text > 0.05:
-                    continue
-                text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
-                ax.text(x, y, f" p: {text}", verticalalignment="center", fontsize="8")
+            bar_width = 0.25
+            for i, experiment in enumerate(heights):
+                y_pos = np.array([(i + (len(heights) + 1) * x) * bar_width for x in range(len(self.go_analysis_gene_names))])
+                ax.barh(y_pos, heights[experiment], height=bar_width, edgecolor='white', label=experiment)
+                for x, y, text in zip(heights[experiment], y_pos, test_results[experiment]):
+                    if text > 0.05:
+                        continue
+                    text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
+                    ax.text(x, y, f" p: {text}", verticalalignment="center", fontsize="8")
 
-        ax.set_ylabel('compartiment')
-        ax.set_xlabel('number of proteins')
-        # add yticks on the middle of the group bars
-        ax.set_yticks([(len(heights) / 2 + (len(heights) + 1) * x) * bar_width
-                       for x in range(len(self.go_analysis_gene_names))])
-        # replace the y ticks with the compartiment names
-        ax.set_yticklabels([x for x in self.go_analysis_gene_names])
-        plt.legend()
-        res_path = os.path.join(self.file_dir_go_analysis, "go_analysis" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+            ax.set_ylabel('compartiment')
+            ax.set_xlabel('number of proteins')
+            # add yticks on the middle of the group bars
+            ax.set_yticks([(len(heights) / 2 + (len(heights) + 1) * x) * bar_width
+                           for x in range(len(self.go_analysis_gene_names))])
+            # replace the y ticks with the compartiment names
+            ax.set_yticklabels([x for x in self.go_analysis_gene_names])
+            plt.legend()
+            res_path = os.path.join(self.file_dir_go_analysis, f"go_analysis_level_{level}" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     @exception_handler
     def plot_r_volcano(self, df_to_use: str = "lfq_log2", show_suptitle: bool = True, levels: Iterable = (1,), p_value="adjpval"):

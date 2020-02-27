@@ -198,7 +198,7 @@ def get_overlap(s1, s2):
 
 
 def dict_depth(d: dict):
-    level = 1
+    level = 0
     queue = deque([(id(d), d, level)])
     memo = set()
     while queue:
