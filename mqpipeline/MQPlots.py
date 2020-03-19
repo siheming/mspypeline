@@ -55,22 +55,16 @@ class MQPlots:
     def __init__(
         self, start_dir, configs, reader_data,
         interesting_proteins, go_analysis_gene_names,
+        additional_entries=(),
         loglevel=logging.DEBUG
     ):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # general information
         self.start_dir = start_dir
         self.configs = configs
-        self.int_mapping = {
-            "raw": "Intensity ", "raw_log2": "Intensity ",
-            "lfq": "LFQ intensity ", "lfq_log2": "LFQ intensity ",
-            "ibaq": "iBAQ ", "ibaq_log2": "iBAQ "
-        }
-        self.intensity_label_names = {
-            "raw": "Intensity", "raw_log2": r"$Log_2$ Intensity",
-            "lfq": "LFQ intensity", "lfq_log2": r"$Log_2$ LFQ intensity",
-            "ibaq": "iBAQ intensity", "ibaq_log2": r"$Log_2$ iBAQ intensity",
-        }
+        self.int_mapping = {}
+        self.intensity_label_names = {}
+        self.all_intensities_dict: Dict[str, pd.DataFrame] = {}
         # TODO atm only one reader is being used. All required information is read here atm
         df_protein_names = reader_data["mqreader"]["proteinGroups.txt"]
         tech_rep = self.configs["has_replicates"]
@@ -78,69 +72,16 @@ class MQPlots:
         self.analysis_design = self.configs["analysis_design"]
         # data frames
         self.df_protein_names = df_protein_names.set_index(df_protein_names["Gene name fasta"], drop=False)
-        if any((col.startswith("LFQ intensity") for col in self.df_protein_names)):
-            self.has_lfq = True
-        else:
-            self.has_lfq = False
-            self.logger.warning("LFQ intensities were not found. Raw intensities are used for all plots")
-        if any((col.startswith("iBAQ") for col in self.df_protein_names)):
-            self.has_ibaq = True
-        else:
-            self.has_ibaq = False
-            self.logger.warning("iBAQ intensities were not found. Raw intensities are used for all plots")
         # self.df_peptide_names = df_peptide_names
         # dicts
         self.interesting_proteins = interesting_proteins
         self.go_analysis_gene_names = go_analysis_gene_names
 
-        # extract all raw intensities from the dataframe
-        # replace all 0 with nan and remove the prefix from the columns
-        self.all_intensities_raw = self.df_protein_names.loc[:,
-            [f"{self.int_mapping['raw']}{rep}" for rep in self.all_replicates]
-        ].replace({0: np.nan}).rename(lambda x: x.replace(self.int_mapping["raw"], ""), axis=1)
-        # filter all rows where all intensities are nan
-        mask = (~self.all_intensities_raw.isna()).sum(axis=1) != 0
-        self.all_intensities_raw = self.all_intensities_raw[mask]
-
-        # add log2 intensities
-        self.all_intensities_raw_log2 = np.log2(self.all_intensities_raw)
-
-        if self.has_lfq:
-            # extract all lfq intensities from the dataframe
-            self.all_intensities_lfq = self.df_protein_names[
-                [f"{self.int_mapping['lfq']}{rep}" for rep in self.all_replicates]
-            ].replace({0: np.nan}).rename(lambda x: x.replace(self.int_mapping["lfq"], ""), axis=1)
-            # filter all rows where all intensities are nan
-            mask = (~self.all_intensities_lfq.isna()).sum(axis=1) != 0
-            self.all_intensities_lfq = self.all_intensities_lfq[mask]
-
-            # add log2 values
-            self.all_intensities_lfq_log2 = np.log2(self.all_intensities_lfq)
-        else:
-            self.all_intensities_lfq = self.all_intensities_raw
-            self.all_intensities_lfq_log2 = self.all_intensities_raw_log2
-
-        if self.has_ibaq:
-            # extract all lfq intensities from the dataframe
-            self.all_intensities_ibaq = self.df_protein_names[
-                [f"{self.int_mapping['ibaq']}{rep}" for rep in self.all_replicates]
-            ].replace({0: np.nan}).rename(lambda x: x.replace(self.int_mapping["ibaq"], ""), axis=1)
-            # filter all rows where all intensities are nan
-            mask = (~self.all_intensities_ibaq.isna()).sum(axis=1) != 0
-            self.all_intensities_ibaq = self.all_intensities_ibaq[mask]
-
-            # add log2 values
-            self.all_intensities_ibaq_log2 = np.log2(self.all_intensities_ibaq)
-        else:
-            self.all_intensities_ibaq = self.all_intensities_raw
-            self.all_intensities_ibaq_log2 = self.all_intensities_raw_log2
-
-        # create a dict matching the raw and lfq dfs by string
-        self.all_intensities_dict: Dict[str, pd.DataFrame] = {
-            "lfq": self.all_intensities_lfq, "lfq_log2": self.all_intensities_lfq_log2,
-            "raw": self.all_intensities_raw, "raw_log2": self.all_intensities_raw_log2,
-            "ibaq": self.all_intensities_ibaq, "ibaq_log2": self.all_intensities_ibaq_log2
-        }
+        self.add_intensity_column("raw", "Intensity ", "Intensity")
+        self.add_intensity_column("lfq", "LFQ intensity ", "LFQ intensity")
+        self.add_intensity_column("ibaq", "iBAQ ", "iBAQ intensity")
+        for option_name, name_in_file, name_in_plot in additional_entries:
+            self.add_intensity_column(option_name, name_in_file, name_in_plot)
 
         # create the data trees
         self.all_tree_dict: Dict[str, DataTree] = {
@@ -183,13 +124,14 @@ class MQPlots:
         os.makedirs(self.file_dir_volcano, exist_ok=True)
 
     @classmethod
-    def from_MQInitializer(cls, mqinti_instance: MQInitializer):
+    def from_MQInitializer(cls, mqinti_instance: MQInitializer, additional_entries=()):
         return cls(
             start_dir = mqinti_instance.start_dir,
             configs = mqinti_instance.configs,
             reader_data = mqinti_instance.reader_data,
             interesting_proteins = mqinti_instance.interesting_proteins,
             go_analysis_gene_names = mqinti_instance.go_analysis_gene_names,
+            additional_entries = additional_entries,
             loglevel = mqinti_instance.logger.getEffectiveLevel()
             )
 
@@ -201,6 +143,29 @@ class MQPlots:
                 self.logger.debug(f"creating plot {plot_name}")
                 getattr(self, plot_name)(**plot_settings)
         self.logger.info("Done creating plots")
+
+    def add_intensity_column(self, option_name, name_in_file, name_in_plot):
+        if not any((col.startswith(name_in_file) for col in self.df_protein_names)):
+            self.logger.warning("%s columns could not be found in data", name_in_file)
+            return
+        self.int_mapping.update({option_name: name_in_file, f"{option_name}_log2": name_in_file})
+        self.intensity_label_names.update({option_name: name_in_plot, f"{option_name}_log2": rf"$Log_2$ {name_in_plot}"})
+
+        # extract all raw intensities from the dataframe
+        # replace all 0 with nan and remove the prefix from the columns
+        intensities = self.df_protein_names.loc[:,
+            [f"{self.int_mapping[option_name]}{rep}" for rep in self.all_replicates]
+        ].replace({0: np.nan}).rename(lambda x: x.replace(self.int_mapping[option_name], ""), axis=1)
+        # filter all rows where all intensities are nan
+        mask = (~intensities.isna()).sum(axis=1) != 0
+        intensities = intensities[mask]
+
+        # add log2 intensities
+        intensities_log2 = np.log2(intensities)
+
+        self.all_intensities_dict.update({
+            option_name: intensities, f"{option_name}_log2": intensities_log2,
+        })
 
     @exception_handler
     def save_venn(self, ex: str, sets, set_names):
