@@ -5,7 +5,7 @@ This pipeline can be used to analyze the results of a MaxQuant analysis.
 It is recommended to use this pipeline with git and anaconda, which need to be installed if they aren't
 already. Proxies need to be set for these tools if they are set up (like in the DKFZ).
 The repository can be downloaded for example via
-`git clone https://github.com/siheming/klingmueller_maxquantpipeline.git` or other ways.
+`git clone https://github.com/siheming/mspypeline.git` or other ways.
 
 ## Usage
 This pipeline can be used via the command line and needs a python
@@ -17,23 +17,23 @@ conda env create python=3.7 -f environment.yml
 ```
 which can then be activated and deactivated via:
 ```bash
-conda activate mqpipeline # activation
+conda activate mspypeline # activation
 conda deactivate  # deactivation
 ```
 When the environment is activated or the default python installation
 satisfies the requirements the script can be used via:
 ```bash
-python3 MQPipeline.py
+python3 MSPypeline.py
 ```
 or
 ```bash
-python MQPipeline.py
+python MSPypeline.py
 ```
 If the script is started with no further arguments the first prompt will ask for the directory,
 the second promp for the yml config file. If the second prompt is cancelled the default yml file is used
 To see help for the command line support type:
 ```bash
-python3 MQPipeline.py --help
+python3 MSPypeline.py --help
 ```
 The arguments that can be specified when using the pipeline are:
 - `--dir` the path to the directory that should be analyzed.

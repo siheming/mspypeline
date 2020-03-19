@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC, abstractstaticmethod, abstractproperty
-from mqpipeline.helpers import get_logger
+from mspypeline.helpers import get_logger
 
 
 class BaseReader(ABC):

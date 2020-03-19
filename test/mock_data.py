@@ -7,7 +7,7 @@ import shutil
 class MockData:
     test_dir = os.path.dirname(os.path.realpath(__file__))
     script_loc = os.path.split(test_dir)[0]
-    config_dir = os.path.join(script_loc, "mqpipeline", "config")
+    config_dir = os.path.join(script_loc, "mspypeline", "config")
     go_dir = os.path.join(config_dir, "go_terms")
     pathway_dir = os.path.join(config_dir, "pathways")
     mock_data_dir = os.path.join(test_dir, "mock_data")
