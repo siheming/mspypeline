@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="mqpipeline",
+    name="mspypeline",
     packages=find_packages(),
 )

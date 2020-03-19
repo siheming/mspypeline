@@ -6,11 +6,11 @@ except ModuleNotFoundError:
     from ruamel.yaml import YAML
 import logging
 
-from mqpipeline.helpers import get_logger
-from mqpipeline.file_reader import MQReader, MissingFilesException, BaseReader
+from mspypeline.helpers import get_logger
+from mspypeline.file_reader import MQReader, MissingFilesException, BaseReader
 
 
-class MQInitializer:
+class MSPInitializer:
     # set all file names that are required
     yml_file_name_tmp = "config_tmp.yml"
     yml_file_name = "config.yml"
@@ -38,7 +38,7 @@ class MQInitializer:
         self.reader_data = {}
         self.interesting_proteins, self.go_analysis_gene_names = None, None
 
-        self.logger.debug("Script location %s", MQInitializer.script_loc)
+        self.logger.debug("Script location %s", MSPInitializer.script_loc)
         # properties
         self._start_dir = None
         self.start_dir = dir_
@@ -95,7 +95,7 @@ class MQInitializer:
             self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml.lower() == "file":
             if self.has_yml_file():
-                self._file_path_yaml = os.path.join(self.start_dir, "config", MQInitializer.yml_file_name)
+                self._file_path_yaml = os.path.join(self.start_dir, "config", MSPInitializer.yml_file_name)
             else:
                 self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml.lower().endswith(('.yml', '.yaml')):
@@ -120,16 +120,16 @@ class MQInitializer:
         if "config" in os.listdir(self.start_dir):
             self.logger.debug("Found config dir")
             config_dir = os.path.join(self.start_dir, "config")
-            if MQInitializer.yml_file_name in os.listdir(config_dir):
+            if MSPInitializer.yml_file_name in os.listdir(config_dir):
                 self.logger.debug("Found config.yml file in config dir")
                 return True
         return False
 
     def get_default_yml_path(self) -> str:
         self.logger.debug("Loading default yml file from: %s, since no (valid) file was selected",
-                          MQInitializer.script_loc)
-        if MQInitializer.default_yml_name in os.listdir(MQInitializer.path_pipeline_config):
-            yaml_file = os.path.join(MQInitializer.path_pipeline_config, MQInitializer.default_yml_name)
+                          MSPInitializer.script_loc)
+        if MSPInitializer.default_yml_name in os.listdir(MSPInitializer.path_pipeline_config):
+            yaml_file = os.path.join(MSPInitializer.path_pipeline_config, MSPInitializer.default_yml_name)
         else:
             raise ValueError("Could not find default yaml file. Please select one.")
         return yaml_file
@@ -138,24 +138,24 @@ class MQInitializer:
         dict_pathway = {}
         dict_go = {}
         for pathway in self.configs.get("pathways"):
-            name, proteins = self.read_config_txt_file(MQInitializer.pathway_path, pathway)
+            name, proteins = self.read_config_txt_file(MSPInitializer.pathway_path, pathway)
             dict_pathway[name] = proteins
 
         for go in self.configs.get("go_terms"):
-            name, proteins = self.read_config_txt_file(MQInitializer.go_path, go)
+            name, proteins = self.read_config_txt_file(MSPInitializer.go_path, go)
             dict_go[name] = proteins
         return dict_pathway, dict_go
 
     def read_config_txt_file(self, path, file) -> Tuple[str, list]:
-        fullpath = os.path.join(MQInitializer.path_pipeline_config, path, file)
-        if path == MQInitializer.pathway_path:
+        fullpath = os.path.join(MSPInitializer.path_pipeline_config, path, file)
+        if path == MSPInitializer.pathway_path:
             with open(fullpath) as f:
                 name = f.readline().strip()
                 f.readline()
                 proteins = []
                 for line in f:
                     proteins.append(line.strip())
-        elif path == MQInitializer.go_path:
+        elif path == MSPInitializer.go_path:
             name = file.replace(".txt", "")
             with open(fullpath) as f:
                 proteins = []
@@ -168,13 +168,13 @@ class MQInitializer:
     def update_config_file(self):
         # store the config file as tmp
         self.logger.debug("Updating yml settings file")
-        yml_file_loc_tmp = os.path.join(self.path_config, MQInitializer.yml_file_name_tmp)
+        yml_file_loc_tmp = os.path.join(self.path_config, MSPInitializer.yml_file_name_tmp)
         with open(yml_file_loc_tmp, "w") as outfile:
             self.yaml.dump(self.configs, outfile)
 
         # delete non tmp if exists
-        yml_file_loc = os.path.join(self.path_config, MQInitializer.yml_file_name)
-        if MQInitializer.yml_file_name in os.listdir(self.path_config):
+        yml_file_loc = os.path.join(self.path_config, MSPInitializer.yml_file_name)
+        if MSPInitializer.yml_file_name in os.listdir(self.path_config):
             os.remove(yml_file_loc)
 
         # rename to non tmp

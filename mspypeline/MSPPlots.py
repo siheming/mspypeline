@@ -14,8 +14,8 @@ from typing import Dict
 from adjustText import adjust_text
 import matplotlib.gridspec as gridspec
 
-from mqpipeline import MQInitializer
-from mqpipeline.helpers import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, plot_annotate_line,\
+from mspypeline import MSPInitializer
+from mspypeline.helpers import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, plot_annotate_line,\
     get_intersection_and_unique, DataTree, get_logger
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
@@ -32,7 +32,7 @@ VENN_SUBSET_LABEL_FONT_SIZE = 14
 # descriptive plots settings
 
 
-class MQPlots:
+class MSPPlots:
     possible_plots = [
         "plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
         "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline",
@@ -124,7 +124,7 @@ class MQPlots:
         os.makedirs(self.file_dir_volcano, exist_ok=True)
 
     @classmethod
-    def from_MQInitializer(cls, mqinti_instance: MQInitializer, additional_entries=()):
+    def from_MQInitializer(cls, mqinti_instance: MSPInitializer, additional_entries=()):
         return cls(
             start_dir = mqinti_instance.start_dir,
             configs = mqinti_instance.configs,
@@ -136,7 +136,7 @@ class MQPlots:
             )
 
     def create_results(self):
-        for plot_name in MQPlots.possible_plots:
+        for plot_name in MSPPlots.possible_plots:
             plot_settings_name = plot_name + "_settings"
             plot_settings = self.configs.get(plot_settings_name, {})
             if plot_settings.pop("create_plot", False):
@@ -841,7 +841,7 @@ class MQPlots:
         pandas2ri.activate()
 
         # install r packages
-        from mqpipeline.helpers.Utils import install_r_dependencies
+        from mspypeline.helpers.Utils import install_r_dependencies
         r_package_names = ("BiocManager", )
         r_bioconducter_package_names = ("limma", )
         install_r_dependencies(r_package_names, r_bioconducter_package_names)

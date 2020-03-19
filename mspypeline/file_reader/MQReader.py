@@ -4,8 +4,8 @@ from pandas.api.types import is_numeric_dtype
 import logging
 from collections import defaultdict as ddict
 
-from mqpipeline.helpers import get_overlap, string_similarity_ratio, dict_depth
-from mqpipeline.file_reader import BaseReader, MissingFilesException
+from mspypeline.helpers import get_overlap, string_similarity_ratio, dict_depth
+from mspypeline.file_reader import BaseReader, MissingFilesException
 
 
 class MQReader(BaseReader):

@@ -3,11 +3,11 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 
-from mqpipeline.MQInitializer import MQInitializer
-from mqpipeline.MQPlots import MQPlots
+from mspypeline.MSPInitializer import MSPInitializer
+from mspypeline.MSPPlots import MSPPlots
 
 
-class MQUI(tk.Tk):
+class MSPUI(tk.Tk):
     def __init__(self, file_dir, yml_file="default", gui=False, loglevel=logging.DEBUG, configs: dict = None):
         super().__init__()
         base_config = {
@@ -26,16 +26,16 @@ class MQUI(tk.Tk):
             # get all necessary data, start the analysis and quit
             self.withdraw()
             # create initializer which reads all required files
-            mqinit = MQInitializer(file_dir, yml_file, loglevel=loglevel)
+            mqinit = MSPInitializer(file_dir, yml_file, loglevel=loglevel)
             mqinit.init_config()
             mqinit.configs.update(configs)
             mqinit.read_data()
             # create plotter from initializer
-            mqplots = MQPlots.from_MQInitializer(mqinit)
+            mqplots = MSPPlots.from_MQInitializer(mqinit)
             # create all plots and other results
             mqplots.create_results()
         else:
-            self.mqinit = MQInitializer("", yml_file, loglevel=loglevel)
+            self.mqinit = MSPInitializer("", yml_file, loglevel=loglevel)
             self.make_layout()
             if file_dir:
                 self.dir_text.set(file_dir)
@@ -66,24 +66,24 @@ class MQUI(tk.Tk):
             for op in self.mqinit.configs.get("experiments"):
                 self.experiments_list.insert("end", op)
         # clear selection then select from configs
-        for i, pathway in enumerate(MQInitializer.possible_pathways):
+        for i, pathway in enumerate(MSPInitializer.possible_pathways):
             self.pathway_list.select_clear(i)
         if self.mqinit.configs.get("pathways"):
             for pathway in self.mqinit.configs.get("pathways"):
-                self.pathway_list.select_set(MQInitializer.possible_pathways.index(pathway))
+                self.pathway_list.select_set(MSPInitializer.possible_pathways.index(pathway))
         # clear selection then select from configs
-        for i, go in enumerate(MQInitializer.possible_gos):
+        for i, go in enumerate(MSPInitializer.possible_gos):
             self.go_proteins_list.select_clear(i)
         if self.mqinit.configs.get("go_terms"):
             for go in self.mqinit.configs.get("go_terms"):
-                self.go_proteins_list.select_set(MQInitializer.possible_gos.index(go))
+                self.go_proteins_list.select_set(MSPInitializer.possible_gos.index(go))
 
     def yaml_path_setter(self, *args):
         self.mqinit.file_path_yaml = self.yaml_text.get()
         level_names = self.mqinit.configs.get("level_names", [])
         level_names = {i: name for i, name in enumerate(level_names)}
         levels = self.mqinit.configs.get("levels", 3)
-        for plot_name in MQPlots.possible_plots:
+        for plot_name in MSPPlots.possible_plots:
             plot_settings_name = plot_name + "_settings"
             plot_settings = self.mqinit.configs.get(plot_settings_name, {})
             plot_levels = plot_settings.get("levels", [])
@@ -102,7 +102,7 @@ class MQUI(tk.Tk):
         self.update_listboxes()
 
     def update_button(self):
-        for plot_name in MQPlots.possible_plots:
+        for plot_name in MSPPlots.possible_plots:
             plot_settings = plot_name + "_settings"
             var_name = plot_name.replace("plot_", "") + "_var"
             int_name = var_name.replace("var", "int")
@@ -114,9 +114,9 @@ class MQUI(tk.Tk):
             }
             self.mqinit.configs.update({plot_settings: selected_settings})
         gos = self.go_proteins_list.curselection()
-        gos = [MQInitializer.possible_gos[int(go)] for go in gos]
+        gos = [MSPInitializer.possible_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()
-        pathways = [MQInitializer.possible_pathways[int(pathway)] for pathway in pathways]
+        pathways = [MSPInitializer.possible_pathways[int(pathway)] for pathway in pathways]
         self.mqinit.configs["go_terms"] = gos
         self.mqinit.configs["pathways"] = pathways
         self.mqinit.configs["has_replicates"] = bool(self.replicate_var.get())
@@ -128,7 +128,7 @@ class MQUI(tk.Tk):
         self.running_text.set("Creating Plots")
         self.update()
         self.update_button()
-        mqplots = MQPlots.from_MQInitializer(self.mqinit)
+        mqplots = MSPPlots.from_MQInitializer(self.mqinit)
         mqplots.create_results()
         self.running_text.set("Please press Start")
 
@@ -162,14 +162,14 @@ class MQUI(tk.Tk):
 
         self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mqinit.possible_gos, key=len)))
         self.go_proteins_list.configure(exportselection=False)
-        for x in MQInitializer.possible_gos:
+        for x in MSPInitializer.possible_gos:
             self.go_proteins_list.insert("end", x)
 
         self.go_proteins_list.grid(row=4, column=0)
 
-        self.pathway_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(MQInitializer.possible_pathways, key=len)))
+        self.pathway_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(MSPInitializer.possible_pathways, key=len)))
         self.pathway_list.configure(exportselection=False)
-        for x in MQInitializer.possible_pathways:
+        for x in MSPInitializer.possible_pathways:
             self.pathway_list.insert("end", x)
 
         self.pathway_list.grid(row=4, column=1)
@@ -230,7 +230,7 @@ class MQUI(tk.Tk):
         return int_var, intensity_var, level_list
 
 
-class MQParser(argparse.ArgumentParser):
+class MSPParser(argparse.ArgumentParser):
     def __init__(self):
         super().__init__(description="A pipeline to analyze result files from a MaxQuant report. "
                                      "The required result files are in the txt directory.")

@@ -1,4 +1,4 @@
-name: mqpipeline
+name: mspypeline
 channels:
   - defaults
   - conda-forge

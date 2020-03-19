@@ -1,5 +1,5 @@
-from mqpipeline import MQParser, MQUI
+from mspypeline import MSPParser, MSPUI
 
 if __name__ == "__main__":
-    mqparser = MQParser()
-    gui = MQUI(**mqparser.args_dict)
+    mspparser = MSPParser()
+    gui = MSPUI(**mspparser.args_dict)
