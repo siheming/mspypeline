@@ -1,14 +1,37 @@
 {% extends 'base.html' %}
 
+{% block head %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+{% endblock %}
 {% block header %}
   <h1>{% block title %}Analysis index{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
 <p >Stuff: {{user_id}}</p>
+<div class="row">
+    <div class="input-field col l3">
+        <select id="1id">
+            <option selected>Eine Option</option>
+            <option>Eine andere Option</option>
+        </select>
+        <label>Dinge zum auswählen</label>
+    </div>
+    <div class="input-field col l3">
+        <select id="2id">
+            <option selected>Eine Option</option>
+            <option>Eine andere Option</option>
+        </select>
+        <label>Andere Dinge zum auswählen</label>
+    </div>
+    <a class="btn-floating btn-large waves-light green"><i class="material-icons">auto matic</i></a>
+</div>
 <div class="chart" id="plot">
     <script>
         Plotly.react("plot",{{json | safe}},{});
     </script>
 </div>
 {% endblock %}
+
+{% block javascript %}{% endblock %}
