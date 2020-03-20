@@ -45,8 +45,7 @@ When this is skipped the default yml file will be used instead.
 Using the default yml file can also be forced via `--yml-file default`
 - `--loglevel` Logging level used during run. Should be from options 
 (lowest to highest): DEBUG < INFO < WARNING < ERROR.
-- `--has_replicates` does the max quant result file contain replicates.
-Should be y or n (yes or no).
+- `--has-replicates` do the names of the experiments in the result files include technical replicates. Default is false.
 
 ## Dependencies
 The pipeline required multiple input files to perform the analysis. They
