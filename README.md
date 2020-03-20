@@ -54,11 +54,10 @@ should be stored in a config dir on the same level as the pipeline script.
 The requirements are:
 - `ms_analysis_default.yml` a file which contains all defaults for the 
 analysis pipeline.
-- `important_protein_names.xlsx` a file which contains proteins which
-should be analyzed. These impact descriptive plots and the score calculation.
-- `important_receptor_names.xlsx` a file with receptors.
-- `go_analysis_gene_names.xlsx` a file which contains GO annotations for the
-enrichment analysis.
+- `go_terms` a directory containing (GO-term) txt files for proteins with which
+should be analyzed. This influences the enrichment analysis of the GO-term plot.
+- `pathways` a directory containing (pathway) txt files for proteins with which
+should be analyzed. This setting impacts descriptive plots and score calculations.
 
 ## Support
 If additional support is required try googleing, asking a programmer or
