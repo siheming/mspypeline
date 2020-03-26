@@ -124,15 +124,15 @@ class MSPPlots:
         os.makedirs(self.file_dir_volcano, exist_ok=True)
 
     @classmethod
-    def from_MQInitializer(cls, mqinti_instance: MSPInitializer, additional_entries=()):
+    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, additional_entries=()):
         return cls(
-            start_dir = mqinti_instance.start_dir,
-            configs = mqinti_instance.configs,
-            reader_data = mqinti_instance.reader_data,
-            interesting_proteins = mqinti_instance.interesting_proteins,
-            go_analysis_gene_names = mqinti_instance.go_analysis_gene_names,
+            start_dir = mspinti_instance.start_dir,
+            configs = mspinti_instance.configs,
+            reader_data = mspinti_instance.reader_data,
+            interesting_proteins = mspinti_instance.interesting_proteins,
+            go_analysis_gene_names = mspinti_instance.go_analysis_gene_names,
             additional_entries = additional_entries,
-            loglevel = mqinti_instance.logger.getEffectiveLevel()
+            loglevel = mspinti_instance.logger.getEffectiveLevel()
             )
 
     def create_results(self):
