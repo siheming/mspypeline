@@ -154,8 +154,9 @@ class MSPPlots:
         # extract all raw intensities from the dataframe
         # replace all 0 with nan and remove the prefix from the columns
         intensities = self.df_protein_names.loc[:,
-            [f"{self.int_mapping[option_name]}{rep}" for rep in self.all_replicates]
-        ].replace({0: np.nan}).rename(lambda x: x.replace(self.int_mapping[option_name], ""), axis=1)
+                                                [f"{self.int_mapping[option_name]}{rep}" for rep in self.all_replicates]
+                                                ].replace({0: np.nan}).rename(
+            lambda x: x.replace(self.int_mapping[option_name], ""), axis=1)
         # filter all rows where all intensities are nan
         mask = (~intensities.isna()).sum(axis=1) != 0
         intensities = intensities[mask]
@@ -362,7 +363,7 @@ class MSPPlots:
                 ax.set_xlabel("Counts")
 
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-            res_path = os.path.join(self.file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
+            res_path = os.path.join(self.file_dir_descriptive, f"detected_counts_level_{level}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     @exception_handler
@@ -380,15 +381,12 @@ class MSPPlots:
 
             for experiment, ax in zip(level_values, axarr.flat):
                 intensities = self.all_tree_dict[df_to_use][experiment].aggregate(None)
-
-                # how many proteins were detected per replicate and in total
-                counts = (intensities > 0).sum(axis=1)
-                counts = counts[counts > 0]
-                heights = [len(counts)]
-                # labels start at 0 so we prepend one empty string
+                # how many proteins were detected in total
+                total_counts = ((intensities > 0).sum(axis=1) > 0).sum()
+                heights = [total_counts]
                 labels = ["Total"]
                 for col in intensities:
-                    h = len(intensities[col][intensities[col] > 0])
+                    h = (intensities[col] > 0).sum()
                     heights.append(h)
                     labels.append(col)
                 mean_height = np.mean(heights[1:])
@@ -406,7 +404,7 @@ class MSPPlots:
                 ax.set_xlabel("Counts")
                 #ax1.tick_params(rotation=70)
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-            res_path = os.path.join(self.file_dir_descriptive, "detection_per_replicate" + FIG_FORMAT)
+            res_path = os.path.join(self.file_dir_descriptive, f"detection_per_replicate_level_{level}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     @exception_handler
@@ -865,6 +863,8 @@ class MSPPlots:
                 df = pd.concat([v1[mask], v2[mask]], axis=1)
                 design = pd.DataFrame([[0] * v1.shape[1] + [1] * v2.shape[1],
                                        [1] * v1.shape[1] + [0] * v2.shape[1]], index=[g2, g1]).T
+                if df.empty:
+                    continue
 
                 # transform to r objects
                 r_df = pandas2ri.py2ri(df)
