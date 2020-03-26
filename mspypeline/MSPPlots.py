@@ -89,21 +89,6 @@ class MSPPlots:
             for intensity, data in self.all_intensities_dict.items()
         }
 
-        # create all sets that are required for plotting
-        # this could be turned into a property
-        venn_int = self.configs.get("plot_venn_results_intensity", "raw")
-        """self.protein_ids = ddict(dict)
-        self.whole_experiment_protein_ids = {}
-        for experiment in self.replicates:
-            exp_prot_ids = set()
-            for rep in self.replicates[experiment]:
-                series = self.intensities_per_experiment_dict[venn_int][experiment].loc[:, self.int_mapping[venn_int] + rep]
-                idx = series.loc[series > 0].index
-                rep_set = set(self.df_protein_names.loc[idx, "Protein name"])
-                self.protein_ids[experiment][rep] = rep_set
-                exp_prot_ids |= rep_set
-            self.whole_experiment_protein_ids[experiment] = exp_prot_ids"""
-
         # set all result dirs
         # create file structure and folders
         # TODO: for now just create all of them
@@ -169,15 +154,18 @@ class MSPPlots:
         })
 
     @exception_handler
-    def save_venn(self, ex: str, sets, set_names):
+    def save_venn(self, ex: str, named_sets: Dict[str, set], show_suptitle: bool = True):
         # TODO legend with colors and numbers
         creates_figure = True
         plt.close("all")
         plt.figure(figsize=(14, 7))
-        title = self.replicate_representation.get(ex, ex)
-        plt.title(title, fontsize=VENN_TITLE_FONT_SIZE)
+        title = ex
+        if show_suptitle:
+            plt.title(title, fontsize=VENN_TITLE_FONT_SIZE)
 
         # create venn diagram based on size of set
+        sets = named_sets.values()
+        set_names = named_sets.keys()
         if len(sets) < 2:
             creates_figure = False
             self.logger.warning(f"Could not create venn diagram for {ex} because it has less than 2 replicates")
@@ -210,7 +198,7 @@ class MSPPlots:
         plt.close("all")
 
     @exception_handler
-    def save_bar_venn(self, ex: str, named_sets, show_suptitle: bool = True):
+    def save_bar_venn(self, ex: str, named_sets: Dict[str, set], show_suptitle: bool = True):
         plt.close("all")
         if len(named_sets) > 6:
             self.logger.warning("Skipping bar-venn for %s because it has more than 6 experiments", ex)
@@ -229,7 +217,7 @@ class MSPPlots:
 
         # initial figure setup
         fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
-        name = self.replicate_representation.get(ex, ex)
+        name = ex
         if show_suptitle:
             fig.suptitle(name, fontsize=20)
         # create the bar plot
@@ -258,6 +246,10 @@ class MSPPlots:
 
     @exception_handler
     def save_venn_names(self, named_sets: dict):
+        if len(named_sets) > 6:
+            self.logger.warning("Skipping save_venn_names because more than 6 experiments were passed at once")
+            return
+
         for intersected, unioned, result in venn_names(named_sets):
             # create name based on the intersections and unions that were done
             intersected_name = "&".join(sorted(intersected))
@@ -271,67 +263,48 @@ class MSPPlots:
                 for re in result:
                     out.write(re + "\n")
 
-    @exception_handler
-    def plot_venn_results(self, *args, **kwargs):
-        return
-        # TODO the *args should not be used?
-        self.logger.info("Creating venn diagrams")
+    def get_venn_group_data(self, df_to_use: str = "raw", level: int = 0, non_na_function=get_number_of_non_na_values):
+        n_children = {
+            key: self.all_tree_dict[df_to_use][key].get_total_number_children()
+            for key in self.all_tree_dict[df_to_use].level_keys_full_name[level]
+        }
+        counts_per_group = self.all_tree_dict[df_to_use].groupby(level, method=lambda x: (x > 0).sum())
+        named_sets = {}
+        for group, n_child in n_children.items():
+            minimum = non_na_function(n_child)
+            named_sets[group] = set(counts_per_group.index[counts_per_group[group] >= minimum])
+        return named_sets
 
-        # create venn diagrams comparing all replicates within an experiment
-        for ex in self.protein_ids:
-            self.logger.debug("Creating venn diagram for experiment %s", ex)
-            set_names = self.protein_ids[ex].keys()
-            sets = self.protein_ids[ex].values()
+    def get_venn_data_per_key(self, df_to_use: str = "raw", key: str = None):
+        df = self.all_tree_dict[df_to_use].aggregate(key, method=None) > 0
+        per_group_dict = {column: set(df.index[df[column]]) for column in df}
+        return per_group_dict
+
+    @exception_handler
+    def plot_venn_groups(self, df_to_use: str = "raw", levels: tuple = (0,), show_suptitle=True):
+        for level in levels:
+            # create venn diagrams comparing all replicates within an experiment
+            named_sets = self.get_venn_group_data(df_to_use, level)
+            ex = f"group_level_{level}"
             # save the resulting venn diagram
-            self.save_venn(ex, sets, set_names)
+            self.save_venn(ex, named_sets, show_suptitle=show_suptitle)
             # save the sets to txt files
-            self.save_venn_names(self.protein_ids[ex])
+            self.save_venn_names(named_sets)
             # create a mixture of bar and venn diagram
-            self.save_bar_venn(ex, self.protein_ids[ex])
-        # create venn diagrams comparing all experiments
-        # first compare only proteins which are found between all replicates
-        self.logger.debug("Creating venn diagram for intersection")
-        experiment_intersection_sets = {
-            exp: set.intersection(*(self.protein_ids[exp][rep] for rep in self.protein_ids[exp]))
-            for exp in self.protein_ids
-        }
-        self.save_bar_venn("All experiments intersection", experiment_intersection_sets)
-        # then compare all proteins that are found at all
-        self.logger.debug("Creating venn diagram for union")
-        experiment_union_sets = {
-            exp: set.union(*(self.protein_ids[exp][rep] for rep in self.protein_ids[exp]))
-            for exp in self.protein_ids
-        }
-        self.save_bar_venn("All experiments union", experiment_union_sets)
+            self.save_bar_venn(ex, named_sets, show_suptitle=show_suptitle)
 
     @exception_handler
-    def plot_venn_groups(self, *args, **kwargs):
-        return
-        # TODO create based on formular
-        if self.experiment_groups:
-            for g1, g2 in combinations(self.experiment_groups, 2):
-                self.logger.debug("Creating venn diagram for group comparison intersection")
-                group_proteins = [
-                    set.union(*[
-                        set.intersection(
-                            *(self.protein_ids[experiment][rep] for rep in self.protein_ids[experiment]))
-                        for experiment in self.experiment_groups[group]
-                    ])
-                    for group in [g1, g2]
-                ]
-                self.save_venn(f"{g1}_vs_{g2}_intersection", group_proteins, [g1, g2])
-                self.save_venn_names({g1 + "_intersection": group_proteins[0], g2 + "_intersection": group_proteins[1]})
-                self.logger.debug("Creating venn diagram for group comparison union")
-                group_proteins = [
-                    set.union(*(self.protein_ids[experiment][rep]
-                                for experiment in self.experiment_groups[group]
-                                for rep in self.protein_ids[experiment]))
-                    for group in [g1, g2]
-                ]
-                self.save_venn(f"{g1}_vs_{g2}_union", group_proteins, [g1, g2])
-                self.save_venn_names({g1 + "_union": group_proteins[0], g2 + "_union": group_proteins[1]})
-        else:
-            self.logger.warning("Skipping venn group plot because grouping failed")
+    def plot_venn_results(self, df_to_use: str = "raw", levels: tuple = (0,), show_suptitle=True):
+        for level in levels:
+            level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
+            for key in level_keys:
+                named_sets = self.get_venn_data_per_key(df_to_use, key)
+                # save the resulting venn diagram
+                self.save_venn(key, named_sets, show_suptitle=show_suptitle)
+                # save the sets to txt files
+                self.save_venn_names(named_sets)
+                # create a mixture of bar and venn diagram
+                self.save_bar_venn(key, named_sets, show_suptitle=show_suptitle)
 
     @exception_handler
     def plot_detection_counts(self, df_to_use: str = "raw", show_suptitle: bool = True, levels: Iterable = (0,)):
@@ -370,7 +343,6 @@ class MSPPlots:
     def plot_number_of_detected_proteins(self, df_to_use: str = "raw", show_suptitle: bool = True, levels: Iterable = (0,)):
         for level in levels:
             plt.close("all")
-            # determine number of rows and columns in the plot based on the number of experiments
             level_values = self.all_tree_dict[df_to_use].level_keys_full_name[level]
             # determine number of rows and columns in the plot based on the number of experiments
             n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(level_values)
