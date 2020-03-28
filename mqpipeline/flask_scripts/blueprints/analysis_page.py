@@ -4,7 +4,7 @@ from flask import (
 )
 import json
 
-from mqpipeline.core import plotly_plots
+from mqpipeline import plotly_plots
 
 bp = Blueprint('analysis_page', __name__)
 
