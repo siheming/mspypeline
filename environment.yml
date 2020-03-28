@@ -13,5 +13,5 @@ dependencies:
   - matplotlib=3.1.1
   - matplotlib-venn=0.11.5
   - adjusttext=0.7.3.1
-prefix: C:\Users\admvlasov\Anaconda3\envs\mqpipeline
+prefix: C:\Users\admvlasov\Anaconda3\envs\mspypeline
 

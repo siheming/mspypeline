@@ -48,6 +48,20 @@ class DataNode:
         for child in self.__iter__():
             return child
 
+    def get_total_number_children(self, go_max_depth: bool = False):
+        queue = deque([self])
+        n_children = 0
+        while queue:
+            parent = queue.popleft()
+            has_child = next(parent) is not None
+            should_go_deeper = go_max_depth and has_child
+            if parent.data is not None and not should_go_deeper:
+                n_children += 1
+            else:
+                for child in parent:
+                    queue += [child]
+        return n_children
+
     def aggregate(self,
                   method: Union[None, str, Callable] = "mean",
                   go_max_depth: bool = False,
