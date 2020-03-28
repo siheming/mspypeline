@@ -3,13 +3,14 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 
-from mspypeline.MSPInitializer import MSPInitializer
-from mspypeline.MSPPlots import MSPPlots
+from mspypeline import MSPInitializer, MSPPlots
+from mspypeline import create_app
+import inspect
+assert inspect.isclass(MSPPlots)
 
 
-class MSPUI(tk.Tk):
-    def __init__(self, file_dir, yml_file="default", gui=False, loglevel=logging.DEBUG, configs: dict = None):
-        super().__init__()
+class UIHandler:
+    def __init__(self, file_dir, yml_file="default", gui=False, host_flask=False, loglevel=logging.DEBUG, configs: dict = None):
         base_config = {
             "has_replicates": False,
             "has_groups": False,
@@ -18,41 +19,51 @@ class MSPUI(tk.Tk):
             configs = {}
         base_config.update(**configs)
         configs = base_config
+
+        if gui and host_flask:
+            raise ValueError("Can only specify one of host_flask and gui")
+        if gui:
+            MSPUI(file_dir=file_dir, yml_file=yml_file, loglevel=loglevel, configs=configs)
+        elif host_flask:
+            # TODO pass arguments to create app
+            app = create_app()
+            app.run(debug=True)
+        else:
+            mspinit = MSPInitializer(file_dir, yml_file, loglevel=loglevel)
+            mspinit.init_config()
+            mspinit.configs.update(configs)
+            mspinit.read_data()
+            # create plotter from initializer
+            mspplots = MSPPlots.from_MSPInitializer(mspinit)
+            # create all plots and other results
+            mspplots.create_results()
+
+
+class MSPUI(tk.Tk):
+    def __init__(self, file_dir, yml_file="default", loglevel=logging.DEBUG, configs: dict = None):
+        super().__init__()
         self.yaml_options = ["default"]
 
         self.number_of_plots = 0
 
-        if not gui:
-            # get all necessary data, start the analysis and quit
-            self.withdraw()
-            # create initializer which reads all required files
-            mqinit = MSPInitializer(file_dir, yml_file, loglevel=loglevel)
-            mqinit.init_config()
-            mqinit.configs.update(configs)
-            mqinit.read_data()
-            # create plotter from initializer
-            mqplots = MSPPlots.from_MQInitializer(mqinit)
-            # create all plots and other results
-            mqplots.create_results()
-        else:
-            self.mqinit = MSPInitializer("", yml_file, loglevel=loglevel)
-            self.make_layout()
-            if file_dir:
-                self.dir_text.set(file_dir)
-            self.mqinit.configs.update(configs)
-            self.mainloop()
+        self.mspinit = MSPInitializer("", yml_file, loglevel=loglevel)
+        self.make_layout()
+        if file_dir:
+            self.dir_text.set(file_dir)
+        self.mspinit.configs.update(configs)
+        self.mainloop()
 
     def dir_setter(self, *args):
-        self.mqinit.start_dir = self.dir_text.get()
+        self.mspinit.start_dir = self.dir_text.get()
         # write back possible modifications
-        self.dir_text.set(self.mqinit.start_dir)
-        if self.mqinit.has_yml_file():
-            self.mqinit.file_path_yaml = "file"
+        self.dir_text.set(self.mspinit.start_dir)
+        if self.mspinit.has_yml_file():
+            self.mspinit.file_path_yaml = "file"
             self.yaml_text.set("file")
             self.yaml_options = ["default", "file"]
             # next steps should also be done hy what the update button does?
         else:
-            self.mqinit.file_path_yaml = "default"
+            self.mspinit.file_path_yaml = "default"
             self.yaml_text.set("default")
             self.yaml_options = ["default"]
         self.yaml_button["menu"].delete(0, "end")
@@ -62,30 +73,30 @@ class MSPUI(tk.Tk):
     def update_listboxes(self):
         # delete all experiments then add from file
         self.experiments_list.delete(0, "end")
-        if self.mqinit.configs.get("experiments"):
-            for op in self.mqinit.configs.get("experiments"):
+        if self.mspinit.configs.get("experiments"):
+            for op in self.mspinit.configs.get("experiments"):
                 self.experiments_list.insert("end", op)
         # clear selection then select from configs
         for i, pathway in enumerate(MSPInitializer.possible_pathways):
             self.pathway_list.select_clear(i)
-        if self.mqinit.configs.get("pathways"):
-            for pathway in self.mqinit.configs.get("pathways"):
+        if self.mspinit.configs.get("pathways"):
+            for pathway in self.mspinit.configs.get("pathways"):
                 self.pathway_list.select_set(MSPInitializer.possible_pathways.index(pathway))
         # clear selection then select from configs
         for i, go in enumerate(MSPInitializer.possible_gos):
             self.go_proteins_list.select_clear(i)
-        if self.mqinit.configs.get("go_terms"):
-            for go in self.mqinit.configs.get("go_terms"):
+        if self.mspinit.configs.get("go_terms"):
+            for go in self.mspinit.configs.get("go_terms"):
                 self.go_proteins_list.select_set(MSPInitializer.possible_gos.index(go))
 
     def yaml_path_setter(self, *args):
-        self.mqinit.file_path_yaml = self.yaml_text.get()
-        level_names = self.mqinit.configs.get("level_names", [])
+        self.mspinit.file_path_yaml = self.yaml_text.get()
+        level_names = self.mspinit.configs.get("level_names", [])
         level_names = {i: name for i, name in enumerate(level_names)}
-        levels = self.mqinit.configs.get("levels", 3)
+        levels = self.mspinit.configs.get("levels", 3)
         for plot_name in MSPPlots.possible_plots:
             plot_settings_name = plot_name + "_settings"
-            plot_settings = self.mqinit.configs.get(plot_settings_name, {})
+            plot_settings = self.mspinit.configs.get(plot_settings_name, {})
             plot_levels = plot_settings.get("levels", [])
             var_name = plot_name.replace("plot_", "") + "_var"
             int_name = var_name.replace("var", "int")
@@ -98,7 +109,7 @@ class MSPUI(tk.Tk):
                 selected_levels.insert("end", level_names.get(level, level))
                 if level in plot_levels:
                     selected_levels.select_set(level)
-        self.replicate_var.set(self.mqinit.configs.get("has_replicates", True))
+        self.replicate_var.set(self.mspinit.configs.get("has_replicates", True))
         self.update_listboxes()
 
     def update_button(self):
@@ -112,24 +123,24 @@ class MSPUI(tk.Tk):
                 "df_to_use": getattr(self, var_name).get(),
                 "levels": [int(x) for x in getattr(self, levels_name).curselection()]
             }
-            self.mqinit.configs.update({plot_settings: selected_settings})
+            self.mspinit.configs.update({plot_settings: selected_settings})
         gos = self.go_proteins_list.curselection()
         gos = [MSPInitializer.possible_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()
         pathways = [MSPInitializer.possible_pathways[int(pathway)] for pathway in pathways]
-        self.mqinit.configs["go_terms"] = gos
-        self.mqinit.configs["pathways"] = pathways
-        self.mqinit.configs["has_replicates"] = bool(self.replicate_var.get())
-        self.mqinit.init_config()
-        self.mqinit.read_data()
+        self.mspinit.configs["go_terms"] = gos
+        self.mspinit.configs["pathways"] = pathways
+        self.mspinit.configs["has_replicates"] = bool(self.replicate_var.get())
+        self.mspinit.init_config()
+        self.mspinit.read_data()
         self.update_listboxes()
 
     def start_button(self):
         self.running_text.set("Creating Plots")
         self.update()
         self.update_button()
-        mqplots = MSPPlots.from_MQInitializer(self.mqinit)
-        mqplots.create_results()
+        mspplots = MSPPlots.from_MSPInitializer(self.mspinit)
+        mspplots.create_results()
         self.running_text.set("Please press Start")
 
     def make_layout(self):
@@ -139,7 +150,7 @@ class MSPUI(tk.Tk):
 
         yaml_label = tk.Label(self, text="Yaml file").grid(row=0, column=1)
 
-        self.dir_text = tk.StringVar(value=self.mqinit.start_dir)
+        self.dir_text = tk.StringVar(value=self.mspinit.start_dir)
         dir_button = tk.Button(self, textvariable=self.dir_text,
                                command=lambda: browsefunc(filedialog.askdirectory, self.dir_text, fn_params={
                                    "title": "Please select a directory with MaxQuant result files"}))
@@ -160,7 +171,7 @@ class MSPUI(tk.Tk):
 
         experiments_label = tk.Label(self, text="Pathway analysis").grid(row=3, column=1)
 
-        self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mqinit.possible_gos, key=len)))
+        self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mspinit.possible_gos, key=len)))
         self.go_proteins_list.configure(exportselection=False)
         for x in MSPInitializer.possible_gos:
             self.go_proteins_list.insert("end", x)
@@ -283,6 +294,14 @@ class MSPParser(argparse.ArgumentParser):
             const=True,
             nargs="?",
             help="specify this if a gui should be opened"
+        )
+        self.add_argument(
+            "--host-flask",
+            dest="host_flask",
+            default=False,
+            const=True,
+            nargs="?",
+            help="specify this if a flask server should be hosted"
         )
         self.args = self.parse_args()
         self.args_dict = vars(self.args)

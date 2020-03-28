@@ -1,5 +1,4 @@
-from mspypeline import MSPParser, MSPUI
-
 if __name__ == "__main__":
+    from mspypeline import MSPParser, UIHandler
     mspparser = MSPParser()
-    gui = MSPUI(**mspparser.args_dict)
+    gui = UIHandler(**mspparser.args_dict)

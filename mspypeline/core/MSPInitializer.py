@@ -7,6 +7,7 @@ except ModuleNotFoundError:
 import logging
 
 from mspypeline.helpers import get_logger
+from mspypeline import path_package, path_package_config
 from mspypeline.file_reader import MQReader, MissingFilesException, BaseReader
 
 
@@ -17,10 +18,8 @@ class MSPInitializer:
     default_yml_name = "ms_analysis_default.yml"
     go_path = "go_terms"
     pathway_path = "pathways"
-    script_loc = os.path.dirname(os.path.realpath(__file__))
-    path_pipeline_config = os.path.join(script_loc, "config")
-    possible_gos = sorted([x for x in os.listdir(os.path.join(path_pipeline_config, go_path)) if x.endswith(".txt")])
-    possible_pathways = sorted([x for x in os.listdir(os.path.join(path_pipeline_config, pathway_path)) if x.endswith(".txt")])
+    possible_gos = sorted([x for x in os.listdir(os.path.join(path_package_config, go_path)) if x.endswith(".txt")])
+    possible_pathways = sorted([x for x in os.listdir(os.path.join(path_package_config, pathway_path)) if x.endswith(".txt")])
 
     def __init__(self, dir_: str, file_path_yml: str = "default", loglevel=logging.DEBUG):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
@@ -38,7 +37,6 @@ class MSPInitializer:
         self.reader_data = {}
         self.interesting_proteins, self.go_analysis_gene_names = None, None
 
-        self.logger.debug("Script location %s", MSPInitializer.script_loc)
         # properties
         self._start_dir = None
         self.start_dir = dir_
@@ -127,9 +125,9 @@ class MSPInitializer:
 
     def get_default_yml_path(self) -> str:
         self.logger.debug("Loading default yml file from: %s, since no (valid) file was selected",
-                          MSPInitializer.script_loc)
-        if MSPInitializer.default_yml_name in os.listdir(MSPInitializer.path_pipeline_config):
-            yaml_file = os.path.join(MSPInitializer.path_pipeline_config, MSPInitializer.default_yml_name)
+                          path_package)
+        if MSPInitializer.default_yml_name in os.listdir(path_package_config):
+            yaml_file = os.path.join(path_package_config, MSPInitializer.default_yml_name)
         else:
             raise ValueError("Could not find default yaml file. Please select one.")
         return yaml_file
@@ -147,7 +145,7 @@ class MSPInitializer:
         return dict_pathway, dict_go
 
     def read_config_txt_file(self, path, file) -> Tuple[str, list]:
-        fullpath = os.path.join(MSPInitializer.path_pipeline_config, path, file)
+        fullpath = os.path.join(path_package_config, path, file)
         if path == MSPInitializer.pathway_path:
             with open(fullpath) as f:
                 name = f.readline().strip()
