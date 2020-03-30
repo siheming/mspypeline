@@ -3,23 +3,67 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from adjustText import adjust_text
 
 
-def save_volcano_results(plot_data):
-    plot_data.to_csv(os.path.join(self.file_dir_volcano,
+FIG_FORMAT = ".pdf"
+
+
+def save_volcano_results(
+        volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
+        g2: str = "group2", col: str = "adjpval", intensity_label: str = "", save_path=os.getcwd(),
+        show_suptitle: bool = True, fchange_threshold: float = 2, scatter_size: float = 10,
+        n_labelled_proteins: int = 10
+):
+    """
+    Saves multiple csv files and images containing the information of the volcano plot
+
+    Parameters
+    ----------
+    volcano_data:
+        DataFrame containing data for the volcano plot with columns logFC and column specified under col. THe index
+        should be protein names or gene names
+    unique_g1
+        Series containing intensities of proteins or genes unique to group one
+    unique_g2
+        Series containing intensities of proteins or genes unique to group two
+    g1
+        Name of group one
+    g2
+        Name of group two
+    col
+        Column name containing p values
+    intensity_label
+        From which intensities were the fold changes calculated
+    save_path
+        path under which the results will be saved
+    show_suptitle
+        Should the figure title be shown
+    fchange_threshold
+        Minimum fold change threshold to be labelled significant
+    scatter_size
+        size of the points in the scatter plots
+    n_labelled_proteins
+        number of points that will be marked in th plot
+
+
+    """
+    plt.close("all")
+
+    col_mapping = {"adjpval": "adjusted p value", "pval": "unadjusted p value"}
+
+    # save all values
+    volcano_data.to_csv(os.path.join(save_path,
                                   f"volcano_plot_data_{g1}_vs_{g2}_full_{col_mapping[col].replace(' ', '_')}.csv"))
     # save significant values
-    plot_data[plot_data[col] < 0.05].to_csv(
-        os.path.join(self.file_dir_volcano,
+    volcano_data[volcano_data[col] < 0.05].to_csv(
+        os.path.join(save_path,
                      f"volcano_plot_data_{g1}_vs_{g2}_significant_{col_mapping[col].replace(' ', '_')}.csv"))
-    # calculate mean intensity for unique genes for plotting
-    unique_g1 = v1[exclusive_1].mean(axis=1).rename(f"{df_to_use} mean intensity")
-    unique_g2 = v2[exclusive_2].mean(axis=1).rename(f"{df_to_use} mean intensity")
     # save unique values
-    unique_g1.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g1}.csv"),
-                     header=True)
-    unique_g2.to_csv(os.path.join(self.file_dir_volcano, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g2}.csv"),
-                     header=True)
+    if unique_g1 is not None:
+        unique_g1.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g1}.csv"), header=True)
+    if unique_g2 is not None:
+        unique_g2.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g2}.csv"), header=True)
 
     def get_volcano_significances(fchange, pval, fchange_threshold):
         if pval > 0.05 or abs(fchange) < np.log2(fchange_threshold):
@@ -52,22 +96,25 @@ def save_volcano_results(plot_data):
     ax_unique_down.tick_params(which='both', bottom=False, labelbottom=False)
     ax_unique_up.tick_params(which='both', bottom=False, labelbottom=False)
 
-    # non sign gray, left side significant blue right side red
+    # non sign gray, left side significant blue, right side red
     significances_plot = [get_volcano_significances(log_fold_change, p_val, fchange_threshold)
-                          for log_fold_change, p_val in zip(plot_data["logFC"], plot_data[col])]
+                          for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
     for regulation in significance_to_color:
         mask = [x == regulation for x in significances_plot]
-        ax.scatter(plot_data["logFC"][mask], -np.log10(plot_data[col])[mask], s=scatter_size,
+        ax.scatter(volcano_data["logFC"][mask], -np.log10(volcano_data[col])[mask], s=scatter_size,
                    color=significance_to_color[regulation], label=f"{sum(mask)} {significance_to_label[regulation]}")
+    # get axis bounds for vertical and horizontal lines
     ymin, ymax = ax.get_ybound()
     xmin, xmax = ax.get_xbound()
     m = max(abs(xmin), xmax)
+    # center the plot around 0
     ax.set_xlim(left=-1 * m, right=m)
+    # update the x bounds
     xmin, xmax = ax.get_xbound()
-    x_offset = (np.log2(fchange_threshold) / xmax) / 2
     # add line at significance threshold
-    axline_kwargs = dict(linestyle="--", color="black", alpha=0.5, linewidth=1)
-    if any(plot_data[col] < 0.05):
+    if any(volcano_data[col] < 0.05):
+        x_offset = (np.log2(fchange_threshold) / xmax) / 2
+        axline_kwargs = dict(linestyle="--", color="black", alpha=0.5, linewidth=1)
         ax.axhline(-np.log10(0.05), **axline_kwargs, xmin=0, xmax=0.5 - x_offset)
         ax.axhline(-np.log10(0.05), **axline_kwargs, xmin=0.5 + x_offset, xmax=1)
 
@@ -81,7 +128,7 @@ def save_volcano_results(plot_data):
                            label=f"{len(unique_g1)} unique in {g1}")
     ax_unique_up.scatter([0] * len(unique_g2), unique_g2, s=scatter_size, color="coral",
                          label=f"{len(unique_g2)} unique in {g2}")
-    # adjust bounds
+    # adjust bounds for unique axis
     ymin_down, ymax_down = ax_unique_down.get_ybound()
     ymin_up, ymax_up = ax_unique_up.get_ybound()
     ax_unique_down.set_ylim(bottom=min(ymin_down, ymin_up), top=max(ymax_down, ymax_up))
@@ -90,29 +137,25 @@ def save_volcano_results(plot_data):
     # figure stuff
     if show_suptitle:
         fig.suptitle(f"{g1} vs {g2}")
-    ax.set_xlabel(r"$Log_2$ Fold Change")
+    ax.set_xlabel(f"{intensity_label} Fold Change")
     ax.set_ylabel(r"-$Log_{10}$" + f" {col_mapping[col]}")
-    ax_unique_down.set_ylabel(self.intensity_label_names[df_to_use])
-    ax_unique_up.set_ylabel(self.intensity_label_names[df_to_use])
+    ax_unique_down.set_ylabel(intensity_label)
+    ax_unique_up.set_ylabel(intensity_label)
     fig.legend(bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False)
-    res_path = os.path.join(self.file_dir_volcano,
-                            f"volcano_{g1}_{g2}_no_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
+    res_path = os.path.join(save_path, f"volcano_{g1}_{g2}_no_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     fig.savefig(res_path, dpi=200, bbox_inches="tight")
-    significant_upregulated = plot_data[
-        (plot_data["logFC"] > np.log2(fchange_threshold)) & (plot_data[col] < 0.05)].sort_values(by=[col],
-                                                                                                 ascending=True).head(
-        10)
-    significant_downregulated = plot_data[
-        (plot_data["logFC"] < -np.log2(fchange_threshold)) & (plot_data[col] < 0.05)].sort_values(by=[col],
-                                                                                                  ascending=True).head(
-        10)
+    significant_upregulated = volcano_data[
+        (volcano_data["logFC"] > np.log2(fchange_threshold)) & (volcano_data[col] < 0.05)
+    ].sort_values(by=[col], ascending=True).head(n_labelled_proteins)
+    significant_downregulated = volcano_data[
+        (volcano_data["logFC"] < -np.log2(fchange_threshold)) & (volcano_data[col] < 0.05)
+    ].sort_values(by=[col], ascending=True).head(n_labelled_proteins)
     significant = pd.concat([significant_upregulated, significant_downregulated])
     texts = []
     for log_fold_change, p_val, gene_name in zip(significant["logFC"], significant[col], significant.index):
         texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center", fontsize=8))
     adjust_text(texts, arrowprops=dict(width=0.15, headwidth=0, color='gray', alpha=0.6), ax=ax)
-    res_path = os.path.join(self.file_dir_volcano,
-                            f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
+    res_path = os.path.join(save_path, f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
     fig.savefig(res_path, dpi=200, bbox_inches="tight")
     # TODO scatter plot of significant genes
