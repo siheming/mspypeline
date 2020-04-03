@@ -90,6 +90,11 @@ plot_venn_groups_settings:
   df_to_use: "lfq"
   levels: []
 
+plot_pca_overview_settings:
+  create_plot: true
+  df_to_use: "lfq"
+  levels: []
+
 use_protein_id: false
 # should the protein id be used, or TODO
 # can be "true" or "false"

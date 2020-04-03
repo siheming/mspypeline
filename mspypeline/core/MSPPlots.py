@@ -11,6 +11,7 @@ from collections.abc import Iterable
 import logging
 import warnings
 from typing import Dict
+from sklearn.decomposition import PCA
 
 from mspypeline import MSPInitializer
 from mspypeline.plotter import matplotlib_plots
@@ -36,7 +37,7 @@ class MSPPlots:
         "plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
         "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline",
         "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
-        "plot_venn_groups", "plot_r_volcano"
+        "plot_venn_groups", "plot_r_volcano", "plot_pca_overview"
     ]
 
     def exception_handler(f):
@@ -876,3 +877,23 @@ class MSPPlots:
                         **data, g1=g1, g2=g2, col=p_value, intensity_label=self.intensity_label_names[df_to_use],
                         save_path=self.file_dir_volcano, show_suptitle=show_suptitle,
                         fchange_threshold=fchange_threshold, scatter_size=scatter_size)
+
+    def get_pca_data(self, df_to_use: str = "raw_log2", level: int = 0, n_components: int = 4, fill_value: float = 0, fill_na_before_norm: bool = False, **kwargs):
+        data_input = self.all_tree_dict[df_to_use].groupby(level, method=None)
+        if fill_na_before_norm:
+            data_input.fillna(fill_value, inplace=True)
+        data_norm = data_input.subtract(data_input.mean(axis=1), axis=0).divide(data_input.std(axis=1), axis=0)
+        if not fill_na_before_norm:
+            data_norm.fillna(fill_value, inplace=True)
+        data_transform = data_norm.T
+        pca: PCA = PCA(n_components=n_components).fit(data_transform)
+        df = pd.DataFrame(pca.transform(data_transform).T, columns=data_input.columns,
+                          index=[f"PC_{i}" for i in range(1, n_components + 1)])
+        return {"pca_data": df, "pca_fit": pca}
+
+    @exception_handler
+    def plot_pca_overview(self, **kwargs):
+        for level in kwargs["levels"]:
+            data = self.get_pca_data(level=level, **kwargs)
+            if data:
+                matplotlib_plots.save_pca_results(**data, save_path=self.file_dir_descriptive, **kwargs)

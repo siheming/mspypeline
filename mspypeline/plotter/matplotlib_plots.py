@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.lines import Line2D
 from adjustText import adjust_text
 
 
@@ -82,9 +83,9 @@ def save_volcano_results(
     fig = plt.figure(figsize=(7, 7))
 
     gs = gridspec.GridSpec(1, 3, width_ratios=[1, 8, 1])
-    ax_unique_down = plt.subplot(gs[0])
-    ax = plt.subplot(gs[1])
-    ax_unique_up = plt.subplot(gs[2])
+    ax_unique_down: plt.Axes = plt.subplot(gs[0])
+    ax: plt.Axes = plt.subplot(gs[1])
+    ax_unique_up: plt.Axes = plt.subplot(gs[2])
 
     # hide the spines between ax and ax2
     ax_unique_down.spines['right'].set_visible(False)
@@ -111,10 +112,10 @@ def save_volcano_results(
     ax.set_xlim(left=-1 * m, right=m)
     # update the x bounds
     xmin, xmax = ax.get_xbound()
+    axline_kwargs = dict(linestyle="--", color="black", alpha=0.5, linewidth=1)
     # add line at significance threshold
     if any(volcano_data[col] < 0.05):
         x_offset = (np.log2(fchange_threshold) / xmax) / 2
-        axline_kwargs = dict(linestyle="--", color="black", alpha=0.5, linewidth=1)
         ax.axhline(-np.log10(0.05), **axline_kwargs, xmin=0, xmax=0.5 - x_offset)
         ax.axhline(-np.log10(0.05), **axline_kwargs, xmin=0.5 + x_offset, xmax=1)
 
@@ -159,3 +160,37 @@ def save_volcano_results(
     res_path = os.path.join(save_path, f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
     fig.savefig(res_path, dpi=200, bbox_inches="tight")
     # TODO scatter plot of significant genes
+
+
+def save_pca_results(pca_data, pca_fit, normalize=True, save_path=".", show_suptitle: bool = True, **kwargs):
+    singular_values = pca_fit.singular_values_
+    n_components = pca_data.shape[0]
+    color_map = {value: f"C{i}" for i, value in enumerate(pca_data.columns.get_level_values(0).unique())}
+    color_map.update(kwargs.get("color_map", {}))
+    if not normalize:
+        singular_values = np.ones(n_components)
+    fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
+    for row in range(n_components):
+        row_pc  = row + 1
+        for col in range(n_components):
+            col_pc  = col + 1
+            if row > col:
+                ax = axarr[col, row]
+                ax.scatter(
+                    pca_data.loc[f"PC_{row_pc}"] / singular_values[row],
+                    pca_data.loc[f"PC_{col_pc}"] / singular_values[col],
+                    c=[color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
+                ax.set_xlabel(f"PC_{row_pc}")
+                ax.set_ylabel(f"PC_{col_pc}")
+
+    if show_suptitle:
+        fig.suptitle(f"{kwargs['df_to_use']} intensity", fontsize="xx-large")
+    res_path = os.path.join(save_path,
+                            f"pca_{kwargs['df_to_use']}" + FIG_FORMAT)
+    legend_elements = [Line2D([0], [0], marker='o', color='w', label=level_0,
+                              markerfacecolor=color_map.get(level_0, "blue"), markersize=10)
+                       for level_0 in pca_data.columns.get_level_values(0).unique()]
+    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=20)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
