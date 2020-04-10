@@ -5,6 +5,7 @@ from difflib import SequenceMatcher
 from itertools import combinations
 from collections import deque
 import numpy as np
+from matplotlib.lines import Line2D
 
 
 def get_number_rows_cols_for_fig(obj):
@@ -209,3 +210,24 @@ def dict_depth(d: dict):
         if isinstance(o, dict):
             queue += ((id(v), v, level + 1) for v in o.values())
     return level
+
+
+def get_legend_elements(labels: list, color_map: dict = None):
+    """
+        Returns custom legend elements based on a list of labels and an optional color map.
+        These elements can be passed to a legend via the 'handles' parameter
+
+        Parameters
+        ----------
+        labels:
+            list of strings
+        color_map:
+            dict of strings, with keys being the name of a label and values the corresponding color
+
+    """
+    if color_map is None:
+        color_map = {name: f"C{i}" for i, name in enumerate(labels)}
+    legend_elements = [Line2D([0], [0], marker='o', color='w', label=name,
+                              markerfacecolor=color_map.get(name, "blue"), markersize=10)
+                       for name in labels]
+    return legend_elements

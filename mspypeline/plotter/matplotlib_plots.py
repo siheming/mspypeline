@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from matplotlib.lines import Line2D
 from adjustText import adjust_text
+from sklearn.decomposition import PCA
 
-from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line
+from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements
 
 FIG_FORMAT = ".pdf"
 
@@ -163,7 +163,26 @@ def save_volcano_results(
     # TODO scatter plot of significant genes
 
 
-def save_pca_results(pca_data, pca_fit, normalize=True, save_path=".", show_suptitle: bool = True, **kwargs):
+def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA, normalize: bool = True, save_path: str = ".",
+                     show_suptitle: bool = True, **kwargs):
+    """
+        Saves image containing the pca results
+
+        Parameters
+        ----------
+        pca_data:
+            DataFrame containing transformed/dimensionally-reduced data with which PCA was performed
+        pca_fit:
+            PCA object that was fitted to normalized input data
+        normalize:
+            Boolean whether the transformed data should be normalized with the singular values before plotting
+        save_path:
+            path under which the results will be saved
+        show_suptitle:
+            Should the figure title be shown
+
+
+    """
     singular_values = pca_fit.singular_values_
     n_components = pca_data.shape[0]
     color_map = {value: f"C{i}" for i, value in enumerate(pca_data.columns.get_level_values(0).unique())}
@@ -188,9 +207,7 @@ def save_pca_results(pca_data, pca_fit, normalize=True, save_path=".", show_supt
         fig.suptitle(f"{kwargs['df_to_use']} intensity", fontsize="xx-large")
     res_path = os.path.join(save_path,
                             f"pca_{kwargs['df_to_use']}" + FIG_FORMAT)
-    legend_elements = [Line2D([0], [0], marker='o', color='w', label=level_0,
-                              markerfacecolor=color_map.get(level_0, "blue"), markersize=10)
-                       for level_0 in pca_data.columns.get_level_values(0).unique()]
+    legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=color_map)
     fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=20)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     fig.savefig(res_path, dpi=200, bbox_inches="tight")
