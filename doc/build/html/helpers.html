@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>helpers API reference &#8212; MSPypeline  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="The core API reference" href="core.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-mspypeline.helpers">
+<span id="helpers-api-reference"></span><h1>helpers API reference<a class="headerlink" href="#module-mspypeline.helpers" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="mspypeline.helpers.DataTree">
+<em class="property">class </em><code class="sig-prename descclassname">mspypeline.helpers.</code><code class="sig-name descname">DataTree</code><span class="sig-paren">(</span><em class="sig-param">root</em><span class="sig-paren">)</span><a class="headerlink" href="#mspypeline.helpers.DataTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Summary line</p>
+<dl class="simple">
+<dt>root: DataNode</dt><dd><p>Does stuff</p>
+</dd>
+<dt>level_keys_full_name: ddict(list)</dt><dd><p>Has all DataNode.full_name of a depth level of all levels</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="mspypeline.helpers.DataTree.add_data">
+<code class="sig-name descname">add_data</code><span class="sig-paren">(</span><em class="sig-param">data</em><span class="sig-paren">)</span><a class="headerlink" href="#mspypeline.helpers.DataTree.add_data" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>data<span class="classifier">pd.DataFrame</span></dt><dd><p>Data which will be used to fill the nodes with a Series.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mspypeline.helpers.DataTree.from_analysis_design">
+<em class="property">classmethod </em><code class="sig-name descname">from_analysis_design</code><span class="sig-paren">(</span><em class="sig-param">analysis_design</em>, <em class="sig-param">data: pandas.core.frame.DataFrame = None</em>, <em class="sig-param">should_aggregate_technical_replicates: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#mspypeline.helpers.DataTree.from_analysis_design" title="Permalink to this definition">¶</a></dt>
+<dd><p>analysis_design
+data</p>
+<blockquote>
+<div><p>Will be passed to add_data</p>
+</div></blockquote>
+<p>should_aggregate_technical_replicates</p>
+<p>cls</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="mspypeline.helpers.plot_annotate_line">
+<code class="sig-prename descclassname">mspypeline.helpers.</code><code class="sig-name descname">plot_annotate_line</code><span class="sig-paren">(</span><em class="sig-param">ax</em>, <em class="sig-param">row1</em>, <em class="sig-param">row2</em>, <em class="sig-param">x</em>, <em class="sig-param">data</em>, <em class="sig-param">fs=None</em>, <em class="sig-param">maxasterix=None</em><span class="sig-paren">)</span><a class="headerlink" href="#mspypeline.helpers.plot_annotate_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>adjusted function
+from: <a class="reference external" href="https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph">https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph</a>
+Annotate plot with p-values with line indicators.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> – axis of plot to put the annotaion line</p></li>
+<li><p><strong>num1</strong> – number of left bar to put bracket over</p></li>
+<li><p><strong>num2</strong> – number of right bar to put bracket over</p></li>
+<li><p><strong>data</strong> – string to write or number for generating asterixes</p></li>
+<li><p><strong>fs</strong> – font size</p></li>
+<li><p><strong>maxasterix</strong> – maximum number of asterixes to write (for very small p-values)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="mspypeline.helpers.get_logger">
+<code class="sig-prename descclassname">mspypeline.helpers.</code><code class="sig-name descname">get_logger</code><span class="sig-paren">(</span><em class="sig-param">name: str = None</em>, <em class="sig-param">loglevel: Union[int</em>, <em class="sig-param">str] = 10</em><span class="sig-paren">)</span> &#x2192; logging.Logger<a class="headerlink" href="#mspypeline.helpers.get_logger" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>name</dt><dd><p>name of the logger, if none the filename will be used instead</p>
+</dd>
+<dt>loglevel</dt><dd><p>loglevel of the logger, either an int or the str level names of the logging module</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>logging.Logger</dt><dd><p>A logger with respective level and formatted output</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">MSPypeline</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="core.html">The core API reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">helpers API reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="core.html" title="previous chapter">The core API reference</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Simon Heming.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/helpers.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
