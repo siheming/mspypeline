@@ -1,6 +1,6 @@
 # setup variables required for package
 import os
-path_package = script_loc = os.path.dirname(os.path.realpath(__file__))
+path_package = os.path.dirname(os.path.realpath(__file__))
 path_package_config = os.path.join(path_package, "config")
 
 
@@ -9,12 +9,13 @@ def create_app(test_config=None):
     from mspypeline.flask_scripts import create_app_helper
     return create_app_helper(test_config)
 
+
 # flatten package imports for the core package
 from .version import __version__
+from .plotter import plotly_plots, matplotlib_plots
 from .core.MSPInitializer import MSPInitializer
 from .core.MSPPlots import MSPPlots
 from .core.MSPypeline import MSPUI, MSPParser, UIHandler
-from .plotter import plotly_plots
 # import for "from package import *"
 __all__ = [
     "create_app",
@@ -24,7 +25,9 @@ __all__ = [
     "MSPUI",
     "MSPParser",
     "UIHandler",
-    "MSPPlots"
+    "MSPPlots",
+    "plotly_plots",
+    "matplotlib_plots"
 ]
 # make sure everything that was imported is a class
 import inspect

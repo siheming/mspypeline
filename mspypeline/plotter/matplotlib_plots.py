@@ -23,7 +23,7 @@ def save_volcano_results(
     Parameters
     ----------
     volcano_data:
-        DataFrame containing data for the volcano plot with columns logFC and column specified under col. THe index
+        DataFrame containing data for the volcano plot with columns logFC and column specified under col. The index
         should be protein names or gene names
     unique_g1
         Series containing intensities of proteins or genes unique to group one
@@ -183,6 +183,7 @@ def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA, normalize: bool = Tru
 
 
     """
+    plt.close("all")
     singular_values = pca_fit.singular_values_
     n_components = pca_data.shape[0]
     color_map = {value: f"C{i}" for i, value in enumerate(pca_data.columns.get_level_values(0).unique())}
@@ -191,9 +192,9 @@ def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA, normalize: bool = Tru
         singular_values = np.ones(n_components)
     fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
     for row in range(n_components):
-        row_pc  = row + 1
+        row_pc = row + 1
         for col in range(n_components):
-            col_pc  = col + 1
+            col_pc = col + 1
             if row > col:
                 ax = axarr[col, row]
                 ax.scatter(

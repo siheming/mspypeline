@@ -30,7 +30,7 @@ class MSPInitializer:
         self.yaml.default_flow_style = False
 
         # attributes that change upon changing the starting dir
-        self.configs = None
+        self.configs = {}
         self.path_config = None
         self.naming_convention = None
 
@@ -60,7 +60,7 @@ class MSPInitializer:
         self.logger.info(f"Starting dir: {self.start_dir}")
         # set all attributes back None that where file specific
         self.naming_convention = None
-        self.configs = None
+        self.configs = {}
         # just set the path to file, since if not found the default will be used
         self.file_path_yaml = "file"
         self.path_config = os.path.join(self.start_dir, "config")

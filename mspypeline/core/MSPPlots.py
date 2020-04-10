@@ -13,8 +13,7 @@ import warnings
 from typing import Dict
 from sklearn.decomposition import PCA
 
-from mspypeline import MSPInitializer
-from mspypeline.plotter import matplotlib_plots
+from mspypeline import MSPInitializer, matplotlib_plots
 from mspypeline.helpers import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, plot_annotate_line,\
     get_intersection_and_unique, DataTree, get_logger
 
@@ -767,7 +766,7 @@ class MSPPlots:
             res_path = os.path.join(self.file_dir_go_analysis, f"go_analysis_level_{level}" + FIG_FORMAT)
             fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def get_r_volcano_data(self, g1: str, g2: str, df_to_use: str = "lfq_log2"):
+    def get_r_volcano_data(self, g1: str, g2: str, df_to_use: str):
         # import r interface package
         from rpy2.robjects.packages import importr
         from rpy2.robjects import pandas2ri
@@ -828,18 +827,17 @@ class MSPPlots:
         return {"volcano_data": plot_data, "unique_g1": unique_g1, "unique_g2": unique_g2}
 
     @exception_handler
-    def plot_r_volcano(self, df_to_use: str = "lfq_log2", show_suptitle: bool = True, levels: Iterable = (1,), p_value="pval", fchange_threshold=2, scatter_size=10):
+    def plot_r_volcano(self, df_to_use: str, levels: Iterable[int], **kwargs):
         # TODO both adj and un adj should be available
         for level in levels:
-
             level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
             for g1, g2 in combinations(level_keys, 2):
                 data = self.get_r_volcano_data(g1, g2, df_to_use)
                 if data:
                     matplotlib_plots.save_volcano_results(
-                        **data, g1=g1, g2=g2, col=p_value, intensity_label=self.intensity_label_names[df_to_use],
-                        save_path=self.file_dir_volcano, show_suptitle=show_suptitle,
-                        fchange_threshold=fchange_threshold, scatter_size=scatter_size)
+                        **data, g1=g1, g2=g2, save_path=self.file_dir_volcano,
+                        intensity_label=self.intensity_label_names[df_to_use], **kwargs
+                    )
 
     def get_pca_data(self, df_to_use: str = "raw_log2", level: int = 0, n_components: int = 4, fill_value: float = 0, fill_na_before_norm: bool = False, **kwargs):
         data_input = self.all_tree_dict[df_to_use].groupby(level, method=None)
@@ -855,8 +853,8 @@ class MSPPlots:
         return {"pca_data": df, "pca_fit": pca}
 
     @exception_handler
-    def plot_pca_overview(self, **kwargs):
-        for level in kwargs["levels"]:
-            data = self.get_pca_data(level=level, **kwargs)
+    def plot_pca_overview(self, df_to_use: str, levels: Iterable[int], **kwargs):
+        for level in levels:
+            data = self.get_pca_data(level=level, df_to_use=df_to_use, **kwargs)
             if data:
                 matplotlib_plots.save_pca_results(**data, save_path=self.file_dir_descriptive, **kwargs)

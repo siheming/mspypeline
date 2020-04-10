@@ -14,5 +14,6 @@ __all__ = [
     "get_logger",
     "get_overlap",
     "string_similarity_ratio",
-    "dict_depth"
+    "dict_depth",
+    "get_legend_elements"
 ]
