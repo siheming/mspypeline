@@ -3,6 +3,7 @@ __pycache__/
 .ipynb_checkpoints/
 .pytest_cache/
 test/mock_data/
+doc/build/*
 
 *.ipynb
 *.df
