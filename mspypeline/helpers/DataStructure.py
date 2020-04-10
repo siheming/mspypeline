@@ -32,8 +32,11 @@ class DataNode:
         else:
             self.full_name = ""
 
-    def __repr__(self):
+    def __str__(self):
         return f"level {self.level}, name: {self.full_name}, n children: {len(self.children)}"
+
+    def __repr__(self):
+        return f"DataNode(name={self.name}, level={self.level}, parent={self.parent}, data={self.data}, children={self.children}"
 
     def __getitem__(self, key):
         return self.children[key]
@@ -89,14 +92,19 @@ class DataNode:
             has_child = next(parent) is not None
             should_go_deeper = go_max_depth and has_child
             if parent.data is not None and not should_go_deeper:
-                # TODO maybe use the index here already
-                data.append(parent.data)
+                if index is not None:
+                    # append only the items in the index
+                    if isinstance(index, str):
+                        # if index was a str then series.loc will return a np type, thus a new series needs to be build
+                        data.append(pd.Series(parent.data.loc[index], name=parent.data.name, index=[index]))
+                    else:
+                        data.append(parent.data.loc[index])
+                else:
+                    data.append(parent.data)
             else:
                 for child in parent:
                     queue += [child]
         data = pd.concat(data, axis=1)
-        if index is not None:
-            data = data.loc[index, :]
         if method is not None:
             data = data.aggregate(method, axis=1).rename(self.full_name, axis=1)
         return data

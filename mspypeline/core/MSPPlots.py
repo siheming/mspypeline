@@ -546,82 +546,45 @@ class MSPPlots:
                 fig.savefig(res_path, dpi=200, bbox_inches="tight")
                 plt.close(fig)
 
+    def get_pathway_analysis_data(self, df_to_use, level, pathway, equal_var=True, **kwargs):
+        level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
+        found_proteins = set(self.interesting_proteins[pathway])
+        found_proteins &= set(self.all_intensities_dict[df_to_use].index)
+        found_proteins = list(found_proteins)
+        if len(found_proteins) < 1:
+            self.logger.warning("Skipping pathway %s in pathway analysis because no proteins were found", pathway)
+            return {}
+        protein_intensities = self.all_tree_dict[df_to_use].groupby(level, method=None, index=found_proteins).\
+            sort_index(0).sort_index(1, ascending=False)
+        significances = []
+        for protein in protein_intensities.index:
+            per_protein_significant = []
+            for e1, e2 in combinations(level_keys, 2):
+                v1 = protein_intensities.loc[protein].loc[e1]
+                v2 = protein_intensities.loc[protein].loc[e2]
+                # filter entries with too many nans based on function
+                non_na_group_1 = get_number_of_non_na_values(v1.shape[0])
+                non_na_group_2 = get_number_of_non_na_values(v2.shape[0])
+                mask_1 = (v1 > 0).sum(axis=0) >= non_na_group_1
+                mask_2 = (v2 > 0).sum(axis=0) >= non_na_group_2
+                mask = np.logical_and(mask_1, mask_2)
+                if not mask:
+                    per_protein_significant.append(np.nan)
+                else:
+                    test = stats.ttest_ind(v1, v2, equal_var=equal_var, nan_policy="omit")
+                    per_protein_significant.append(test[1])
+            significances.append(per_protein_significant)
+        significances = pd.DataFrame(significances, index=protein_intensities.index,
+                                     columns=pd.MultiIndex.from_tuples([(e1, e2) for e1, e2 in combinations(level_keys, 2)]))
+        return {"protein_intensities": protein_intensities, "significances": significances}
+
     @exception_handler
-    def plot_pathway_analysis(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (0,)):
-        plot_ns = False
-        threshhold = 0.05
+    def plot_pathway_analysis(self, df_to_use, levels, **kwargs):
         for level in levels:
-            level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
-            ex_list = sorted(level_keys, reverse=True)
-            for pathway in self.interesting_proteins:
-                plt.close("all")
-                found_proteins = set(self.interesting_proteins[pathway])
-                found_proteins &= set(self.all_intensities_dict[df_to_use].index)
-                found_proteins = sorted(list(found_proteins))
-                if len(found_proteins) < 1:
-                    self.logger.warning("Skipping pathway %s in pathway analysis because no proteins were found", pathway)
-                    continue
-                n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
-                fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(level_keys) / 1.5)))
-                if show_suptitle:
-                    fig.suptitle(pathway)
-                all_heights = {}
-                try:
-                    axiterator = axarr.flat
-                except AttributeError:
-                    axiterator = [axarr]
-                for protein, ax in zip(found_proteins, axiterator):
-                    ax.set_title(protein)
-                    heights = []
-                    for idx, level_key in enumerate(sorted(level_keys, reverse=True)):
-                        protein_intensities = self.all_tree_dict[df_to_use][level_key].aggregate(None, index=protein)
-                        ax.scatter(protein_intensities, [idx] * len(protein_intensities), label=f"{level_key}")
-                        heights.append(np.max(protein_intensities))
-                    all_heights[protein] = heights
-                    ax.set_ylim((-1, len(level_keys)))
-
-                    ax.set_yticks([i for i in range(len(level_keys))])
-                    # ax.set_yticklabels([self.replicate_representation[r] for r in sorted(level_keys, reverse=True)])
-                    ax.set_yticklabels(sorted(level_keys, reverse=True))
-                    ax.set_xlabel(self.intensity_label_names[df_to_use])
-                fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-                res_path = os.path.join(self.file_dir_pathway, f"pathway_analysis_level_{level}_{pathway}_no_labels" + FIG_FORMAT)
-                fig.savefig(res_path, dpi=200, bbox_inches="tight")
-                try:
-                    axiterator = axarr.flat
-                except AttributeError:
-                    axiterator = [axarr]
-                significances = []
-                for protein, ax in zip(found_proteins, axiterator):
-                    per_protein_significant = []
-                    for e1, e2 in combinations(level_keys, 2):
-                        v1 = self.all_tree_dict[df_to_use][e1].aggregate(None, index=protein)
-                        v2 = self.all_tree_dict[df_to_use][e2].aggregate(None, index=protein)
-                        # filter entries with too many nans based on function
-                        non_na_group_1 = get_number_of_non_na_values(v1.shape[0])
-                        non_na_group_2 = get_number_of_non_na_values(v2.shape[0])
-                        mask_1 = (v1 > 0).sum(axis=0) >= non_na_group_1
-                        mask_2 = (v2 > 0).sum(axis=0) >= non_na_group_2
-                        mask = np.logical_and(mask_1, mask_2)
-                        if not mask:
-                            continue
-                        test = stats.ttest_ind(v1[~v1.isna()], v2[~v2.isna()], equal_var=self.configs.get("equal_var", False))
-                        if plot_ns or test[1] <= threshhold:
-                            significances.append((protein, e1, e2, test[1]))
-                            per_protein_significant.append((e1, e2, test[1]))
-                    per_protein_df = pd.DataFrame(per_protein_significant, columns=["experiment1", "experiment2", "pvalue"])
-                    per_protein_df = per_protein_df.sort_values("pvalue")#.head(20)
-                    # adjust axis height
-                    xmin, xmax = ax.get_xbound()
-                    ax.set_xlim(right=xmax * (1 + per_protein_df.shape[0] * 0.015))
-                    for i, (e1, e2, pval) in enumerate(zip(per_protein_df["experiment1"], per_protein_df["experiment2"], per_protein_df["pvalue"])):
-                        plot_annotate_line(ax, ex_list.index(e1), ex_list.index(e2), xmax * (1 + i * 0.015) - 0.005, pval)
-                df = pd.DataFrame(significances, columns=["protein", "experiment1", "experiment2", "pvalue"])
-                df.to_csv(os.path.join(self.file_dir_pathway, f"pathway_analysis_level_{level}_{pathway}_table.csv"), index=False)
-
-                fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-                res_path = os.path.join(self.file_dir_pathway, f"pathway_analysis_level_{level}_{pathway}" + FIG_FORMAT)
-                fig.savefig(res_path, dpi=200, bbox_inches="tight")
+            for pathway in list(self.interesting_proteins.keys()):
+                data = self.get_pathway_analysis_data(level=level, df_to_use=df_to_use, pathway=pathway, **kwargs)
+                if data:
+                    matplotlib_plots.save_pathway_analysis_results(**data, pathway=pathway, level=level, intensity_label=self.intensity_label_names[df_to_use], save_path=self.file_dir_pathway, **kwargs)
 
     @exception_handler
     def plot_pathway_timeline(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (2,)):

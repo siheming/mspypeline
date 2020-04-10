@@ -6,6 +6,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.lines import Line2D
 from adjustText import adjust_text
 
+from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line
 
 FIG_FORMAT = ".pdf"
 
@@ -194,3 +195,44 @@ def save_pca_results(pca_data, pca_fit, normalize=True, save_path=".", show_supt
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+
+def save_pathway_analysis_results(
+        protein_intensities: pd.DataFrame, significances: pd.DataFrame = None,
+        pathway: str = "", show_suptitle: bool = False, level=0,
+        threshold: float = 0.05, intensity_label: str = "", save_path=".", **kwargs
+):
+    plt.close("all")
+    protein_intensities.to_csv(os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_intensities.csv"))
+    level_keys = list(protein_intensities.columns.get_level_values(0).unique())
+    n_rows, n_cols = get_number_rows_cols_for_fig(protein_intensities.index)
+    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(level_keys) / 1.5)))
+    color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
+    color_map.update(kwargs.get("color_map", {}))
+    if show_suptitle:
+        fig.suptitle(pathway)
+    for protein, (pos, ax) in zip(protein_intensities.index, np.ndenumerate(axarr)):
+        ax.scatter(protein_intensities.loc[protein], [level_keys.index(c) for c in protein_intensities.columns.get_level_values(0)],
+                   c=[color_map[c] for c in protein_intensities.columns.get_level_values(0)])
+        ax.set_title(protein)
+        ax.set_ylim((-1, len(level_keys)))
+        ax.set_yticks([i for i in range(len(level_keys))])
+        ax.set_yticklabels(level_keys)
+        ax.set_xlabel(intensity_label)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_no_labels" + FIG_FORMAT)
+    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    if significances is not None:
+        significances.to_csv(os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_pvalues.csv"))
+        for protein, (pos, ax) in zip(protein_intensities.index, np.ndenumerate(axarr)):
+            # adjust axis height based on number of significant differences
+            to_annotate = significances.loc[protein]
+            to_annotate = to_annotate[to_annotate <= threshold]
+            xmin, xmax = ax.get_xbound()
+            ax.set_xlim(right=xmax * (1 + to_annotate.shape[0] * 0.015))
+            for i, (index, pval) in enumerate(to_annotate.items()):
+                plot_annotate_line(ax, level_keys.index(index[0]), level_keys.index(index[1]), xmax * (1 + i * 0.015) - 0.005, pval)
+
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+        res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
