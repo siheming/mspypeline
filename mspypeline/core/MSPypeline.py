@@ -209,6 +209,7 @@ class MSPUI(tk.Tk):
         self.venn_groups_int, self.venn_groups_var, self.venn_groups_levels = self.plot_row("Group diagrams", "raw_log2")
         self.r_volcano_int, self.r_volcano_var, self.r_volcano_levels = self.plot_row("Volcano plot (R)", "raw_log2")
         self.pca_overview_int, self.pca_overview_var, self.pca_overview_levels = self.plot_row("PCA overview", "raw")
+        self.boxplot_int, self.boxplot_var, self.boxplot_levels = self.plot_row("Boxplot", "raw")
 
         total_length = self.heading_length + self.number_of_plots
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())

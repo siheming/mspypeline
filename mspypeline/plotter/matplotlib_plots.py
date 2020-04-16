@@ -10,6 +10,8 @@ from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line,
 
 FIG_FORMAT = ".pdf"
 
+# TODO include option to specify None as savepath and dont save
+
 
 def save_volcano_results(
         volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
@@ -256,4 +258,40 @@ def save_pathway_analysis_results(
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
         res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+
+def save_boxplot_results(
+        protein_intensities: pd.DataFrame, save_path: str = ".", level: int = 0, intensity_label: str = "Intensity", **kwargs
+):
+    """
+    Boxplot of intensities
+
+    Parameters
+    ----------
+    protein_intensities
+        DataFrame where each column are the intensities to boxplot, column names will be used as labels
+    save_path
+        path under which the results will be saved
+    level
+        level from with the data comes from. used for the save path
+    intensity_label
+        label of the x axis of the plot
+    kwargs
+        accepts kwargs
+
+    """
+    fig, ax = plt.subplots(figsize=(14, 7))
+    # indicate overall median with a line
+    ax.axvline(protein_intensities.median().median(), color="black", alpha=0.5, linewidth=1)
+    # convert the data into a list of lists and filter nan values
+    data = [
+        protein_intensities.loc[~pd.isna(protein_intensities.loc[:, c]), c].tolist()
+        for c in protein_intensities.columns
+    ]
+    ax.boxplot(data, vert=False, labels=protein_intensities.columns)
+    ax.set_xlabel(intensity_label)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    if save_path is not None:
+        res_path = os.path.join(save_path, f"boxplot_{intensity_label}_level_{level}" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")

@@ -36,7 +36,7 @@ class MSPPlots:
         "plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
         "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline",
         "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
-        "plot_venn_groups", "plot_r_volcano", "plot_pca_overview"
+        "plot_venn_groups", "plot_r_volcano", "plot_pca_overview", "plot_boxplot"
     ]
 
     def exception_handler(f):
@@ -91,6 +91,7 @@ class MSPPlots:
         # set all result dirs
         # create file structure and folders
         # TODO: for now just create all of them
+        # TODO: dont create them on init
         # path for venn diagrams
         self.file_dir_venn = os.path.join(self.start_dir, "venn")
         os.makedirs(self.file_dir_venn, exist_ok=True)
@@ -858,3 +859,34 @@ class MSPPlots:
             data = self.get_pca_data(level=level, df_to_use=df_to_use, **kwargs)
             if data:
                 matplotlib_plots.save_pca_results(**data, save_path=self.file_dir_descriptive, **kwargs)
+
+    def get_boxplot_data(self, df_to_use: str, level: int, **kwargs) -> dict:
+        """
+        Generates data for the boxplot, where columns are sorted by median intensities
+
+        Parameters
+        ----------
+        df_to_use
+            which dataframe should be used
+        level
+            on which level should the data be grouped
+        kwargs
+            accepts kwargs
+
+        Returns
+        -------
+        A dictionary with the the protein intensities
+        """
+        df = self.all_tree_dict[df_to_use].groupby(level)
+        # sort columns by median intensity
+        df = df[df.median().sort_values(ascending=True).index]
+        return {"protein_intensities": df}
+
+    def plot_boxplot(self, df_to_use, levels, **kwargs):
+        for level in levels:
+            data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
+            if data:
+                matplotlib_plots.save_boxplot_results(
+                    **data, level=level, intensity_label=self.intensity_label_names[df_to_use],
+                    save_path=self.file_dir_descriptive, **kwargs
+                )
