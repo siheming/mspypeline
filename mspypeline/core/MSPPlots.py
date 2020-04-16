@@ -827,7 +827,7 @@ class MSPPlots:
         return {"volcano_data": plot_data, "unique_g1": unique_g1, "unique_g2": unique_g2}
 
     @exception_handler
-    def plot_r_volcano(self, df_to_use: str, levels: Iterable[int], **kwargs):
+    def plot_r_volcano(self, df_to_use: str, levels, **kwargs):  # TODO Iterable[int]
         # TODO both adj and un adj should be available
         for level in levels:
             level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
@@ -853,7 +853,7 @@ class MSPPlots:
         return {"pca_data": df, "pca_fit": pca}
 
     @exception_handler
-    def plot_pca_overview(self, df_to_use: str, levels: Iterable[int], **kwargs):
+    def plot_pca_overview(self, df_to_use: str, levels, **kwargs):  # TODO Iterable[int]
         for level in levels:
             data = self.get_pca_data(level=level, df_to_use=df_to_use, **kwargs)
             if data:
