@@ -21,7 +21,7 @@ class MSPInitializer:
     possible_gos = sorted([x for x in os.listdir(os.path.join(path_package_config, go_path)) if x.endswith(".txt")])
     possible_pathways = sorted([x for x in os.listdir(os.path.join(path_package_config, pathway_path)) if x.endswith(".txt")])
 
-    def __init__(self, dir_: str, file_path_yml: str = "default", loglevel=logging.DEBUG):
+    def __init__(self, dir_: str, file_path_yml: str = "file", loglevel=logging.DEBUG):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # create a yaml file reader
         self.yaml = YAML()
@@ -31,7 +31,6 @@ class MSPInitializer:
 
         # attributes that change upon changing the starting dir
         self.configs = {}
-        self.path_config = None
         self.naming_convention = None
 
         self.reader_data = {}
@@ -61,9 +60,10 @@ class MSPInitializer:
         # set all attributes back None that where file specific
         self.naming_convention = None
         self.configs = {}
-        # just set the path to file, since if not found the default will be used
-        self.file_path_yaml = "file"
-        self.path_config = os.path.join(self.start_dir, "config")
+
+    @property
+    def path_config(self):
+        return os.path.join(self.start_dir, "config")
 
     @property
     def file_path_yaml(self):
