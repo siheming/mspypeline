@@ -163,7 +163,7 @@ def save_volcano_results(
     # TODO scatter plot of significant genes
 
 
-def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA, normalize: bool = True, save_path: str = ".",
+def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, save_path: str = ".",
                      show_suptitle: bool = True, **kwargs):
     """
         Saves image containing the pca results
@@ -184,12 +184,15 @@ def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA, normalize: bool = Tru
 
     """
     plt.close("all")
-    singular_values = pca_fit.singular_values_
     n_components = pca_data.shape[0]
+    singular_values = np.ones(n_components)
     color_map = {value: f"C{i}" for i, value in enumerate(pca_data.columns.get_level_values(0).unique())}
     color_map.update(kwargs.get("color_map", {}))
-    if not normalize:
-        singular_values = np.ones(n_components)
+    if normalize and pca_fit is None:
+        # TODO warning
+        pass
+    elif normalize and pca_fit is not None:
+        singular_values = pca_fit.singular_values_
     fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
     for row in range(n_components):
         row_pc = row + 1
