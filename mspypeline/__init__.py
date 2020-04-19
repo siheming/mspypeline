@@ -14,7 +14,7 @@ def create_app(test_config=None):
 from .version import __version__
 from .plotter import plotly_plots, matplotlib_plots
 from .core.MSPInitializer import MSPInitializer
-from .core.MSPPlots import MSPPlots
+from .core.MSPPlots import MSPPlots, MaxQuantPlotter
 from .core.MSPypeline import MSPUI, MSPParser, UIHandler
 # import for "from package import *"
 __all__ = [
@@ -26,6 +26,7 @@ __all__ = [
     "MSPParser",
     "UIHandler",
     "MSPPlots",
+    "MaxQuantPlotter",
     "plotly_plots",
     "matplotlib_plots"
 ]

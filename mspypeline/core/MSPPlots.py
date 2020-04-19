@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import functools
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib_venn import venn3, venn2
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -52,41 +53,61 @@ class MSPPlots:
         return wrapper
 
     def __init__(
-        self, start_dir, configs, reader_data,
-        interesting_proteins, go_analysis_gene_names,
-        additional_entries=(),
-        loglevel=logging.DEBUG
+            self,
+            start_dir: str,
+            reader_data: dict,
+            intensity_df_name: str = "",
+            interesting_proteins: dict = None,
+            go_analysis_gene_names: dict = None,
+            configs: dict = None,
+            required_reader=None,
+            intensity_entries=(),
+            loglevel=logging.DEBUG
     ):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # general information
+        # TODO make start dir optional
         self.start_dir = start_dir
-        self.configs = configs
+        # read in optional arguments
+        self.configs = {} if configs is None else configs
+        self.interesting_proteins = {} if interesting_proteins is None else interesting_proteins
+        self.go_analysis_gene_names = {} if go_analysis_gene_names is None else go_analysis_gene_names
+
+        if required_reader is not None:
+            try:
+                self.required_reader_data = reader_data[required_reader]
+            except KeyError:
+                self.logger.exception("Reader data does not provide information from %s reader", required_reader)
+                raise
+
+        self.intensity_df = None
+        for reader in reader_data:
+            for key in reader_data[reader]:
+                if key == intensity_df_name:
+                    self.intensity_df = reader_data[reader][key]
+                    break
+
+        # setup everything for all_intensity dict
         self.int_mapping = {}
         self.intensity_label_names = {}
         self.all_intensities_dict: Dict[str, pd.DataFrame] = {}
-        # TODO atm only one reader is being used. All required information is read here atm
-        df_protein_names = reader_data["mqreader"]["proteinGroups.txt"]
-        tech_rep = self.configs["has_replicates"]
-        self.all_replicates = self.configs["all_replicates"]
-        self.analysis_design = self.configs["analysis_design"]
-        # data frames
-        self.df_protein_names = df_protein_names.set_index(df_protein_names["Gene name fasta"], drop=False)
-        # self.df_peptide_names = df_peptide_names
-        # dicts
-        self.interesting_proteins = interesting_proteins
-        self.go_analysis_gene_names = go_analysis_gene_names
-
-        self.add_intensity_column("raw", "Intensity ", "Intensity")
-        self.add_intensity_column("lfq", "LFQ intensity ", "LFQ intensity")
-        self.add_intensity_column("ibaq", "iBAQ ", "iBAQ intensity")
-        for option_name, name_in_file, name_in_plot in additional_entries:
+        for option_name, name_in_file, name_in_plot in intensity_entries:
             self.add_intensity_column(option_name, name_in_file, name_in_plot)
 
         # create the data trees
-        self.all_tree_dict: Dict[str, DataTree] = {
-            intensity: DataTree.from_analysis_design(self.analysis_design, data, tech_rep)
-            for intensity, data in self.all_intensities_dict.items()
-        }
+        tech_rep = self.configs.get("has_replicates", False)
+        analysis_design = self.configs.get("analysis_design", {})
+        if analysis_design:
+            self.all_tree_dict: Dict[str, DataTree] = {
+                intensity: DataTree.from_analysis_design(analysis_design, data, tech_rep)
+                for intensity, data in self.all_intensities_dict.items()
+            }
+        else:
+            self.all_tree_dict = {
+                intensity: {}
+                for intensity, data in self.all_intensities_dict.items()
+            }
+            self.logger.warning("No analysis design was provided. Most plotting functions will not work")
 
         # set all result dirs
         # create file structure and folders
@@ -109,15 +130,17 @@ class MSPPlots:
         os.makedirs(self.file_dir_volcano, exist_ok=True)
 
     @classmethod
-    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, additional_entries=()):
+    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, intensity_entries=()):
         return cls(
-            start_dir = mspinti_instance.start_dir,
-            configs = mspinti_instance.configs,
-            reader_data = mspinti_instance.reader_data,
-            interesting_proteins = mspinti_instance.interesting_proteins,
-            go_analysis_gene_names = mspinti_instance.go_analysis_gene_names,
-            additional_entries = additional_entries,
-            loglevel = mspinti_instance.logger.getEffectiveLevel()
+            start_dir=mspinti_instance.start_dir,
+            reader_data=mspinti_instance.reader_data,
+            intensity_df_name="",
+            interesting_proteins=mspinti_instance.interesting_proteins,
+            go_analysis_gene_names=mspinti_instance.go_analysis_gene_names,
+            configs=mspinti_instance.configs,
+            required_reader=None,
+            intensity_entries=intensity_entries,
+            loglevel=mspinti_instance.logger.getEffectiveLevel()
             )
 
     def create_results(self):
@@ -130,7 +153,7 @@ class MSPPlots:
         self.logger.info("Done creating plots")
 
     def add_intensity_column(self, option_name, name_in_file, name_in_plot):
-        if not any((col.startswith(name_in_file) for col in self.df_protein_names)):
+        if not any((col.startswith(name_in_file) for col in self.intensity_df)):
             self.logger.warning("%s columns could not be found in data", name_in_file)
             return
         self.int_mapping.update({option_name: name_in_file, f"{option_name}_log2": name_in_file})
@@ -138,8 +161,8 @@ class MSPPlots:
 
         # extract all raw intensities from the dataframe
         # replace all 0 with nan and remove the prefix from the columns
-        intensities = self.df_protein_names.loc[:,
-            [f"{self.int_mapping[option_name]}{rep}" for rep in self.all_replicates]
+        intensities = self.intensity_df.loc[:,
+                        [c for c in self.intensity_df.columns if c.startswith(self.int_mapping[option_name])]
         ].replace({0: np.nan}).rename(lambda x: x.replace(self.int_mapping[option_name], ""), axis=1)
         # filter all rows where all intensities are nan
         mask = (~intensities.isna()).sum(axis=1) != 0
@@ -386,14 +409,15 @@ class MSPPlots:
     def plot_intensity_histograms(self, df_to_use: str = "raw", show_suptitle: bool = False, levels=()):
         # TODO levels should overlay histograms
         plt.close("all")
-        n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig(self.all_replicates)
+        columns = self.all_tree_dict[df_to_use].level_keys_full_name[max(self.all_tree_dict[df_to_use].level_keys_full_name.keys())]
+        n_rows_replicates, n_cols_replicates = get_number_rows_cols_for_fig(columns)
         # make a intensity histogram for every replicate
         fig, axarr = plt.subplots(n_rows_replicates, n_cols_replicates,
                                   figsize=(5 * n_cols_replicates, 5 * n_rows_replicates))
         if show_suptitle:
             fig.suptitle(f"Replicate {self.intensity_label_names[df_to_use]} histograms")
 
-        for col, ax in zip(self.all_replicates, axarr.flat):
+        for col, ax in zip(columns, axarr.flat):
             intensities = self.all_tree_dict[df_to_use][col].aggregate()
 
             if "log2" in df_to_use:
@@ -890,3 +914,101 @@ class MSPPlots:
                     **data, level=level, intensity_label=self.intensity_label_names[df_to_use],
                     save_path=self.file_dir_descriptive, **kwargs
                 )
+
+
+class MaxQuantPlotter(MSPPlots):
+    def __init__(
+            self,
+            start_dir: str,
+            reader_data: dict,
+            intensity_df_name: str = "",
+            interesting_proteins: dict = None,
+            go_analysis_gene_names: dict = None,
+            configs: dict = None,
+            required_reader=None,
+            intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"), ("ibaq", "iBAQ ", "iBAQ intensity")),
+            loglevel=logging.DEBUG
+    ):
+        super().__init__(
+            start_dir,
+            reader_data,
+            intensity_df_name,
+            interesting_proteins,
+            go_analysis_gene_names,
+            configs,
+            required_reader,
+            intensity_entries,
+            loglevel
+        )
+
+    @classmethod
+    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"), ("ibaq", "iBAQ ", "iBAQ intensity"))):
+        return cls(
+            start_dir=mspinti_instance.start_dir,
+            reader_data=mspinti_instance.reader_data,
+            intensity_df_name="proteinGroups.txt",
+            interesting_proteins=mspinti_instance.interesting_proteins,
+            go_analysis_gene_names=mspinti_instance.go_analysis_gene_names,
+            configs=mspinti_instance.configs,
+            required_reader="mqreader",
+            intensity_entries=intensity_entries,
+            loglevel=mspinti_instance.logger.getEffectiveLevel()
+            )
+
+    def create_report(self):
+        def bar_from_counts(ax, counts, title=None, relative=False, yscale=None):
+            if relative:
+                counts = counts / counts.sum()
+            if title is not None:
+                ax.set_title(title)
+            ax.bar([x for x in range(len(counts))], counts.values)
+            ax.set_xticks([i for i in range(len(counts))])
+            ax.set_xticklabels(counts.index)
+            if yscale is not None:
+                if isinstance(yscale, str):
+                    ax.set_yscale(yscale)
+                elif isinstance(yscale, dict):
+                    ax.set_yscale(**yscale)
+
+        with PdfPages(os.path.join(self.start_dir, "MaxQuantReport2.pdf")) as pdf:
+            first_page = plt.figure(figsize=(12, 8))
+            text_conf = dict(transform=first_page.transFigure, size=24, ha="center")
+            first_page.text(0.5, 0.9, "MaxQuant report", **text_conf)
+            text_conf.update({"size": 20})
+            first_page.text(0.5, 0.85, "parameter.txt info", **text_conf)
+            text_conf.pop("size")
+            first_page.text(0.5, 0.8, f"Version: {self.required_reader_data['parameters.txt']['Version']}, "
+                            f"run at: {self.required_reader_data['parameters.txt']['Date of writing']}", **text_conf)
+            first_page.text(0.5, 0.75, f"Fasta File: {os.path.split(self.required_reader_data['parameters.txt']['Fasta file'])[1]}, "
+                                       f"Match between runs: {self.required_reader_data['parameters.txt']['Match between runs']}", **text_conf)
+            first_page.text(0.5, 0.7, "Min. to Max. peptide length for unspecific search: "
+                                      f"{self.required_reader_data['parameters.txt']['Min. peptide length for unspecific search']} to {self.required_reader_data['parameters.txt']['Max. peptide length for unspecific search']}", **text_conf)
+
+            text_conf.update({"size": 20})
+            first_page.text(0.5, 0.65, "summary.txt info", **text_conf)
+            text_conf.pop("size")
+            first_page.text(0.5, 0.6, f"Used Enzyme: {self.required_reader_data['summary.txt'].loc[1, 'Enzyme']}", **text_conf)
+            first_page.text(0.5, 0.55, f"Variable modifications: {self.required_reader_data['summary.txt'].loc[1, 'Variable modifications']}", **text_conf)
+            first_page.text(0.5, 0.5, f"Mass Standard Deviation: mean {self.required_reader_data['summary.txt'].loc[1, 'Mass Standard Deviation [ppm]'].mean()}, max {self.required_reader_data['summary.txt'].loc[1, 'Mass Standard Deviation [ppm]'].max()}", **text_conf)
+
+            # TODO LFQ, Identified proteins, and peptides
+            pdf.savefig()
+            plt.close(first_page)
+
+            fig, axarr = plt.subplots(3, 1, figsize=(14, 7))
+            bar_from_counts(axarr[0], self.required_reader_data["peptides.txt"]["Missed cleavages"].value_counts(), title="Missed Cleavages", relative=True)
+            bar_from_counts(axarr[1], self.required_reader_data["peptides.txt"]["Amino acid before"].value_counts(), title="Amino acid before", yscale="log")
+            bar_from_counts(axarr[2], self.required_reader_data["peptides.txt"]["Last amino acid"].value_counts(), title="Last amino acid", yscale="log")
+
+            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+            pdf.savefig()
+            plt.close(fig)
+
+            fig, axarr = plt.subplots(3, 1, figsize=(14, 7))
+            bar_from_counts(axarr[0], self.required_reader_data["peptides.txt"]["Charges"].value_counts(), title="Peptide Charges")
+
+            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+            pdf.savefig()
+            plt.close(fig)
