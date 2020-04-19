@@ -281,7 +281,8 @@ def save_boxplot_results(
         accepts kwargs
 
     """
-    fig, ax = plt.subplots(figsize=(14, 7))
+    plt.close("all")
+    fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
     # indicate overall median with a line
     ax.axvline(protein_intensities.median().median(), color="black", alpha=0.5, linewidth=1)
     # convert the data into a list of lists and filter nan values
