@@ -530,45 +530,40 @@ class MSPPlots:
                                         f"{level_key}_rank" + FIG_FORMAT)
                 fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
+    def get_relative_std_data(self, df_to_use: str, full_name: str, **kwargs):
+        """
+
+        Parameters
+        ----------
+        df_to_use
+            which dataframe/intensity should be used
+        full_name
+            name of the experiment which should be accepted
+        kwargs
+            accepts kwargs
+
+        Returns
+        -------
+        Dictionary with the intensity of the experiment and the relative standard deviations
+
+        """
+        intensities = self.all_tree_dict[df_to_use][full_name].aggregate(None)
+        non_na = get_number_of_non_na_values(intensities.shape[1])
+        mask = (intensities > 0).sum(axis=1) >= non_na
+        intensities = intensities[mask]
+        return {"intensities": intensities}
+
     @exception_handler
-    def plot_relative_std(self, df_to_use: str = "raw", levels: Iterable = (0,)):
-        plt.close("all")
+    def plot_relative_std(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
         # TODO check with log2 thresholds
         for level in levels:
             for full_name in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
-                intensities = self.all_tree_dict[df_to_use][full_name].aggregate(None)
-                non_na = get_number_of_non_na_values(intensities.shape[1])
-                mask = (intensities > 0).sum(axis=1) >= non_na
-                intensities = intensities[mask]
-                relative_std_percent = intensities.std(axis=1) / intensities.mean(axis=1) * 100
-
-                bins = np.array([10, 20, 30])
-                if "log2" in df_to_use:
-                    bins = np.log2(bins)
-                inds = np.digitize(relative_std_percent, bins).astype(int)
-
-                cm = {0: "navy", 1: "royalblue", 2: "skyblue", 3: "darkgray"}
-                colors = pd.Series([cm.get(x, "black") for x in inds], index=relative_std_percent.index)
-                color_counts = {color: (colors == color).sum() for color in colors.unique()}
-
-                # intensity vs relative standard deviation
-                fig, ax = plt.subplots(1, 1, figsize=(14, 7))
-                ax.scatter(intensities.mean(axis=1), relative_std_percent, c=colors, marker="o", s=(2* 72./fig.dpi)**2, alpha=0.8)
-                ax.set_xlabel(f"Mean {self.intensity_label_names[df_to_use]}")
-                ax.set_ylabel("Relative Standard deviation [%]")
-                if "log2" not in df_to_use:
-                    ax.set_xscale('log')
-                xmin, xmax = ax.get_xbound()
-                cumulative_count = 0
-                for i, bin_ in enumerate(bins):
-                    cumulative_count += color_counts.get(cm[i], 0)
-                    ax.axhline(bin_, color=cm[i])
-                    ax.text(xmin, bin_, cumulative_count)
-
-                res_path = os.path.join(self.file_dir_descriptive,
-                                        f"{full_name}_rel_std" + FIG_FORMAT)
-                fig.savefig(res_path, dpi=200, bbox_inches="tight")
-                plt.close(fig)
+                data = self.get_relative_std_data(df_to_use=df_to_use, full_name=full_name, **kwargs)
+                if data:
+                    matplotlib_plots.save_relative_std_plot(
+                        **data, df_to_use=df_to_use, name=full_name, save_path=self.file_dir_descriptive,
+                        intensity_label=self.intensity_label_names[df_to_use], **kwargs
+                    )
 
     def get_pathway_analysis_data(self, df_to_use, level, pathway, equal_var=True, **kwargs):
         level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
