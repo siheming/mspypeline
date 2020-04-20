@@ -175,6 +175,9 @@ class MSPPlots:
             option_name: intensities, f"{option_name}_log2": intensities_log2,
         })
 
+    def create_report(self):
+        raise NotImplementedError
+
     @exception_handler
     def save_venn(self, ex: str, named_sets: Dict[str, set], show_suptitle: bool = True):
         # TODO legend with colors and numbers
@@ -716,12 +719,8 @@ class MSPPlots:
                 fig.savefig(res_path, dpi=200, bbox_inches="tight")
                 plt.close("all")
 
-    def create_report(self):
-        pass
-
     @exception_handler
     def plot_go_analysis(self, df_to_use: str = "raw", levels: Iterable = (0,)):
-        self.logger.info("Creating go analysis plots")
         plt.close("all")
 
         # all proteins that were detected in any replicate
@@ -916,11 +915,11 @@ class MaxQuantPlotter(MSPPlots):
             self,
             start_dir: str,
             reader_data: dict,
-            intensity_df_name: str = "",
+            intensity_df_name: str = "proteinGroups.txt",
             interesting_proteins: dict = None,
             go_analysis_gene_names: dict = None,
             configs: dict = None,
-            required_reader=None,
+            required_reader="mqreader",
             intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"), ("ibaq", "iBAQ ", "iBAQ intensity")),
             loglevel=logging.DEBUG
     ):
@@ -966,9 +965,9 @@ class MaxQuantPlotter(MSPPlots):
                     ax.set_yscale(**yscale)
 
         with PdfPages(os.path.join(self.start_dir, "MaxQuantReport2.pdf")) as pdf:
-            first_page = plt.figure(figsize=(12, 8))
+            first_page = plt.figure(figsize=(14, 7))
             text_conf = dict(transform=first_page.transFigure, size=24, ha="center")
-            first_page.text(0.5, 0.9, "MaxQuant report", **text_conf)
+            first_page.text(0.5, 0.92, "MaxQuant report", **text_conf)
             text_conf.update({"size": 20})
             first_page.text(0.5, 0.85, "parameter.txt info", **text_conf)
             text_conf.pop("size")
@@ -984,7 +983,7 @@ class MaxQuantPlotter(MSPPlots):
             text_conf.pop("size")
             first_page.text(0.5, 0.6, f"Used Enzyme: {self.required_reader_data['summary.txt'].loc[1, 'Enzyme']}", **text_conf)
             first_page.text(0.5, 0.55, f"Variable modifications: {self.required_reader_data['summary.txt'].loc[1, 'Variable modifications']}", **text_conf)
-            first_page.text(0.5, 0.5, f"Mass Standard Deviation: mean {self.required_reader_data['summary.txt'].loc[1, 'Mass Standard Deviation [ppm]'].mean()}, max {self.required_reader_data['summary.txt'].loc[1, 'Mass Standard Deviation [ppm]'].max()}", **text_conf)
+            first_page.text(0.5, 0.5, f"Mass Standard Deviation: mean {self.required_reader_data['summary.txt'].loc[:, 'Mass Standard Deviation [ppm]'].mean()}, max {self.required_reader_data['summary.txt'].loc[:, 'Mass Standard Deviation [ppm]'].max()}", **text_conf)
 
             # TODO LFQ, Identified proteins, and peptides
             pdf.savefig()

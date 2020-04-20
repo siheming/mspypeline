@@ -15,7 +15,7 @@ FIG_FORMAT = ".pdf"
 
 def save_volcano_results(
         volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", col: str = "adjpval", intensity_label: str = "", save_path=os.getcwd(),
+        g2: str = "group2", col: str = "adjpval", intensity_label: str = "", save_path=".",
         show_suptitle: bool = True, fchange_threshold: float = 2, scatter_size: float = 10,
         n_labelled_proteins: int = 10
 ):
@@ -284,7 +284,7 @@ def save_boxplot_results(
     plt.close("all")
     fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
     # indicate overall median with a line
-    ax.axvline(protein_intensities.median().median(), color="black", alpha=0.5, linewidth=1)
+    ax.axvline(np.nanmedian(protein_intensities.values), color="black", alpha=0.5, linewidth=1)
     # convert the data into a list of lists and filter nan values
     data = [
         protein_intensities.loc[~pd.isna(protein_intensities.loc[:, c]), c].tolist()
