@@ -15,7 +15,7 @@ FIG_FORMAT = ".pdf"
 
 def save_volcano_results(
         volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", col: str = "adjpval", intensity_label: str = "", save_path=os.getcwd(),
+        g2: str = "group2", col: str = "adjpval", intensity_label: str = "", save_path=".",
         show_suptitle: bool = True, fchange_threshold: float = 2, scatter_size: float = 10,
         n_labelled_proteins: int = 10
 ):
@@ -281,9 +281,10 @@ def save_boxplot_results(
         accepts kwargs
 
     """
-    fig, ax = plt.subplots(figsize=(14, 7))
+    plt.close("all")
+    fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
     # indicate overall median with a line
-    ax.axvline(protein_intensities.median().median(), color="black", alpha=0.5, linewidth=1)
+    ax.axvline(np.nanmedian(protein_intensities.values), color="black", alpha=0.5, linewidth=1)
     # convert the data into a list of lists and filter nan values
     data = [
         protein_intensities.loc[~pd.isna(protein_intensities.loc[:, c]), c].tolist()
@@ -295,3 +296,74 @@ def save_boxplot_results(
     if save_path is not None:
         res_path = os.path.join(save_path, f"boxplot_{intensity_label}_level_{level}" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+
+def save_relative_std_plot(
+        intensities: pd.DataFrame, name: str, df_to_use: str = "raw", intensity_label: str = "Intensity",
+        bins=(10, 20, 30), save_path: str = ".", cmap: dict = None, **kwargs
+):
+    """
+    Relative standard deviations of passed intensities with color marking based on the specified bins and color map
+
+    Parameters
+    ----------
+    intensities
+        DataFrame with experiment intensities to be plotted
+    name
+        name of the overall experiment
+    df_to_use
+        from which intensities was the data gathered
+    intensity_label
+        name of the intensities for the x label
+    bins
+        in which bins should the standard deviations be categorized
+    save_path
+        path to which the figure will be saved
+    cmap
+        mapping for the digitized labels to a color
+    kwargs
+        accepts kwargs
+
+    Returns
+    -------
+    figure and axis of the plot
+
+    """
+    # TODO add percentage to absolute numbers
+    # TODO see if code could be optimized
+    plt.close("all")
+
+    bins = np.array(bins)
+    if "log2" in df_to_use:
+        bins = np.log2(bins)
+
+    cm = {0: "navy", 1: "royalblue", 2: "skyblue", 3: "darkgray"}
+    if cmap is not None:
+        cm.update(cmap)
+
+    relative_std_percent = intensities.std(axis=1) / intensities.mean(axis=1) * 100
+
+    inds = np.digitize(relative_std_percent, bins).astype(int)
+    colors = pd.Series([cm.get(x, "black") for x in inds], index=relative_std_percent.index)
+    color_counts = {color: (colors == color).sum() for color in colors.unique()}
+
+    fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+    ax.scatter(intensities.mean(axis=1), relative_std_percent, c=colors, marker="o", s=(2 * 72. / fig.dpi) ** 2,
+               alpha=0.8)
+    ax.set_xlabel(f"Mean {intensity_label}")
+    ax.set_ylabel("Relative Standard deviation [%]")
+    if "log2" not in df_to_use:
+        ax.set_xscale('log')
+    xmin, xmax = ax.get_xbound()
+    cumulative_count = 0
+    for i, bin_ in enumerate(bins):
+        cumulative_count += color_counts.get(cm[i], 0)
+        ax.axhline(bin_, color=cm[i])
+        ax.text(xmin, bin_, cumulative_count)
+
+    if save_path is not None:
+        res_path = os.path.join(save_path, f"rel_std_{name}_{df_to_use}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+
+    return fig, ax

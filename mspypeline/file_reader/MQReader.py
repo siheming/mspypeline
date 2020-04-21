@@ -12,13 +12,16 @@ class MQReader(BaseReader):
     proteins_txt = "proteinGroups.txt"
     peptides_txt = "peptides.txt"
     mapping_txt = "sample_mapping.txt"
-    all_files = [proteins_txt, peptides_txt]
+    summary_txt = "summary.txt"
+    parameters_txt = "parameters.txt"
+    all_files = [proteins_txt, peptides_txt, summary_txt, parameters_txt]
     name = "mqreader"
 
-    def __init__(self, start_dir, reader_config, loglevel=logging.DEBUG):
+    def __init__(self, start_dir, reader_config, index_col: str = "Gene name fasta", loglevel=logging.DEBUG):
         super().__init__(start_dir, reader_config, loglevel=loglevel)
         # TODO connect this to the configs of the initializer
         self.data_dir = os.path.join(self.start_dir, "txt")
+        self.index_col = index_col
 
         # start by sampling with all files
         # only save the dataframe if the file was found
@@ -29,7 +32,7 @@ class MQReader(BaseReader):
                 df = pd.read_csv(file_dir, sep="\t", nrows=5)
                 self.sample_data[file] = df
             except FileNotFoundError:
-                pass
+                self.logger.info("Did not find file: %s", file)
 
         # if no files were found throw an error
         if not self.sample_data:
@@ -86,6 +89,7 @@ class MQReader(BaseReader):
         self.full_data = {}
         for file in MQReader.all_files:
             if file in self.sample_data:
+                self.logger.debug("Preprocessing %s", file)
                 full_data = getattr(self, f"preprocess_{file.replace('.txt', '')}")()
                 self.full_data[file] = full_data
 
@@ -135,6 +139,8 @@ class MQReader(BaseReader):
         for file, l in self.intensity_column_names.items():
             unmatched = [x for x in l if x not in self.column_name_sample]
             if len(unmatched) > 0:
+                self.logger.warning("mismatch between files found")
+                continue
                 raise ValueError(
                     f"Found replicates in {MQReader.proteins_txt}, but not in {MQReader.peptides_txt}: " +
                     ", ".join(unmatched))
@@ -173,51 +179,9 @@ class MQReader(BaseReader):
 
     def guess_analysis_design(self, all_reps):
         raise NotImplementedError("This is not implemented at the moment. Please stick to the naming convention")
-        # TODO update all of this
-        if self.configs.get("has_replicates", True):
-            #
-            overlap = [[get_overlap(re1, re2) if re1 != re2 else "" for re1 in all_reps] for re2 in all_reps]
-            overlap_matrix = pd.DataFrame(overlap, columns=all_reps, index=all_reps)
-            unclear_matches = []
-            replicates = ddict(list)
-            for col in overlap_matrix:
-                sorted_matches = sorted(overlap_matrix[col].values, key=len, reverse=True)
-                best_match = sorted_matches[0]
-                replicates[best_match].append(col)
-                # check if any other match with the same length could be found
-                if any([len(best_match) == len(match) and best_match != match for match in sorted_matches]):
-                    unclear_matches.append(best_match)
-            for experiment in replicates:
-                if len(replicates[experiment]) == 1:
-                    rep = replicates.pop(experiment)
-                    replicates[rep[0]] = rep
-                elif experiment in unclear_matches:
-                    self.logger.warning(f"unclear match for experiment: {experiment}")
-            self.logger.info(f"determined experiments: {replicates.keys()}")
-            self.logger.debug("number of replicates per experiment:")
-            self.logger.debug("\n".join([f"{ex}: {len(replicates[ex])}" for ex in replicates]))
-        else:
-            replicates = {rep: [rep] for rep in all_reps}
-
-        try:
-            # determine grouping
-            similarities = pd.DataFrame([[string_similarity_ratio(e1, e2) for e1 in replicates] for e2 in replicates],
-                                        columns=replicates, index=replicates)
-            similarities = similarities > 0.8
-            experiment_groups = {}
-            start_index = 0
-            count = 0
-            while start_index < similarities.shape[0]:
-                matches = similarities.iloc[start_index, :].sum()
-                experiment_groups[f"Group_{count}"] = [similarities.index[i] for i in
-                                                       range(start_index, start_index + matches)]
-                start_index += matches
-                count += 1
-        except Exception:
-            experiment_groups = {}
+        # TODO update the attempted matching mechanism
 
     def preprocess_proteinGroups(self):
-        self.logger.debug("Preprocessing %s", MQReader.proteins_txt)
         file_dir = os.path.join(self.data_dir, MQReader.proteins_txt)
         df_protein_groups = pd.read_csv(file_dir, sep="\t")
         df_protein_groups.columns = self.new_column_names[MQReader.proteins_txt]
@@ -273,6 +237,9 @@ class MQReader(BaseReader):
                 "Found duplicates in Gene name fasta column. Dropping all %s duplicates. Duplicate Gene names: %s",
                 duplicates.sum(), ", ".join(df_protein_groups[duplicates].loc[:, "Gene name fasta"]))
             df_protein_groups = df_protein_groups.drop_duplicates(subset="Gene name fasta", keep=False)
+        # set index
+        self.logger.info("Setting index of %s to %s", MQReader.proteins_txt, self.index_col)
+        df_protein_groups = df_protein_groups.set_index(df_protein_groups[self.index_col], drop=False)
         # convert all non numeric intensities
         for col in [col for col in df_protein_groups.columns if 'Intensity ' in col or "LFQ " in col or "iBAQ " in col]:
             if not is_numeric_dtype(df_protein_groups[col]):
@@ -282,7 +249,6 @@ class MQReader(BaseReader):
         return df_protein_groups
 
     def preprocess_peptides(self):
-        self.logger.debug("Preprocessing %s", MQReader.peptides_txt)
         file_dir = os.path.join(self.data_dir, MQReader.peptides_txt)
         df_peptides = pd.read_csv(file_dir, sep="\t")
         df_peptides.columns = self.new_column_names[MQReader.peptides_txt]
@@ -294,3 +260,16 @@ class MQReader(BaseReader):
                           (~not_contaminants).sum(), MQReader.peptides_txt)
 
         return df_peptides
+
+    def preprocess_summary(self):
+        file_dir = os.path.join(self.data_dir, MQReader.summary_txt)
+        df_summary = pd.read_csv(file_dir, sep="\t")
+        df_summary.columns = self.new_column_names[MQReader.summary_txt]
+        df_summary = df_summary[df_summary["Enzyme"] != ""]
+        return df_summary
+
+    def preprocess_parameters(self):
+        file_dir = os.path.join(self.data_dir, MQReader.parameters_txt)
+        df_parameters = pd.read_csv(file_dir, sep="\t", index_col=[0], squeeze=True)
+        df_parameters.columns = self.new_column_names[MQReader.parameters_txt]
+        return df_parameters
