@@ -563,7 +563,7 @@ class MSPPlots:
             for full_name in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
                 data = self.get_relative_std_data(df_to_use=df_to_use, full_name=full_name, **kwargs)
                 if data:
-                    matplotlib_plots.save_relative_std_plot(
+                    matplotlib_plots.save_relative_std_results(
                         **data, df_to_use=df_to_use, name=full_name, save_path=self.file_dir_descriptive,
                         intensity_label=self.intensity_label_names[df_to_use], **kwargs
                     )

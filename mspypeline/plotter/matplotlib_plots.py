@@ -298,7 +298,7 @@ def save_boxplot_results(
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
 
-def save_relative_std_plot(
+def save_relative_std_results(
         intensities: pd.DataFrame, name: str, df_to_use: str = "raw", intensity_label: str = "Intensity",
         bins=(10, 20, 30), save_path: str = ".", cmap: dict = None, **kwargs
 ):
