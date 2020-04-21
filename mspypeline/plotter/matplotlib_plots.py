@@ -24,7 +24,7 @@ def save_volcano_results(
 
     Parameters
     ----------
-    volcano_data:
+    volcano_data
         DataFrame containing data for the volcano plot with columns logFC and column specified under col. The index
         should be protein names or gene names
     unique_g1
@@ -56,18 +56,19 @@ def save_volcano_results(
 
     col_mapping = {"adjpval": "adjusted p value", "pval": "unadjusted p value"}
 
-    # save all values
-    volcano_data.to_csv(os.path.join(save_path,
-                                  f"volcano_plot_data_{g1}_vs_{g2}_full_{col_mapping[col].replace(' ', '_')}.csv"))
-    # save significant values
-    volcano_data[volcano_data[col] < 0.05].to_csv(
-        os.path.join(save_path,
-                     f"volcano_plot_data_{g1}_vs_{g2}_significant_{col_mapping[col].replace(' ', '_')}.csv"))
-    # save unique values
-    if unique_g1 is not None:
-        unique_g1.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g1}.csv"), header=True)
-    if unique_g2 is not None:
-        unique_g2.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g2}.csv"), header=True)
+    if save_path is not None:
+        # save all values
+        volcano_data.to_csv(os.path.join(save_path,
+                                      f"volcano_plot_data_{g1}_vs_{g2}_full_{col_mapping[col].replace(' ', '_')}.csv"))
+        # save significant values
+        volcano_data[volcano_data[col] < 0.05].to_csv(
+            os.path.join(save_path,
+                         f"volcano_plot_data_{g1}_vs_{g2}_significant_{col_mapping[col].replace(' ', '_')}.csv"))
+        # save unique values
+        if unique_g1 is not None:
+            unique_g1.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g1}.csv"), header=True)
+        if unique_g2 is not None:
+            unique_g2.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g2}.csv"), header=True)
 
     def get_volcano_significances(fchange, pval, fchange_threshold):
         if pval > 0.05 or abs(fchange) < np.log2(fchange_threshold):
@@ -160,9 +161,11 @@ def save_volcano_results(
     for log_fold_change, p_val, gene_name in zip(significant["logFC"], significant[col], significant.index):
         texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center", fontsize=8))
     adjust_text(texts, arrowprops=dict(width=0.15, headwidth=0, color='gray', alpha=0.6), ax=ax)
-    res_path = os.path.join(save_path, f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
-    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    if save_path is not None:
+        res_path = os.path.join(save_path, f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
     # TODO scatter plot of significant genes
+    return fig, (ax, ax_unique_down, ax_unique_up)
 
 
 def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, save_path: str = ".",
@@ -211,12 +214,14 @@ def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: boo
 
     if show_suptitle:
         fig.suptitle(f"{kwargs['df_to_use']} intensity", fontsize="xx-large")
-    res_path = os.path.join(save_path,
-                            f"pca_{kwargs['df_to_use']}" + FIG_FORMAT)
     legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=color_map)
     fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=20)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    if save_path is not None:
+        res_path = os.path.join(save_path,
+                                f"pca_{kwargs['df_to_use']}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    return fig, axarr
 
 
 def save_pathway_analysis_results(
@@ -242,8 +247,9 @@ def save_pathway_analysis_results(
         ax.set_yticklabels(level_keys)
         ax.set_xlabel(intensity_label)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_no_labels" + FIG_FORMAT)
-    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    if save_path is not None:
+        res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_no_labels" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     if significances is not None:
         significances.to_csv(os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_pvalues.csv"))
@@ -257,8 +263,10 @@ def save_pathway_analysis_results(
                 plot_annotate_line(ax, level_keys.index(index[0]), level_keys.index(index[1]), xmax * (1 + i * 0.015) - 0.005, pval)
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+        if save_path is not None:
+            res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    return fig, axarr
 
 
 def save_boxplot_results(
@@ -281,10 +289,11 @@ def save_boxplot_results(
         accepts kwargs
 
     """
+    # TODO give colors to the different groups
     plt.close("all")
     fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
     # indicate overall median with a line
-    ax.axvline(np.nanmedian(protein_intensities.values), color="black", alpha=0.5, linewidth=1)
+    ax.axvline(np.nanmedian(protein_intensities.values.flatten()), color="black", alpha=0.5, linewidth=1)
     # convert the data into a list of lists and filter nan values
     data = [
         protein_intensities.loc[~pd.isna(protein_intensities.loc[:, c]), c].tolist()
@@ -296,6 +305,7 @@ def save_boxplot_results(
     if save_path is not None:
         res_path = os.path.join(save_path, f"boxplot_{intensity_label}_level_{level}" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    return fig, ax
 
 
 def save_relative_std_plot(
