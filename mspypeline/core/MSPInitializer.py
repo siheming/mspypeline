@@ -179,8 +179,6 @@ class MSPInitializer:
         os.rename(yml_file_loc_tmp, yml_file_loc)
 
     def read_data(self):
-        # read the proteins_txt and peptides_txt
-        self.logger.info("Reading %s, and %s", MQReader.proteins_txt, MQReader.peptides_txt)
         for Reader in BaseReader.__subclasses__():
             Reader: Type[BaseReader]  # for IDE hints
             try:

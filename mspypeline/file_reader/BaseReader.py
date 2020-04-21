@@ -8,6 +8,10 @@ class BaseReader(ABC):
         self.start_dir = start_dir
         self.reader_config = reader_config
         self.logger = get_logger(self.get_class_name(), loglevel)
+
+        # log which files will be read
+        self.logger.info("Reading files: %s", self.all_files)
+        self.logger.debug("Got configs: %s", self.reader_config)
         if start_dir is None:
             raise ValueError("Invalid starting dir")
         if not reader_config:
