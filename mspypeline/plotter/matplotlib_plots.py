@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,7 +7,7 @@ import matplotlib.gridspec as gridspec
 from adjustText import adjust_text
 from sklearn.decomposition import PCA
 
-from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements
+from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, get_plot_name_suffix
 
 FIG_FORMAT = ".pdf"
 
@@ -377,3 +378,62 @@ def save_relative_std_results(
         plt.close(fig)
 
     return fig, ax
+
+
+def save_detection_counts_results(
+        counts: pd.DataFrame, level: int = None, intensity_label: str = "Intensity", df_to_use: str = None,
+        show_suptitle: bool = True, save_path: str = ".", **kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    """
+
+    Parameters
+    ----------
+    counts
+        DataFrame containing the counts to be plotted
+    level
+        on which level was the data aggregated
+    intensity_label
+        label of the dataframe
+    df_to_use
+        which dataframe was used
+    show_suptitle
+        should the figure title be shown
+    save_path
+        path to which the figure will be saved
+    kwargs
+        accepts kwargs
+
+    Returns
+    -------
+    figure and axis of the plot
+
+    """
+    plt.close("all")
+
+    n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(counts.columns)
+    fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, squeeze=True,
+                              figsize=(5 * n_cols_experiment, 3 * n_rows_experiment))
+    if show_suptitle:
+        fig.suptitle(f"Detection counts from {intensity_label}")
+
+    for (pos, ax), col in zip(np.ndenumerate(axarr), counts.columns):
+        col_data = counts.loc[:, col]
+        col_data = col_data[~pd.isna(col_data)]
+
+        ax.set_title(f"{col},\ntotal detected: {int(col_data.sum())}")
+        ax.barh(col_data.index, col_data, color="skyblue")
+        for y, value in zip(col_data.index, col_data):
+            ax.text(col_data.max() / 2, y, value,
+                    verticalalignment='center', horizontalalignment='center')
+
+        ax.set_yticks(col_data.index)
+        ax.set_yticklabels([f"detected in {i} replicates" for i in col_data.index])
+        ax.set_xlabel("Counts")
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    if save_path is not None:
+        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
+        res_path = os.path.join(save_path, f"detected_counts{suffix}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    return fig, axarr

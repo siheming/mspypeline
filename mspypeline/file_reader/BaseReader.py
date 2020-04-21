@@ -7,7 +7,7 @@ class BaseReader(ABC):
         self.full_data = {}
         self.start_dir = start_dir
         self.reader_config = reader_config
-        self.logger = get_logger(self.get_class_name(), loglevel)
+        self.logger = get_logger(self.__class__.__name__, loglevel)
 
         # log which files will be read
         self.logger.info("Reading files: %s", self.all_files)
@@ -17,10 +17,6 @@ class BaseReader(ABC):
         if not reader_config:
             # raise ValueError("Empty configs")
             pass
-
-    @classmethod
-    def get_class_name(cls):
-        return cls.__name__
 
     @property
     @classmethod

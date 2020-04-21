@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from itertools import combinations
 from collections import defaultdict as ddict
-from collections.abc import Iterable
+from _collections_abc import Iterable
 import logging
 import warnings
 from typing import Dict
@@ -144,7 +144,7 @@ class MSPPlots:
             )
 
     def create_results(self):
-        for plot_name in MSPPlots.possible_plots:
+        for plot_name in self.possible_plots:
             plot_settings_name = plot_name + "_settings"
             plot_settings = self.configs.get(plot_settings_name, {})
             if plot_settings.pop("create_plot", False):
@@ -331,38 +331,44 @@ class MSPPlots:
                 # create a mixture of bar and venn diagram
                 self.save_bar_venn(key, named_sets, show_suptitle=show_suptitle)
 
+    def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str: pd.DataFrame]:
+        """
+        Counts the number values greater than 0 per protein
+
+        Parameters
+        ----------
+        df_to_use
+            DataFrame to use
+        level
+            level to use
+        kwargs
+            accepts kwargs
+
+        Returns
+        -------
+        Dictionary with DataFrame containing the counts
+
+        """
+        level_values = self.all_tree_dict[df_to_use].level_keys_full_name[level]
+        level_counts = []
+        for full_name in level_values:
+            intensities = self.all_tree_dict[df_to_use][full_name].aggregate(None)
+            # from 0 to number of replicates, how often was each protein detected
+            counts = (intensities > 0).sum(axis=1)
+            counts = counts.value_counts().drop([0], errors="ignore").rename(full_name)
+            level_counts.append(counts)
+        level_counts = pd.concat(level_counts, axis=1).astype("Int64").sort_index()
+        return {"counts": level_counts}
+
     @exception_handler
-    def plot_detection_counts(self, df_to_use: str = "raw", show_suptitle: bool = True, levels: Iterable = (0,)):
+    def plot_detection_counts(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
         for level in levels:
-            plt.close("all")
-            # determine number of rows and columns in the plot based on the number of experiments
-            level_values = self.all_tree_dict[df_to_use].level_keys_full_name[level]
-            n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(level_values)
-            fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, squeeze=True,
-                                      figsize=(5 * n_cols_experiment, 3 * n_rows_experiment))
-            if show_suptitle:
-                fig.suptitle(f"Detection counts from {self.intensity_label_names[df_to_use]} intensities")
-            for experiment, ax in zip(level_values, axarr.flat):
-                intensities = self.all_tree_dict[df_to_use][experiment].aggregate(None)
-                # from 0 to number of replicates, how often was each protein detected
-                counts = (intensities > 0).sum(axis=1)
-                counts = counts[counts > 0]
-                heights = [len(counts[counts == value]) for value in sorted(counts.unique())]
-                # y_pos = [value for value in sorted(counts.unique())]  # old version
-                y_pos = [f"detected in {value} replicates" for value in sorted(counts.unique())]
-                max_val = max(heights)
-
-                ax.set_title(f"{experiment},\ntotal detected: {len(counts)}")
-                ax.barh(y_pos, heights, color="skyblue")
-                for y, value in zip(y_pos, heights):
-                    ax.text(max_val / 2, y, value,
-                            verticalalignment='center', horizontalalignment='center')
-                ax.set_yticks(y_pos)
-                ax.set_xlabel("Counts")
-
-            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-            res_path = os.path.join(self.file_dir_descriptive, f"detected_counts" + FIG_FORMAT)
-            fig.savefig(res_path, dpi=200, bbox_inches="tight")
+            data = self.get_detection_counts_data(df_to_use=df_to_use, level=level, **kwargs)
+            if data:
+                matplotlib_plots.save_detection_counts_results(
+                    **data, intensity_label=self.intensity_label_names[df_to_use], df_to_use=df_to_use,
+                    level=level, save_path=self.file_dir_descriptive, **kwargs
+                )
 
     @exception_handler
     def plot_number_of_detected_proteins(self, df_to_use: str = "raw", show_suptitle: bool = True, levels: Iterable = (0,)):
