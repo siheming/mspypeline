@@ -21,7 +21,7 @@ class UIHandler:
         if gui and host_flask:
             raise ValueError("Can only specify one of host_flask and gui")
         if gui:
-            MSPUI(file_dir=file_dir, yml_file=yml_file, loglevel=loglevel, configs=configs)
+            MSPGUI(file_dir=file_dir, yml_file=yml_file, loglevel=loglevel, configs=configs)
         elif host_flask:
             # TODO pass arguments to create app
             app = create_app()
@@ -37,7 +37,7 @@ class UIHandler:
             mspplots.create_results()
 
 
-class MSPUI(tk.Tk):
+class MSPGUI(tk.Tk):
     def __init__(self, file_dir, yml_file="default", loglevel=logging.DEBUG, configs: dict = None):
         super().__init__()
         self.yaml_options = ["default"]
