@@ -331,7 +331,7 @@ class MSPPlots:
                 # create a mixture of bar and venn diagram
                 self.save_bar_venn(key, named_sets, show_suptitle=show_suptitle)
 
-    def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str: pd.DataFrame]:
+    def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """
         Counts the number values greater than 0 per protein
 
