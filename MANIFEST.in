@@ -1,0 +1,3 @@
+include LICENSE.txt
+include mspypeline/config/go_terms/*.txt
+include mspypeline/config/pathways/*.txt
