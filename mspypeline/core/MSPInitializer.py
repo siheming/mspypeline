@@ -21,7 +21,7 @@ class MSPInitializer:
     possible_gos = sorted([x for x in os.listdir(os.path.join(path_package_config, go_path)) if x.endswith(".txt")])
     possible_pathways = sorted([x for x in os.listdir(os.path.join(path_package_config, pathway_path)) if x.endswith(".txt")])
 
-    def __init__(self, dir_: str, file_path_yml: str = "default", loglevel=logging.DEBUG):
+    def __init__(self, dir_: str, file_path_yml: str = "file", loglevel=logging.DEBUG):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # create a yaml file reader
         self.yaml = YAML()
@@ -30,8 +30,7 @@ class MSPInitializer:
         self.yaml.default_flow_style = False
 
         # attributes that change upon changing the starting dir
-        self.configs = None
-        self.path_config = None
+        self.configs = {}
         self.naming_convention = None
 
         self.reader_data = {}
@@ -60,10 +59,11 @@ class MSPInitializer:
         self.logger.info(f"Starting dir: {self.start_dir}")
         # set all attributes back None that where file specific
         self.naming_convention = None
-        self.configs = None
-        # just set the path to file, since if not found the default will be used
-        self.file_path_yaml = "file"
-        self.path_config = os.path.join(self.start_dir, "config")
+        self.configs = {}
+
+    @property
+    def path_config(self):
+        return os.path.join(self.start_dir, "config")
 
     @property
     def file_path_yaml(self):
@@ -179,8 +179,6 @@ class MSPInitializer:
         os.rename(yml_file_loc_tmp, yml_file_loc)
 
     def read_data(self):
-        # read the proteins_txt and peptides_txt
-        self.logger.info("Reading %s, and %s", MQReader.proteins_txt, MQReader.peptides_txt)
         for Reader in BaseReader.__subclasses__():
             Reader: Type[BaseReader]  # for IDE hints
             try:

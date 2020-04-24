@@ -10,8 +10,7 @@ Welcome to MSPypeline's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   core
-   helpers
+   autoapi/mspypeline/index
 
 
 

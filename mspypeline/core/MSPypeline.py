@@ -3,14 +3,12 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 
-from mspypeline import MSPInitializer, MSPPlots
+from mspypeline import MSPInitializer, MSPPlots, MaxQuantPlotter
 from mspypeline import create_app
-import inspect
-assert inspect.isclass(MSPPlots)
 
 
 class UIHandler:
-    def __init__(self, file_dir, yml_file="default", gui=False, host_flask=False, loglevel=logging.DEBUG, configs: dict = None):
+    def __init__(self, file_dir, yml_file="default", gui=False, host_flask=False, selected_reader=MaxQuantPlotter, loglevel=logging.DEBUG, configs: dict = None):
         base_config = {
             "has_replicates": False,
             "has_groups": False,
@@ -23,7 +21,7 @@ class UIHandler:
         if gui and host_flask:
             raise ValueError("Can only specify one of host_flask and gui")
         if gui:
-            MSPUI(file_dir=file_dir, yml_file=yml_file, loglevel=loglevel, configs=configs)
+            MSPGUI(file_dir=file_dir, yml_file=yml_file, loglevel=loglevel, configs=configs)
         elif host_flask:
             # TODO pass arguments to create app
             app = create_app()
@@ -34,15 +32,16 @@ class UIHandler:
             mspinit.configs.update(configs)
             mspinit.read_data()
             # create plotter from initializer
-            mspplots = MSPPlots.from_MSPInitializer(mspinit)
+            mspplots = selected_reader.from_MSPInitializer(mspinit)
             # create all plots and other results
             mspplots.create_results()
 
 
-class MSPUI(tk.Tk):
+class MSPGUI(tk.Tk):
     def __init__(self, file_dir, yml_file="default", loglevel=logging.DEBUG, configs: dict = None):
         super().__init__()
         self.yaml_options = ["default"]
+        self.selected_reader = MaxQuantPlotter
 
         self.number_of_plots = 0
 
@@ -94,7 +93,7 @@ class MSPUI(tk.Tk):
         level_names = self.mspinit.configs.get("level_names", [])
         level_names = {i: name for i, name in enumerate(level_names)}
         levels = self.mspinit.configs.get("levels", 3)
-        for plot_name in MSPPlots.possible_plots:
+        for plot_name in self.selected_reader.possible_plots:
             plot_settings_name = plot_name + "_settings"
             plot_settings = self.mspinit.configs.get(plot_settings_name, {})
             plot_levels = plot_settings.get("levels", [])
@@ -113,7 +112,7 @@ class MSPUI(tk.Tk):
         self.update_listboxes()
 
     def update_button(self):
-        for plot_name in MSPPlots.possible_plots:
+        for plot_name in self.selected_reader.possible_plots:
             plot_settings = plot_name + "_settings"
             var_name = plot_name.replace("plot_", "") + "_var"
             int_name = var_name.replace("var", "int")
@@ -139,7 +138,7 @@ class MSPUI(tk.Tk):
         self.running_text.set("Creating Plots")
         self.update()
         self.update_button()
-        mspplots = MSPPlots.from_MSPInitializer(self.mspinit)
+        mspplots = self.selected_reader.from_MSPInitializer(self.mspinit)
         mspplots.create_results()
         self.running_text.set("Please press Start")
 
@@ -209,6 +208,7 @@ class MSPUI(tk.Tk):
         self.venn_groups_int, self.venn_groups_var, self.venn_groups_levels = self.plot_row("Group diagrams", "raw_log2")
         self.r_volcano_int, self.r_volcano_var, self.r_volcano_levels = self.plot_row("Volcano plot (R)", "raw_log2")
         self.pca_overview_int, self.pca_overview_var, self.pca_overview_levels = self.plot_row("PCA overview", "raw")
+        self.boxplot_int, self.boxplot_var, self.boxplot_levels = self.plot_row("Boxplot", "raw")
 
         total_length = self.heading_length + self.number_of_plots
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())

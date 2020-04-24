@@ -1,7 +1,7 @@
 from collections import defaultdict as ddict
 from collections import deque
 import pandas as pd
-from typing import Union, Callable, Dict
+from typing import Union, Callable, Dict, List
 
 
 class DataNode:
@@ -16,10 +16,20 @@ class DataNode:
         Parameters
         ----------
         name
+            Name of the node
         level
+            depth of the node
         parent
+            Parent of this node
         data
+            Is None when there are nodes below this one, which were not aggregated as technical replicated
         children
+            Maps name of a child to a child node
+
+        See Also
+        --------
+        DataTree: A class to help construct a node structure from data
+
         """
         self.name = name
         self.parent = parent
@@ -51,7 +61,19 @@ class DataNode:
         for child in self.__iter__():
             return child
 
-    def get_total_number_children(self, go_max_depth: bool = False):
+    def get_total_number_children(self, go_max_depth: bool = False) -> int:
+        """
+
+        Parameters
+        ----------
+        go_max_depth
+
+        Returns
+        -------
+        n_children
+            The number of all children below this node
+
+        """
         queue = deque([self])
         n_children = 0
         while queue:
@@ -68,7 +90,7 @@ class DataNode:
     def aggregate(self,
                   method: Union[None, str, Callable] = "mean",
                   go_max_depth: bool = False,
-                  index=None):
+                  index: Union[None, str, pd.Index] = None):
         """
 
         Parameters
@@ -78,7 +100,7 @@ class DataNode:
         go_max_depth
             If technical replicates were aggregated, this can be specified to use the unaggregated values instead.
         index
-            Index to subset the data with.
+            Index to subset the data with. If None no index is applied
 
         Returns
         -------
@@ -109,25 +131,30 @@ class DataNode:
             data = data.aggregate(method, axis=1).rename(self.full_name, axis=1)
         return data
 
-    # TODO
-    def groupby(self, method="mean", go_max_depth=False, index=None):
+    def groupby(
+            self, method: Union[str, Callable] = "mean",
+            go_max_depth: bool = False,
+            index: Union[None, str, pd.Index] = None
+    ) -> Union[pd.Series, pd.DataFrame]:
         """
         consider each child a group then aggregate all children
+
         Parameters
         ----------
-        method: Union[str, Callable]
+        method
             Will be passed to aggregate.
-        go_max_depth: bool
+        go_max_depth
             Will be passed to aggregate.
-        index:
+        index
             Will be passed to aggregate.
 
         Returns
         -------
-        Union[pd.Series, pd.DataFrame]
+        data
             Result of the grouping
 
         See Also
+        --------
         aggregate : Will be called on each of the groups
 
         """
@@ -147,16 +174,16 @@ class DataTree:
     ----------
     root: DataNode
         Does stuff
-    level_keys_full_name: ddict(list)
+    level_keys_full_name: Dict[int, List[str]]
         Has all DataNode.full_name of a depth level of all levels
 
     """
-    def __init__(self, root):
+    def __init__(self, root: DataNode):
         """
 
         Parameters
         ----------
-        root: DataNode
+        root
             The root node of the Tree.
         """
         self.root = root
@@ -174,21 +201,28 @@ class DataTree:
 
     @classmethod
     def from_analysis_design(cls,
-                             analysis_design,
-                             data: pd.DataFrame = None,
+                             analysis_design: dict,
+                             data: Union[None, pd.DataFrame] = None,
                              should_aggregate_technical_replicates: bool = True):
         """
 
         Parameters
         ----------
         analysis_design
+            nested dict
         data
-            Will be passed to add_data
+            Will be passed to add_data. If None no data is added
         should_aggregate_technical_replicates
+            If True the lowest level of the analysis design is considered as a technical replicate and averaged
 
         Returns
         -------
         cls
+
+        See Also
+        --------
+        add_data: will be called if data is not None
+        aggregate_technical_replicates: will be called if should_aggregate_technical_replicates
 
         """
         root = DataNode()
@@ -209,11 +243,25 @@ class DataTree:
             c.aggregate_technical_replicates()
         return c
 
-    def aggregate(self,
-                  key: Union[None, str] = None,
-                  method: Union[None, str, Callable] = "mean",
-                  go_max_depth: bool = False,
-                  index=None):
+    def aggregate(
+            self, key: Union[None, str] = None,
+            method: Union[None, str, Callable] = "mean",
+            go_max_depth: bool = False,
+            index=None
+    ) -> Union[pd.Series, pd.DataFrame]:
+        """
+
+        Parameters
+        ----------
+        key
+        method
+        go_max_depth
+        index
+
+        Returns
+        -------
+
+        """
         if key is None:
             return self.root.aggregate(method, go_max_depth, index)
         elif isinstance(key, str):
@@ -226,7 +274,21 @@ class DataTree:
                 new_col_name: str = None,
                 method: Union[None, str, Callable] = "mean",
                 go_max_depth: bool = False,
-                index=None):
+                index=None) -> Union[pd.Series, pd.DataFrame]:
+        """
+
+        Parameters
+        ----------
+        key_or_index
+        new_col_name
+        method
+        go_max_depth
+        index
+
+        Returns
+        -------
+
+        """
         if key_or_index is None:
             return self.root.groupby(method, go_max_depth, index)
         elif isinstance(key_or_index, str):
@@ -248,13 +310,14 @@ class DataTree:
         else:
             raise ValueError(f"Invalid input for key: {key_or_index}, with type: {type(key_or_index)}")
 
-    def add_data(self, data):
+    def add_data(self, data: pd.DataFrame):
         """
 
         Parameters
         ----------
-        data : pd.DataFrame
-            Data which will be used to fill the nodes with a Series.
+        data
+            Data which will be used to fill the nodes with a Series. The column names of the data need to be the same as
+            the full names of the DataNode.
 
         """
         queue = deque([self.root])
@@ -266,6 +329,10 @@ class DataTree:
                     child.data = data.loc[:, child.full_name]
 
     def aggregate_technical_replicates(self):
+        """
+        aggregates all the stuff!
+
+        """
         queue = deque([self.root])
         while queue:
             parent = queue.popleft()

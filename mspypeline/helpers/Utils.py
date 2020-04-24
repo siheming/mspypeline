@@ -231,3 +231,24 @@ def get_legend_elements(labels: list, color_map: dict = None):
                               markerfacecolor=color_map.get(name, "blue"), markersize=10)
                        for name in labels]
     return legend_elements
+
+
+def get_plot_name_suffix(df_to_use: str = None, level: str = None) -> str:
+    """
+    Generate a suffix for the plot name
+
+    Parameters
+    ----------
+    df_to_use
+        dataframe that was used
+    level
+        level on which data was aggregated
+
+    Returns
+    -------
+    a string which can be used as a suffix for file paths
+
+    """
+    s = "" if df_to_use is None else f"_{df_to_use}"
+    s += "" if level is None else f"_{level}"
+    return s

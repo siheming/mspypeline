@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,14 +7,16 @@ import matplotlib.gridspec as gridspec
 from adjustText import adjust_text
 from sklearn.decomposition import PCA
 
-from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements
+from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, get_plot_name_suffix
 
 FIG_FORMAT = ".pdf"
+
+# TODO include option to specify None as savepath and dont save
 
 
 def save_volcano_results(
         volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", col: str = "adjpval", intensity_label: str = "", save_path=os.getcwd(),
+        g2: str = "group2", col: str = "adjpval", intensity_label: str = "", save_path=".",
         show_suptitle: bool = True, fchange_threshold: float = 2, scatter_size: float = 10,
         n_labelled_proteins: int = 10
 ):
@@ -22,8 +25,8 @@ def save_volcano_results(
 
     Parameters
     ----------
-    volcano_data:
-        DataFrame containing data for the volcano plot with columns logFC and column specified under col. THe index
+    volcano_data
+        DataFrame containing data for the volcano plot with columns logFC and column specified under col. The index
         should be protein names or gene names
     unique_g1
         Series containing intensities of proteins or genes unique to group one
@@ -54,18 +57,19 @@ def save_volcano_results(
 
     col_mapping = {"adjpval": "adjusted p value", "pval": "unadjusted p value"}
 
-    # save all values
-    volcano_data.to_csv(os.path.join(save_path,
-                                  f"volcano_plot_data_{g1}_vs_{g2}_full_{col_mapping[col].replace(' ', '_')}.csv"))
-    # save significant values
-    volcano_data[volcano_data[col] < 0.05].to_csv(
-        os.path.join(save_path,
-                     f"volcano_plot_data_{g1}_vs_{g2}_significant_{col_mapping[col].replace(' ', '_')}.csv"))
-    # save unique values
-    if unique_g1 is not None:
-        unique_g1.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g1}.csv"), header=True)
-    if unique_g2 is not None:
-        unique_g2.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g2}.csv"), header=True)
+    if save_path is not None:
+        # save all values
+        volcano_data.to_csv(os.path.join(save_path,
+                                      f"volcano_plot_data_{g1}_vs_{g2}_full_{col_mapping[col].replace(' ', '_')}.csv"))
+        # save significant values
+        volcano_data[volcano_data[col] < 0.05].to_csv(
+            os.path.join(save_path,
+                         f"volcano_plot_data_{g1}_vs_{g2}_significant_{col_mapping[col].replace(' ', '_')}.csv"))
+        # save unique values
+        if unique_g1 is not None:
+            unique_g1.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g1}.csv"), header=True)
+        if unique_g2 is not None:
+            unique_g2.to_csv(os.path.join(save_path, f"volcano_plot_data_{g1}_vs_{g2}_unique_{g2}.csv"), header=True)
 
     def get_volcano_significances(fchange, pval, fchange_threshold):
         if pval > 0.05 or abs(fchange) < np.log2(fchange_threshold):
@@ -158,12 +162,14 @@ def save_volcano_results(
     for log_fold_change, p_val, gene_name in zip(significant["logFC"], significant[col], significant.index):
         texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center", fontsize=8))
     adjust_text(texts, arrowprops=dict(width=0.15, headwidth=0, color='gray', alpha=0.6), ax=ax)
-    res_path = os.path.join(save_path, f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
-    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    if save_path is not None:
+        res_path = os.path.join(save_path, f"volcano_{g1}_{g2}_annotation_{col_mapping[col].replace(' ', '_')}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
     # TODO scatter plot of significant genes
+    return fig, (ax, ax_unique_down, ax_unique_up)
 
 
-def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA, normalize: bool = True, save_path: str = ".",
+def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, save_path: str = ".",
                      show_suptitle: bool = True, **kwargs):
     """
         Saves image containing the pca results
@@ -183,17 +189,21 @@ def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA, normalize: bool = Tru
 
 
     """
-    singular_values = pca_fit.singular_values_
+    plt.close("all")
     n_components = pca_data.shape[0]
+    singular_values = np.ones(n_components)
     color_map = {value: f"C{i}" for i, value in enumerate(pca_data.columns.get_level_values(0).unique())}
     color_map.update(kwargs.get("color_map", {}))
-    if not normalize:
-        singular_values = np.ones(n_components)
+    if normalize and pca_fit is None:
+        # TODO warning
+        pass
+    elif normalize and pca_fit is not None:
+        singular_values = pca_fit.singular_values_
     fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
     for row in range(n_components):
-        row_pc  = row + 1
+        row_pc = row + 1
         for col in range(n_components):
-            col_pc  = col + 1
+            col_pc = col + 1
             if row > col:
                 ax = axarr[col, row]
                 ax.scatter(
@@ -205,12 +215,14 @@ def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA, normalize: bool = Tru
 
     if show_suptitle:
         fig.suptitle(f"{kwargs['df_to_use']} intensity", fontsize="xx-large")
-    res_path = os.path.join(save_path,
-                            f"pca_{kwargs['df_to_use']}" + FIG_FORMAT)
     legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=color_map)
     fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=20)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    if save_path is not None:
+        res_path = os.path.join(save_path,
+                                f"pca_{kwargs['df_to_use']}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    return fig, axarr
 
 
 def save_pathway_analysis_results(
@@ -236,8 +248,9 @@ def save_pathway_analysis_results(
         ax.set_yticklabels(level_keys)
         ax.set_xlabel(intensity_label)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_no_labels" + FIG_FORMAT)
-    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    if save_path is not None:
+        res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_no_labels" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     if significances is not None:
         significances.to_csv(os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}_pvalues.csv"))
@@ -251,5 +264,176 @@ def save_pathway_analysis_results(
                 plot_annotate_line(ax, level_keys.index(index[0]), level_keys.index(index[1]), xmax * (1 + i * 0.015) - 0.005, pval)
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}" + FIG_FORMAT)
+        if save_path is not None:
+            res_path = os.path.join(save_path, f"{pathway}_level_{level}_{intensity_label}" + FIG_FORMAT)
+            fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    return fig, axarr
+
+
+def save_boxplot_results(
+        protein_intensities: pd.DataFrame, save_path: str = ".", level: int = 0, intensity_label: str = "Intensity", **kwargs
+):
+    """
+    Boxplot of intensities
+
+    Parameters
+    ----------
+    protein_intensities
+        DataFrame where each column are the intensities to boxplot, column names will be used as labels
+    save_path
+        path under which the results will be saved
+    level
+        level from with the data comes from. used for the save path
+    intensity_label
+        label of the x axis of the plot
+    kwargs
+        accepts kwargs
+
+    """
+    # TODO give colors to the different groups
+    plt.close("all")
+    fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
+    # indicate overall median with a line
+    ax.axvline(np.nanmedian(protein_intensities.values.flatten()), color="black", alpha=0.5, linewidth=1)
+    # convert the data into a list of lists and filter nan values
+    data = [
+        protein_intensities.loc[~pd.isna(protein_intensities.loc[:, c]), c].tolist()
+        for c in protein_intensities.columns
+    ]
+    ax.boxplot(data, vert=False, labels=protein_intensities.columns)
+    ax.set_xlabel(intensity_label)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    if save_path is not None:
+        res_path = os.path.join(save_path, f"boxplot_{intensity_label}_level_{level}" + FIG_FORMAT)
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
+    return fig, ax
+
+
+def save_relative_std_results(
+        intensities: pd.DataFrame, name: str, df_to_use: str = "raw", intensity_label: str = "Intensity",
+        bins=(10, 20, 30), save_path: str = ".", cmap: dict = None, **kwargs
+):
+    """
+    Relative standard deviations of passed intensities with color marking based on the specified bins and color map
+
+    Parameters
+    ----------
+    intensities
+        DataFrame with experiment intensities to be plotted
+    name
+        name of the overall experiment
+    df_to_use
+        from which intensities was the data gathered
+    intensity_label
+        name of the intensities for the x label
+    bins
+        in which bins should the standard deviations be categorized
+    save_path
+        path to which the figure will be saved
+    cmap
+        mapping for the digitized labels to a color
+    kwargs
+        accepts kwargs
+
+    Returns
+    -------
+    figure and axis of the plot
+
+    """
+    # TODO add percentage to absolute numbers
+    # TODO see if code could be optimized
+    plt.close("all")
+
+    bins = np.array(bins)
+    if "log2" in df_to_use:
+        bins = np.log2(bins)
+
+    cm = {0: "navy", 1: "royalblue", 2: "skyblue", 3: "darkgray"}
+    if cmap is not None:
+        cm.update(cmap)
+
+    relative_std_percent = intensities.std(axis=1) / intensities.mean(axis=1) * 100
+
+    inds = np.digitize(relative_std_percent, bins).astype(int)
+    colors = pd.Series([cm.get(x, "black") for x in inds], index=relative_std_percent.index)
+    color_counts = {color: (colors == color).sum() for color in colors.unique()}
+
+    fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+    ax.scatter(intensities.mean(axis=1), relative_std_percent, c=colors, marker="o", s=(2 * 72. / fig.dpi) ** 2,
+               alpha=0.8)
+    ax.set_xlabel(f"Mean {intensity_label}")
+    ax.set_ylabel("Relative Standard deviation [%]")
+    if "log2" not in df_to_use:
+        ax.set_xscale('log')
+    xmin, xmax = ax.get_xbound()
+    cumulative_count = 0
+    for i, bin_ in enumerate(bins):
+        cumulative_count += color_counts.get(cm[i], 0)
+        ax.axhline(bin_, color=cm[i])
+        ax.text(xmin, bin_, cumulative_count)
+
+    if save_path is not None:
+        res_path = os.path.join(save_path, f"rel_std_{name}_{df_to_use}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+
+    return fig, ax
+
+
+def save_detection_counts_results(
+        counts: pd.DataFrame, level: int = None, intensity_label: str = "Intensity", df_to_use: str = None,
+        show_suptitle: bool = True, save_path: str = ".", **kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    """
+
+    Parameters
+    ----------
+    counts
+        DataFrame containing the counts to be plotted
+    level
+        on which level was the data aggregated
+    intensity_label
+        label of the dataframe
+    df_to_use
+        which dataframe was used
+    show_suptitle
+        should the figure title be shown
+    save_path
+        path to which the figure will be saved
+    kwargs
+        accepts kwargs
+
+    Returns
+    -------
+    figure and axis of the plot
+
+    """
+    plt.close("all")
+
+    n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(counts.columns)
+    fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, squeeze=True,
+                              figsize=(5 * n_cols_experiment, 3 * n_rows_experiment))
+    if show_suptitle:
+        fig.suptitle(f"Detection counts from {intensity_label}")
+
+    for (pos, ax), col in zip(np.ndenumerate(axarr), counts.columns):
+        col_data = counts.loc[:, col]
+        col_data = col_data[~pd.isna(col_data)]
+
+        ax.set_title(f"{col},\ntotal detected: {int(col_data.sum())}")
+        ax.barh(col_data.index, col_data, color="skyblue")
+        for y, value in zip(col_data.index, col_data):
+            ax.text(col_data.max() / 2, y, value,
+                    verticalalignment='center', horizontalalignment='center')
+
+        ax.set_yticks(col_data.index)
+        ax.set_yticklabels([f"detected in {i} replicates" for i in col_data.index])
+        ax.set_xlabel("Counts")
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    if save_path is not None:
+        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
+        res_path = os.path.join(save_path, f"detected_counts{suffix}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    return fig, axarr
