@@ -16,4 +16,3 @@ dependencies:
   - scikit-learn=0.22.1
   - plotly=4.6.0
 prefix: C:\Users\admvlasov\Anaconda3\envs\mspypeline
-
