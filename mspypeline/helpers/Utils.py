@@ -233,7 +233,7 @@ def get_legend_elements(labels: list, color_map: dict = None):
     return legend_elements
 
 
-def get_plot_name_suffix(df_to_use: str = None, level: str = None) -> str:
+def get_plot_name_suffix(df_to_use: str = None, level: int = None) -> str:
     """
     Generate a suffix for the plot name
 

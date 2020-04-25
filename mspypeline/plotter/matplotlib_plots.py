@@ -4,12 +4,35 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.colors as colors
+import matplotlib.cm as cm
+from matplotlib.collections import LineCollection
 from adjustText import adjust_text
+from matplotlib.colorbar import ColorbarBase
+from scipy.optimize import curve_fit
+from scipy.stats import gaussian_kde
 from sklearn.decomposition import PCA
 
 from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, get_plot_name_suffix
 
 FIG_FORMAT = ".pdf"
+
+
+def linear(x, m, b):
+    return m * x + b
+
+
+class QuantileNormalize(colors.Normalize):
+    def __init__(self, quantiles: pd.Series):
+        self.quantiles = quantiles
+        assert self.quantiles.index.min() >= 0
+        assert self.quantiles.index.max() <= 1
+        self.outputs = np.concatenate((self.quantiles.index.values, [1]))
+        super().__init__(0, 1)
+
+    def __call__(self, value, clip=None):
+        index = np.searchsorted(self.quantiles, value)
+        return np.ma.array(self.outputs[index], fill_value=0)
 
 # TODO include option to specify None as savepath and dont save
 
@@ -271,7 +294,8 @@ def save_pathway_analysis_results(
 
 
 def save_boxplot_results(
-        protein_intensities: pd.DataFrame, save_path: str = ".", level: int = 0, intensity_label: str = "Intensity", **kwargs
+        protein_intensities: pd.DataFrame, save_path: str = ".", level: int = 0, intensity_label: str = "Intensity",
+        plot: Tuple[plt.Figure, plt.Axes] = None, vertical: bool = False, **kwargs
 ):
     """
     Boxplot of intensities
@@ -286,22 +310,37 @@ def save_boxplot_results(
         level from with the data comes from. used for the save path
     intensity_label
         label of the x axis of the plot
+    plot
+        asd
+    vertical
+
     kwargs
         accepts kwargs
 
     """
     # TODO give colors to the different groups
-    plt.close("all")
-    fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
+    if plot is None:
+        plt.close("all")
+        fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
+    else:
+        fig, ax = plot
     # indicate overall median with a line
-    ax.axvline(np.nanmedian(protein_intensities.values.flatten()), color="black", alpha=0.5, linewidth=1)
+    median_value = np.nanmedian(protein_intensities.values.flatten())
+    line_kwargs = dict(color="black", alpha=0.5, linewidth=1)
+    if vertical:
+        ax.axhline(median_value, **line_kwargs)
+    else:
+        ax.axvline(median_value, **line_kwargs)
     # convert the data into a list of lists and filter nan values
     data = [
         protein_intensities.loc[~pd.isna(protein_intensities.loc[:, c]), c].tolist()
         for c in protein_intensities.columns
     ]
-    ax.boxplot(data, vert=False, labels=protein_intensities.columns)
-    ax.set_xlabel(intensity_label)
+    ax.boxplot(data, vert=vertical, labels=protein_intensities.columns)
+    if vertical:
+        ax.set_ylabel(intensity_label)
+    else:
+        ax.set_xlabel(intensity_label)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     if save_path is not None:
         res_path = os.path.join(save_path, f"boxplot_{intensity_label}_level_{level}" + FIG_FORMAT)
@@ -437,3 +476,123 @@ def save_detection_counts_results(
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
     return fig, axarr
+
+
+def save_kde_results(
+        intensities: pd.DataFrame, quantile_range: np.array = None, intensity_label: str = "Intensity",
+        n_points: int = 1000, cmap: str = "viridis", plot: Tuple[plt.Figure, plt.Axes] = None,
+        save_path: str = ".", df_to_use: str = "raw", level: int = 0, **kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    if plot is not None:
+        fig, ax = plot
+    else:
+        fig, ax = plt.subplots(1, 1)
+
+    if quantile_range is None:
+        quantile_range = np.arange(0.05, 1, 0.05)
+
+    for col in intensities.columns:
+        intensity_quantiles = intensities.loc[:, col].quantile(quantile_range)
+        kde_fit = gaussian_kde(intensities.loc[~pd.isna(intensities.loc[:, col]), col])
+
+        x = np.linspace(intensities.loc[:, col].min() * 0.9, intensities.loc[:, col].max() * 1.1, n_points)
+        y = kde_fit.evaluate(x)
+        # Create a set of line segments so that we can color them individually
+        # This creates the points as a N x 1 x 2 array so that we can stack points
+        # together easily to get the segments. The segments array for line collection
+        # needs to be (numlines) x (points per line) x 2 (for x and y)
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        #
+        norm = QuantileNormalize(quantiles=intensity_quantiles)
+        lc = LineCollection(segments, cmap=cmap, norm=norm, alpha=0.5)
+        # Set the values used for colormapping
+        lc.set_array(x)
+        lc.set_linewidth(1)
+        line = ax.add_collection(lc)
+
+    ax.set_ylabel("Density")
+    ax.set_xlabel(intensity_label)
+
+    ax.autoscale_view()
+
+    if save_path is not None:
+        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
+        res_path = os.path.join(save_path, f"normalization_overview{suffix}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    return fig, ax
+
+
+def save_n_proteins_vs_quantile_results(
+        quantiles: pd.DataFrame, n_proteins: pd.Series, nstd: int = 1, cmap: str = "viridis",
+        plot: Tuple[plt.Figure, plt.Axes] = None, cbar_ax: plt.Axes = None, intensity_label: str = "Intensity",
+        fill_between: bool = False, save_path: str = ".", df_to_use: str = "raw", level: int = 0, **kwargs
+) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
+    if plot is not None:
+        fig, ax = plot
+    else:
+        fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+
+    cmap = cm.get_cmap(cmap)
+
+    m = n_proteins.sort_values()
+    for quant in quantiles.index:
+        ax.scatter(quantiles.loc[quant, :], n_proteins, c=[cmap(quant)] * len(n_proteins), alpha=0.5)
+        popt, pcov = curve_fit(linear, n_proteins, quantiles.loc[quant, :])
+        perr = np.sqrt(np.diag(pcov))
+        fit = linear(m, *popt)
+
+        ax.plot(fit, m, color=cmap(quant))
+
+        if fill_between:
+            popt_up = popt + nstd * perr
+            popt_dw = popt - nstd * perr
+            fit_up = linear(m, *popt_up)
+            fit_dw = linear(m, *popt_dw)
+            ax.fill_betweenx(m, fit_dw, fit_up, alpha=.15, color=cmap(quant))
+
+    if cbar_ax is None:
+        cbar_ax = fig.add_axes([0.2, 0.00, 0.6, 0.02])  # [left, bottom, width, height]
+    cb = ColorbarBase(cbar_ax, cmap=cmap, orientation="horizontal")
+    cb.set_label("quantile")
+
+    ax.set_ylabel("# detected proteins")
+    ax.set_xlabel(intensity_label)
+
+    if save_path is not None:
+        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
+        res_path = os.path.join(save_path, f"normalization_overview{suffix}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    return fig, (ax, cbar_ax)
+
+
+def save_normalization_overview_results(
+        quantiles, n_proteins, intensities, protein_intensities, df_to_use: str = "raw", level: int = 0,
+        height: int = 15, intesity_label: str = "Intensity", save_path: str = ".", **kwargs
+) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]:
+    fig = plt.figure(figsize=(18, 18))
+    gs = fig.add_gridspec(height, 2)
+    ax_density = fig.add_subplot(gs[0:height // 2, 0])
+    ax_nprot = fig.add_subplot(gs[height // 2:height - 1, 0])
+    ax_colorbar = fig.add_subplot(gs[height - 1, 0])
+    ax_boxplot = fig.add_subplot(gs[0:height, 1])
+
+    # order the boxplot data after the number of identified peptides
+    boxplot_data = protein_intensities.loc[:, n_proteins.sort_values(ascending=False).index[::-1]]
+    save_kde_results(intensities=intensities, intensity_label=intesity_label, save_path=None,
+                     plot=(fig, ax_density), **kwargs)
+    save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, intensity_label=intesity_label,
+                                        plot=(fig, ax_nprot), save_path=None, cbar_ax=ax_colorbar, **kwargs)
+    save_boxplot_results(boxplot_data, save_path=None, intensity_label=intesity_label, plot=(fig, ax_boxplot),
+                         vertical=False, **kwargs)
+    ax_density.set_xlim(ax_nprot.get_xlim())
+
+    if save_path is not None:
+        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
+        res_path = os.path.join(save_path, f"normalization_overview{suffix}" + FIG_FORMAT)
+        fig.savefig(res_path, dpi=200, bbox_inches="tight")
+
+    return fig, (ax_nprot, ax_density, ax_colorbar, ax_boxplot)

@@ -91,23 +91,13 @@ class MSPPlots:
         self.int_mapping = {}
         self.intensity_label_names = {}
         self.all_intensities_dict: Dict[str, pd.DataFrame] = {}
+        self.all_tree_dict: Dict[str, DataTree] = {}
+        self.analysis_design = self.configs.get("analysis_design", {})
+        if not self.analysis_design:
+            self.logger.warning("No analysis design was provided. Most plotting functions will not work")
+
         for option_name, name_in_file, name_in_plot in intensity_entries:
             self.add_intensity_column(option_name, name_in_file, name_in_plot)
-
-        # create the data trees
-        tech_rep = self.configs.get("has_replicates", False)
-        analysis_design = self.configs.get("analysis_design", {})
-        if analysis_design:
-            self.all_tree_dict: Dict[str, DataTree] = {
-                intensity: DataTree.from_analysis_design(analysis_design, data, tech_rep)
-                for intensity, data in self.all_intensities_dict.items()
-            }
-        else:
-            self.all_tree_dict = {
-                intensity: {}
-                for intensity, data in self.all_intensities_dict.items()
-            }
-            self.logger.warning("No analysis design was provided. Most plotting functions will not work")
 
         # set all result dirs
         # create file structure and folders
@@ -156,6 +146,7 @@ class MSPPlots:
         if not any((col.startswith(name_in_file) for col in self.intensity_df)):
             self.logger.warning("%s columns could not be found in data", name_in_file)
             return
+        self.logger.debug("Adding option %s and %s_log2", option_name, option_name)
         self.int_mapping.update({option_name: name_in_file, f"{option_name}_log2": name_in_file})
         self.intensity_label_names.update({option_name: name_in_plot, f"{option_name}_log2": rf"$Log_2$ {name_in_plot}"})
 
@@ -173,6 +164,15 @@ class MSPPlots:
 
         self.all_intensities_dict.update({
             option_name: intensities, f"{option_name}_log2": intensities_log2,
+        })
+
+        self.all_tree_dict.update({
+            f"{option_name}": DataTree.from_analysis_design(
+                self.analysis_design, intensities, self.configs.get("has_replicates", False)
+            ),
+            f"{option_name}_log2": DataTree.from_analysis_design(
+                self.analysis_design, intensities_log2, self.configs.get("has_replicates", False)
+            )
         })
 
     def create_report(self):
@@ -331,7 +331,7 @@ class MSPPlots:
                 # create a mixture of bar and venn diagram
                 self.save_bar_venn(key, named_sets, show_suptitle=show_suptitle)
 
-    def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str: pd.DataFrame]:
+    def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """
         Counts the number values greater than 0 per protein
 
@@ -914,6 +914,46 @@ class MSPPlots:
                     **data, level=level, intensity_label=self.intensity_label_names[df_to_use],
                     save_path=self.file_dir_descriptive, **kwargs
                 )
+
+    def get_n_protein_vs_quantile_data(self, df_to_use, level, quantile_range: np.array = None, **kwargs):
+        if quantile_range is None:
+            quantile_range = np.arange(0.05, 1, 0.05)
+        df = self.all_tree_dict[df_to_use].groupby(level)
+        n_proteins = (df > 0).sum(axis=0)
+        quantiles = df.quantile(quantile_range)
+        return {"quantiles": quantiles, "n_proteins": n_proteins}
+
+    def plot_n_proteins_vs_quantile(self, df_to_use, levels, **kwargs):
+        for level in levels:
+            data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
+            if data:
+                matplotlib_plots.save_n_proteins_vs_quantile_results(
+                    **data, intensity_label=self.intensity_label_names[df_to_use],
+                    df_to_use=df_to_use, level=level, **kwargs
+                )
+
+    def get_kde_data(self, df_to_use, level, **kwargs) -> Dict[str, pd.DataFrame]:
+        intensities = self.all_tree_dict[df_to_use].groupby(level)
+        return {"intensities": intensities}
+
+    def plot_kde(self, df_to_use, levels, **kwargs):
+        for level in levels:
+            data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
+            if data:
+                matplotlib_plots.save_kde_results(
+                    **data, intensity_label=self.intensity_label_names[df_to_use],
+                    df_to_use=df_to_use, level=level, **kwargs
+                )
+
+    def plot_normalization_overview(self, df_to_use, level, **kwargs):
+        n_prot_data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
+        kde_data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
+        boxplot_data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
+
+        matplotlib_plots.save_normalization_overview_results(
+            **n_prot_data, **kde_data, **boxplot_data, intesity_label=self.intensity_label_names[df_to_use],
+            df_to_use=df_to_use, level=level, **kwargs
+        )
 
 
 class MaxQuantPlotter(MSPPlots):
