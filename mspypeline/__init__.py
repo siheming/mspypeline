@@ -16,6 +16,7 @@ from .plotter import plotly_plots, matplotlib_plots
 from .core.MSPInitializer import MSPInitializer
 from .core.MSPPlots import MSPPlots, MaxQuantPlotter
 from .core.MSPypeline import MSPGUI, MSPParser, UIHandler
+from .modules import Normalization
 # import for "from package import *"
 __all__ = [
     "create_app",
