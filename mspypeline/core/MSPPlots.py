@@ -14,9 +14,9 @@ import warnings
 from typing import Dict
 from sklearn.decomposition import PCA
 
-from mspypeline import MSPInitializer, matplotlib_plots
+from mspypeline import MSPInitializer, matplotlib_plots, DataTree
 from mspypeline.helpers import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, plot_annotate_line,\
-    get_intersection_and_unique, DataTree, get_logger
+    get_intersection_and_unique, get_logger
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
@@ -142,8 +142,10 @@ class MSPPlots:
                 getattr(self, plot_name)(**plot_settings)
         self.logger.info("Done creating plots")
 
-    def add_intensity_column(self, option_name, name_in_file, name_in_plot):
-        if not any((col.startswith(name_in_file) for col in self.intensity_df)):
+    def add_intensity_column(self, option_name, name_in_file, name_in_plot, df: pd.DataFrame = None):
+        if df is None:
+            df = self.intensity_df
+        if not any((col.startswith(name_in_file) for col in df)):
             self.logger.warning("%s columns could not be found in data", name_in_file)
             return
         self.logger.debug("Adding option %s and %s_log2", option_name, option_name)
@@ -152,9 +154,9 @@ class MSPPlots:
 
         # extract all raw intensities from the dataframe
         # replace all 0 with nan and remove the prefix from the columns
-        intensities = self.intensity_df.loc[:,
-                        [c for c in self.intensity_df.columns if c.startswith(self.int_mapping[option_name])]
-        ].replace({0: np.nan}).rename(lambda x: x.replace(self.int_mapping[option_name], ""), axis=1)
+        intensities = df.loc[:, [c for c in df.columns if c.startswith(self.int_mapping[option_name])]
+            ].replace({0: np.nan}).rename(lambda x: x.replace(self.int_mapping[option_name], ""), axis=1)
+        assert np.isinf(intensities).sum().sum() == 0
         # filter all rows where all intensities are nan
         mask = (~intensities.isna()).sum(axis=1) != 0
         intensities = intensities[mask]
