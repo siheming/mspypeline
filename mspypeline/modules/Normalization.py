@@ -184,7 +184,7 @@ class QuantileNormalizer(BaseNormalizer):
         result = data.rank()
         if self.missing_value_handler is not None:
             result = result[na_mask]
-        result.replace(self.rank_replace, inplace=True)
+        result = result.apply(pd.Series.map, arg=self.rank_replace)
         if self.output_scale == "normal":
             result = np.exp2(result)
         if self.col_name_prefix is not None:
