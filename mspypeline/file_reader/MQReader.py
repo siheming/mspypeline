@@ -17,11 +17,16 @@ class MQReader(BaseReader):
     all_files = [proteins_txt, peptides_txt, summary_txt, parameters_txt]
     name = "mqreader"
 
-    def __init__(self, start_dir, reader_config, index_col: str = "Gene name fasta", loglevel=logging.DEBUG):
+    def __init__(self, start_dir: str,
+                 reader_config: dict,
+                 index_col: str = "Gene name",
+                 duplicate_handling: str = "sum",
+                 loglevel=logging.DEBUG):
         super().__init__(start_dir, reader_config, loglevel=loglevel)
         # TODO connect this to the configs of the initializer
         self.data_dir = os.path.join(self.start_dir, "txt")
         self.index_col = index_col
+        self.duplicate_handling = duplicate_handling
 
         # start by sampling with all files
         # only save the dataframe if the file was found
@@ -53,6 +58,7 @@ class MQReader(BaseReader):
             self.mapping_txt = None
 
         # rename all columns based on the mapping
+        self.logger.info("Renaming columns using %s", MQReader.mapping_txt)
         self.new_column_names = {file: df.columns for file, df in self.sample_data.items()}
         if self.mapping_txt is not None:
             for file in self.sample_data:
@@ -96,7 +102,6 @@ class MQReader(BaseReader):
     def rename_df_columns(self, col_names: list) -> list:
         mapping_dict = {old_name: new_name for old_name, new_name in zip(self.mapping_txt.iloc[:, 0], self.mapping_txt.iloc[:, 1])}
 
-        self.logger.info("Renaming columns using %s", MQReader.mapping_txt)
         def find_key_match(col):
             matches = []
             for key in mapping_dict:
@@ -193,14 +198,14 @@ class MQReader(BaseReader):
         df_protein_groups = df_protein_groups[not_contaminants]
         if any(df_protein_groups["Fasta headers"].isna()):
             self.logger.warning("Missing fasta headers using default columns for information")
-            gene_names_fasta = df_protein_groups["Gene names"]
-            gene_names_fasta.name = "Gene name fasta"
-            sep_ind = gene_names_fasta.str.contains(";").fillna(False)
-            gene_names_fasta[sep_ind] = gene_names_fasta[sep_ind].str.split(";").apply(pd.Series)[0]
-            fasta_col = pd.DataFrame({
-                "description": ["Missing"] * gene_names_fasta.shape[0],
-                "protein id": df_protein_groups["Protein names"]
-            }, index=gene_names_fasta.index)
+            gene_name = df_protein_groups["Gene names"]
+            sep_ind = gene_name.str.contains(";").fillna(False)
+            gene_name[sep_ind] = gene_name[sep_ind].str.split(";", expand=True)[0]
+            concat_df = pd.DataFrame({
+                "protein id": df_protein_groups["Protein names"],
+                "Gene name": gene_name.str.upper(),
+                "Protein name": ["Missing"] * gene_name.shape[0],
+            })
         else:
             # split the fasta headers
             colon_start = df_protein_groups["Fasta headers"].str.startswith(";")
@@ -210,41 +215,54 @@ class MQReader(BaseReader):
             sep_ind = df_protein_groups["Fasta headers"].str.contains(";").fillna(False)
             # replace all fasta headers with multiple entries with only the first one
             df_protein_groups.loc[sep_ind, "Fasta headers"] = \
-            df_protein_groups.loc[sep_ind, "Fasta headers"].str.split(";").apply(pd.Series)[0]
+                df_protein_groups.loc[sep_ind, "Fasta headers"].str.split(";", expand=True)[0]
             # split the fasta headers with the pipe symbol
             fasta_col = df_protein_groups["Fasta headers"].str.split("|", n=2).apply(pd.Series)
             fasta_col.columns = ["trash", "protein id", "description"]
             # extract the gene name from the description eg: "GN=abcd"
             gene_names_fasta = fasta_col["description"].str.extract(r"(GN=(.*?)(\s|$))")[1]
-            gene_names_fasta.name = "Gene name fasta"
-        # remove all rows without gene names
-        mask = ~pd.isna(gene_names_fasta)
-        gene_names_fasta = gene_names_fasta.loc[mask]
-        fasta_col = fasta_col.loc[mask]
+            # added upper() function to avoid that non-human gene names are not recognized
+            concat_df = pd.DataFrame({
+                "protein id": fasta_col["protein id"],
+                "Gene name": gene_names_fasta.str.upper(),
+                "Protein name": fasta_col["description"].str.split("_", expand=True)[0]
+            })
+        # concat all important columns with the original dataframe
+        df_protein_groups = pd.concat([df_protein_groups, concat_df], axis=1)
+        # remove all rows where the column used for indexing is missing
+        mask = ~pd.isna(df_protein_groups[self.index_col])
         df_protein_groups = df_protein_groups.loc[mask]
         if ~mask.sum() > 0:
-            self.logger.warning("Removing %s rows because the gene names are missing", ~mask.sum())
-        # added upper() function to avoid that non-human gene names are not recognized
-        gene_names_fasta = gene_names_fasta.str.upper()
-        # concat all important columns with the original dataframe
-        df_protein_groups = pd.concat([df_protein_groups, fasta_col["protein id"], gene_names_fasta], axis=1)
-        # add protein name from fasta description col
-        df_protein_groups["Protein name"] = fasta_col["description"].str.split("_", expand=True)[0]
-        # filter all entries with duplicate Gene name fasta
-        duplicates = df_protein_groups.duplicated(subset="Gene name fasta", keep=False)
-        if any(duplicates):
-            self.logger.warning(
-                "Found duplicates in Gene name fasta column. Dropping all %s duplicates. Duplicate Gene names: %s",
-                duplicates.sum(), ", ".join(df_protein_groups[duplicates].loc[:, "Gene name fasta"]))
-            df_protein_groups = df_protein_groups.drop_duplicates(subset="Gene name fasta", keep=False)
+            self.logger.warning("Removing %s rows because the index col information from: %s is missing",
+                                ~mask.sum(), self.index_col)
         # set index
         self.logger.info("Setting index of %s to %s", MQReader.proteins_txt, self.index_col)
         df_protein_groups = df_protein_groups.set_index(df_protein_groups[self.index_col], drop=False)
         # convert all non numeric intensities
-        for col in [col for col in df_protein_groups.columns if 'Intensity ' in col or "LFQ " in col or "iBAQ " in col]:
+        for col in [col for col in df_protein_groups.columns if "Intensity " in col or "LFQ " in col or "iBAQ " in col]:
             if not is_numeric_dtype(df_protein_groups[col]):
                 df_protein_groups[col] = df_protein_groups[col].apply(lambda x: x.replace(",", ".")).fillna(0)
                 df_protein_groups[col] = df_protein_groups[col].astype("int64")
+        # handle all rows with duplicated index column
+        duplicates = df_protein_groups.duplicated(subset=self.index_col, keep=False)
+        if any(duplicates):
+            self.logger.warning("Found duplicates in %s column. Duplicate names: %s",
+                                self.index_col, ", ".join(df_protein_groups[duplicates].loc[:, self.index_col]))
+            if self.duplicate_handling == "drop":
+                self.logger.warning("Dropping all %s duplicates.", duplicates.sum())
+                df_protein_groups = df_protein_groups.drop_duplicates(subset=self.index_col, keep=False)
+            elif self.duplicate_handling == "sum":
+                def group_sum(x):
+                    x.iloc[0].loc[x.select_dtypes("number").columns] = x.sum(axis=0, numeric_only=True)
+                    return x.iloc[0]
+
+                new_index = df_protein_groups.index.drop_duplicates(keep=False)
+                duplicate_index = df_protein_groups.index.difference(new_index)
+                df_dup = df_protein_groups.loc[duplicate_index, :]
+                self.logger.warning("Merging %s rows into %s by summing numerical columns."
+                                    "Some information might be incorrect", df_dup.shape[0], duplicate_index.shape[0])
+                df_dup = df_dup.groupby(df_dup.index).apply(group_sum)
+                df_protein_groups = pd.concat([df_protein_groups.loc[new_index, :], df_dup], axis=0)
         self.logger.debug("%s shape after preprocessing: %s", MQReader.proteins_txt, df_protein_groups.shape)
         return df_protein_groups
 
