@@ -859,12 +859,12 @@ class MSPPlots:
         for level in levels:
             level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
             for g1, g2 in combinations(level_keys, 2):
-                data = self.get_r_volcano_data(g1, g2, df_to_use)
+                data = self.get_r_volcano_data(g1, g2, df_to_use, level)
                 if data:
-                    matplotlib_plots.save_volcano_results(
-                        **data, g1=g1, g2=g2, save_path=self.file_dir_volcano,
-                        intensity_label=self.intensity_label_names[df_to_use], **kwargs
-                    )
+                    plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano,
+                                       intensity_label=self.intensity_label_names[df_to_use])
+                    plot_kwargs.update(**kwargs)
+                    matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
 
     def get_pca_data(self, df_to_use: str = "raw_log2", level: int = 0, n_components: int = 4, fill_value: float = 0, fill_na_before_norm: bool = False, **kwargs):
         data_input = self.all_tree_dict[df_to_use].groupby(level, method=None)
@@ -884,7 +884,10 @@ class MSPPlots:
         for level in levels:
             data = self.get_pca_data(level=level, df_to_use=df_to_use, **kwargs)
             if data:
-                matplotlib_plots.save_pca_results(**data, save_path=self.file_dir_descriptive, **kwargs)
+                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                plot_kwargs.update(**kwargs)
+                matplotlib_plots.save_pca_results(**data, **plot_kwargs)
 
     def get_boxplot_data(self, df_to_use: str, level: int, **kwargs) -> dict:
         """
@@ -912,10 +915,10 @@ class MSPPlots:
         for level in levels:
             data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
             if data:
-                matplotlib_plots.save_boxplot_results(
-                    **data, level=level, intensity_label=self.intensity_label_names[df_to_use],
-                    save_path=self.file_dir_descriptive, **kwargs
-                )
+                plot_kwargs = dict(level=level, df_to_use=df_to_use, save_path=self.file_dir_descriptive,
+                                   intensity_label=self.intensity_label_names[df_to_use])
+                plot_kwargs.update(**kwargs)
+                matplotlib_plots.save_boxplot_results(**data, **plot_kwargs)
 
     def get_n_protein_vs_quantile_data(self, df_to_use, level, quantile_range: np.array = None, **kwargs):
         if quantile_range is None:
@@ -929,10 +932,10 @@ class MSPPlots:
         for level in levels:
             data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
             if data:
-                matplotlib_plots.save_n_proteins_vs_quantile_results(
-                    **data, intensity_label=self.intensity_label_names[df_to_use],
-                    df_to_use=df_to_use, level=level, **kwargs
-                )
+                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                plot_kwargs.update(**kwargs)
+                matplotlib_plots.save_n_proteins_vs_quantile_results(**data, **plot_kwargs)
 
     def get_kde_data(self, df_to_use, level, **kwargs) -> Dict[str, pd.DataFrame]:
         intensities = self.all_tree_dict[df_to_use].groupby(level)
@@ -942,20 +945,45 @@ class MSPPlots:
         for level in levels:
             data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
             if data:
-                matplotlib_plots.save_kde_results(
-                    **data, intensity_label=self.intensity_label_names[df_to_use],
-                    df_to_use=df_to_use, level=level, **kwargs
-                )
+                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                plot_kwargs.update(**kwargs)
+                matplotlib_plots.save_kde_results(**data, **plot_kwargs)
 
     def plot_normalization_overview(self, df_to_use, level, **kwargs):
         n_prot_data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
         kde_data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
         boxplot_data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
 
-        matplotlib_plots.save_normalization_overview_results(
-            **n_prot_data, **kde_data, **boxplot_data, intesity_label=self.intensity_label_names[df_to_use],
-            df_to_use=df_to_use, level=level, **kwargs
-        )
+        if n_prot_data and kde_data and boxplot_data:
+            plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                               df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+            plot_kwargs.update(**kwargs)
+            matplotlib_plots.save_normalization_overview_results(
+                **n_prot_data, **kde_data, **boxplot_data, **plot_kwargs
+            )
+
+    def get_intensity_heatmap_data(self, df_to_use, level, sort_index: bool = True, sort_columns: bool = True, **kwargs):
+        intensities = self.all_tree_dict[df_to_use].groupby(level)
+        if sort_index:
+            index = intensities.isna().sum(axis=1).sort_values().index
+        else:
+            index = intensities.index
+        if sort_columns:
+            columns = intensities.isna().sum(axis=0).sort_values().index
+        else:
+            columns = intensities.columns
+
+        return {"intensities": intensities.loc[index, columns]}
+
+    def plot_intensity_heatmap(self, df_to_use, levels, **kwargs):
+        for level in levels:
+            data = self.get_intensity_heatmap_data(df_to_use=df_to_use, level=level, **kwargs)
+            if data:
+                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                plot_kwargs.update(**kwargs)
+                return matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
 
 
 class MaxQuantPlotter(MSPPlots):

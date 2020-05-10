@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import Tuple, Optional, Union
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +12,8 @@ from matplotlib.colorbar import ColorbarBase
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
 from sklearn.decomposition import PCA
+import functools
+import warnings
 
 from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, get_plot_name_suffix
 
@@ -20,6 +22,55 @@ FIG_FORMAT = ".pdf"
 
 def linear(x, m, b):
     return m * x + b
+
+
+def save_plot(name):
+    """
+
+    Parameters
+    ----------
+    name
+
+    Returns
+    -------
+
+    """
+    def decorator_save_plot(func):
+        @functools.wraps(func)
+        def wrapper_save_plot(*args, **kwargs):
+            # get values with default
+            plot_name = kwargs.get("name", name)
+            save_path = kwargs.get("save_path", None)
+            # suffix
+            df_to_use = kwargs.get("df_to_use", None)
+            level = kwargs.get("level", None)
+            # file format
+            fig_format = kwargs.get("fig_format", FIG_FORMAT)
+            # run original function
+            fig, ax = func(*args, **kwargs)
+            # save if wanted
+            if save_path is not None:
+                try:
+                    suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
+                    plot_name = f"{plot_name}{suffix}" + fig_format
+                    plot_name = plot_name.format_map(kwargs)
+                    res_path = os.path.join(save_path, plot_name)
+                    fig.savefig(res_path, dpi=200, bbox_inches="tight")
+                except PermissionError:
+                    warnings.warn("Permission error in function %s. Did you forget to close the file?",
+                                  str(func).split(" ")[1])
+            return fig, ax
+        return wrapper_save_plot
+    return decorator_save_plot
+
+
+_save_plot_decorator_doc = """
+    save_path
+    plot_name
+    df_to_use
+    level
+    fig_format
+"""
 
 
 class QuantileNormalize(colors.Normalize):
@@ -33,8 +84,6 @@ class QuantileNormalize(colors.Normalize):
     def __call__(self, value, clip=None):
         index = np.searchsorted(self.quantiles, value)
         return np.ma.array(self.outputs[index], fill_value=0)
-
-# TODO include option to specify None as savepath and dont save
 
 
 def save_volcano_results(
@@ -102,7 +151,7 @@ def save_volcano_results(
         elif fchange < 0:
             return "down"
         else:
-            raise ValueError("heisenbug")
+            raise ValueError(f"heisenbug: fold change: {fchange}, p value: {pval}")
 
     significance_to_color = {"ns": "gray", "up": "red", "down": "blue"}
     significance_to_label = {"ns": "non-significant", "up": f"upregulated in {g2}", "down": f"upregulated in {g1}"}
@@ -192,7 +241,8 @@ def save_volcano_results(
     return fig, (ax, ax_unique_down, ax_unique_up)
 
 
-def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, save_path: str = ".",
+@save_plot("pca_overview")
+def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, save_path: Optional[str] = ".",
                      show_suptitle: bool = True, **kwargs):
     """
         Saves image containing the pca results
@@ -241,10 +291,6 @@ def save_pca_results(pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: boo
     legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=color_map)
     fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=20)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    if save_path is not None:
-        res_path = os.path.join(save_path,
-                                f"pca_{kwargs['df_to_use']}" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
     return fig, axarr
 
 
@@ -293,9 +339,10 @@ def save_pathway_analysis_results(
     return fig, axarr
 
 
+@save_plot("boxplot")
 def save_boxplot_results(
-        protein_intensities: pd.DataFrame, save_path: str = ".", level: int = 0, intensity_label: str = "Intensity",
-        plot: Tuple[plt.Figure, plt.Axes] = None, vertical: bool = False, **kwargs
+        protein_intensities: pd.DataFrame, intensity_label: str = "Intensity",
+        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vertical: bool = False, **kwargs
 ):
     """
     Boxplot of intensities
@@ -342,15 +389,12 @@ def save_boxplot_results(
     else:
         ax.set_xlabel(intensity_label)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    if save_path is not None:
-        res_path = os.path.join(save_path, f"boxplot_{intensity_label}_level_{level}" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
     return fig, ax
 
 
 def save_relative_std_results(
         intensities: pd.DataFrame, name: str, df_to_use: str = "raw", intensity_label: str = "Intensity",
-        bins=(10, 20, 30), save_path: str = ".", cmap: dict = None, **kwargs
+        bins=(10, 20, 30), save_path: Optional[str] = ".", cmap: dict = None, **kwargs
 ):
     """
     Relative standard deviations of passed intensities with color marking based on the specified bins and color map
@@ -394,11 +438,11 @@ def save_relative_std_results(
     relative_std_percent = intensities.std(axis=1) / intensities.mean(axis=1) * 100
 
     inds = np.digitize(relative_std_percent, bins).astype(int)
-    colors = pd.Series([cm.get(x, "black") for x in inds], index=relative_std_percent.index)
-    color_counts = {color: (colors == color).sum() for color in colors.unique()}
+    plot_colors = pd.Series([cm.get(x, "black") for x in inds], index=relative_std_percent.index)
+    color_counts = {color: (plot_colors == color).sum() for color in plot_colors.unique()}
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 7))
-    ax.scatter(intensities.mean(axis=1), relative_std_percent, c=colors, marker="o", s=(2 * 72. / fig.dpi) ** 2,
+    ax.scatter(intensities.mean(axis=1), relative_std_percent, c=plot_colors, marker="o", s=(2 * 72. / fig.dpi) ** 2,
                alpha=0.8)
     ax.set_xlabel(f"Mean {intensity_label}")
     ax.set_ylabel("Relative Standard deviation [%]")
@@ -416,29 +460,25 @@ def save_relative_std_results(
         fig.savefig(res_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
 
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, ax
 
 
+@save_plot("detected_counts")
 def save_detection_counts_results(
-        counts: pd.DataFrame, level: int = None, intensity_label: str = "Intensity", df_to_use: str = None,
-        show_suptitle: bool = True, save_path: str = ".", **kwargs
+        counts: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
-    """
+    f"""
 
     Parameters
     ----------
     counts
         DataFrame containing the counts to be plotted
-    level
-        on which level was the data aggregated
     intensity_label
         label of the dataframe
-    df_to_use
-        which dataframe was used
     show_suptitle
         should the figure title be shown
-    save_path
-        path to which the figure will be saved
+    {_save_plot_decorator_doc}
     kwargs
         accepts kwargs
 
@@ -470,22 +510,19 @@ def save_detection_counts_results(
         ax.set_xlabel("Counts")
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    if save_path is not None:
-        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
-        res_path = os.path.join(save_path, f"detected_counts{suffix}" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
-
     return fig, axarr
 
 
+@save_plot("kde")
 def save_kde_results(
-        intensities: pd.DataFrame, quantile_range: np.array = None, intensity_label: str = "Intensity",
-        n_points: int = 1000, cmap: str = "viridis", plot: Tuple[plt.Figure, plt.Axes] = None,
-        save_path: str = ".", df_to_use: str = "raw", level: int = 0, **kwargs
+        intensities: pd.DataFrame, quantile_range: Optional[np.array] = None, n_points: int = 1000,
+        cmap: Union[str, colors.Colormap] = "viridis", plot: Optional[Tuple[plt.Figure, plt.Axes]] = None,
+        intensity_label: str = "Intensity", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     if plot is not None:
         fig, ax = plot
     else:
+        plt.close("all")
         fig, ax = plt.subplots(1, 1)
 
     if quantile_range is None:
@@ -517,36 +554,35 @@ def save_kde_results(
 
     ax.autoscale_view()
 
-    if save_path is not None:
-        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
-        res_path = os.path.join(save_path, f"normalization_overview{suffix}" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
-
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, ax
 
 
+@save_plot("n_proteins_vs_quantile")
 def save_n_proteins_vs_quantile_results(
-        quantiles: pd.DataFrame, n_proteins: pd.Series, nstd: int = 1, cmap: str = "viridis",
-        plot: Tuple[plt.Figure, plt.Axes] = None, cbar_ax: plt.Axes = None, intensity_label: str = "Intensity",
-        fill_between: bool = False, save_path: str = ".", df_to_use: str = "raw", level: int = 0, **kwargs
+        quantiles: pd.DataFrame, n_proteins: pd.Series, nstd: int = 1, cmap: Union[str, colors.Colormap] = "viridis",
+        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, cbar_ax: Optional[plt.Axes] = None, intensity_label: str = "Intensity",
+        fill_between: bool = False, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
     if plot is not None:
         fig, ax = plot
     else:
+        plt.close("all")
         fig, ax = plt.subplots(1, 1, figsize=(14, 7))
 
-    cmap = cm.get_cmap(cmap)
+    if not isinstance(cmap, colors.Colormap):
+        cmap = cm.get_cmap(cmap)
 
     m = n_proteins.sort_values()
     for quant in quantiles.index:
         ax.scatter(quantiles.loc[quant, :], n_proteins, c=[cmap(quant)] * len(n_proteins), alpha=0.5)
         popt, pcov = curve_fit(linear, n_proteins, quantiles.loc[quant, :])
-        perr = np.sqrt(np.diag(pcov))
         fit = linear(m, *popt)
 
         ax.plot(fit, m, color=cmap(quant))
 
         if fill_between:
+            perr = np.sqrt(np.diag(pcov))
             popt_up = popt + nstd * perr
             popt_dw = popt - nstd * perr
             fit_up = linear(m, *popt_up)
@@ -561,18 +597,32 @@ def save_n_proteins_vs_quantile_results(
     ax.set_ylabel("# detected proteins")
     ax.set_xlabel(intensity_label)
 
-    if save_path is not None:
-        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
-        res_path = os.path.join(save_path, f"normalization_overview{suffix}" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
-
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, (ax, cbar_ax)
 
 
+@save_plot("normalization_overview")
 def save_normalization_overview_results(
-        quantiles, n_proteins, intensities, protein_intensities, df_to_use: str = "raw", level: int = 0,
-        height: int = 15, intesity_label: str = "Intensity", save_path: str = ".", **kwargs
+        quantiles, n_proteins, intensities, protein_intensities,
+        height: int = 15, intensity_label: str = "Intensity", **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]:
+    f"""
+    
+    Parameters
+    ----------
+    quantiles
+    n_proteins
+    intensities
+    protein_intensities
+    height
+    intensity_label
+    {_save_plot_decorator_doc}
+    kwargs
+
+    Returns
+    -------
+
+    """
     fig = plt.figure(figsize=(18, 18))
     gs = fig.add_gridspec(height, 2)
     ax_density = fig.add_subplot(gs[0:height // 2, 0])
@@ -582,17 +632,14 @@ def save_normalization_overview_results(
 
     # order the boxplot data after the number of identified peptides
     boxplot_data = protein_intensities.loc[:, n_proteins.sort_values(ascending=False).index[::-1]]
-    save_kde_results(intensities=intensities, intensity_label=intesity_label, save_path=None,
-                     plot=(fig, ax_density), **kwargs)
-    save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, intensity_label=intesity_label,
-                                        plot=(fig, ax_nprot), save_path=None, cbar_ax=ax_colorbar, **kwargs)
-    save_boxplot_results(boxplot_data, save_path=None, intensity_label=intesity_label, plot=(fig, ax_boxplot),
-                         vertical=False, **kwargs)
+
+    plot_kwargs = dict(intensity_label=intensity_label)
+    plot_kwargs.update(**kwargs)
+    plot_kwargs["save_path"] = None
+    save_kde_results(intensities=intensities,  plot=(fig, ax_density), **plot_kwargs)
+    save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, plot=(fig, ax_nprot), cbar_ax=ax_colorbar, **plot_kwargs)
+    save_boxplot_results(boxplot_data, plot=(fig, ax_boxplot), vertical=False, **plot_kwargs)
     ax_density.set_xlim(ax_nprot.get_xlim())
 
-    if save_path is not None:
-        suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
-        res_path = os.path.join(save_path, f"normalization_overview{suffix}" + FIG_FORMAT)
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
-
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, (ax_nprot, ax_density, ax_colorbar, ax_boxplot)
