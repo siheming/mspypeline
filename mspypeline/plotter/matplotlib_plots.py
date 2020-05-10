@@ -643,3 +643,50 @@ def save_normalization_overview_results(
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, (ax_nprot, ax_density, ax_colorbar, ax_boxplot)
+
+
+@save_plot("intensities_heatmap")
+def save_intensities_heatmap_result(
+        intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad="dimgray",
+        cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, **kwargs
+) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
+    f"""
+    
+    Parameters
+    ----------
+    intensities
+    cmap
+    cmap_bad
+    cax
+    plot
+    {_save_plot_decorator_doc}
+    kwargs
+
+    Returns
+    -------
+
+    """
+    if plot is not None:
+        fig, ax = plot
+    else:
+        plt.close("all")
+        fig, ax = plt.subplots(figsize=(14, 16))  # TODO scale with intensities.shape
+
+    if not isinstance(cmap, colors.Colormap):
+        cmap = cm.get_cmap(cmap)
+    if cmap_bad is not None:
+        cmap.set_bad(color='dimgray')
+
+    im = ax.imshow(intensities.values.T, aspect="auto", cmap=cmap)
+    if cax is None:
+        cbar = ax.figure.colorbar(im, ax=ax)
+    else:
+        cbar = ax.figure.colorbar(im, cax=cax)
+
+    y_lim = ax.get_ylim()
+    ax.set_yticks(np.linspace(0, len(intensities.columns) - 1, len(intensities.columns)))
+    ax.set_yticklabels(intensities.columns)
+    ax.set_ylim(*y_lim)
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, (ax, cbar.ax)

@@ -1,4 +1,5 @@
 import difflib
+from typing import Optional
 import pandas as pd
 from collections.abc import Sized
 from difflib import SequenceMatcher
@@ -212,7 +213,7 @@ def dict_depth(d: dict):
     return level
 
 
-def get_legend_elements(labels: list, color_map: dict = None):
+def get_legend_elements(labels: list, color_map: Optional[dict] = None):
     """
         Returns custom legend elements based on a list of labels and an optional color map.
         These elements can be passed to a legend via the 'handles' parameter
@@ -233,7 +234,7 @@ def get_legend_elements(labels: list, color_map: dict = None):
     return legend_elements
 
 
-def get_plot_name_suffix(df_to_use: str = None, level: int = None) -> str:
+def get_plot_name_suffix(df_to_use: Optional[str] = None, level: Optional[int] = None) -> str:
     """
     Generate a suffix for the plot name
 
@@ -250,5 +251,5 @@ def get_plot_name_suffix(df_to_use: str = None, level: int = None) -> str:
 
     """
     s = "" if df_to_use is None else f"_{df_to_use}"
-    s += "" if level is None else f"_{level}"
+    s += "" if level is None else f"_level_{level}"
     return s
