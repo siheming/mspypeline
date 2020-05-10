@@ -4,6 +4,7 @@ from typing import Type, Callable
 import pandas as pd
 import numpy as np
 import logging
+import warnings
 
 from mspypeline.helpers import get_logger
 
@@ -71,6 +72,34 @@ def interpolate_data(data: pd.DataFrame) -> pd.DataFrame:
         result.append(pd.Series(new_values[:, column_index], index=s_ind, name=column_name))
 
     return pd.concat(result, axis=1, sort=False)
+
+
+def median_polish(data: pd.DataFrame, max_iter: int = 100, tol: float = 0.001):
+    overall = np.nanmedian(data.values)
+    row_effect = pd.Series([0] * data.shape[0], index=data.index)
+    column_effect = pd.Series([0] * data.shape[1], index=data.columns)
+    residuals = data - overall
+
+    for i in range(max_iter):
+        # row collapse
+        row_medians = residuals.median(axis=1)
+        overall += column_effect.median()
+        row_effect += row_medians
+        residuals = residuals.sub(row_medians, axis=0)
+        column_effect -= column_effect.median()
+        # column collapse
+        column_medians = residuals.median(axis=0)
+        overall += row_effect.median()
+        column_effect += column_medians
+        residuals = residuals.sub(column_medians, axis=1)
+        row_effect -= row_effect.median()
+        # check stop condition
+        # could be adapted to check difference between last two updates
+        if column_medians.abs().sum() + row_medians.abs().sum() <= tol:
+            break
+    else:
+        warnings.warn("stopping because max iter was reached")
+    return {"ave": overall, "row_effect": row_effect, "col_effect": column_effect, "residual": residuals}
 
 
 class BaseNormalizer(ABC):
