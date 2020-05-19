@@ -1,5 +1,6 @@
 import os
-from typing import Tuple, Optional, Union
+from itertools import combinations
+from typing import Tuple, Optional, Union, Dict
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,11 +12,13 @@ from adjustText import adjust_text
 from matplotlib.colorbar import ColorbarBase
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
+from scipy import stats
 from sklearn.decomposition import PCA
 import functools
 import warnings
 
-from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, get_plot_name_suffix
+from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, \
+    get_plot_name_suffix, get_intersection_and_unique
 
 FIG_FORMAT = ".pdf"
 
@@ -690,3 +693,265 @@ def save_intensities_heatmap_result(
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, (ax, cbar.ax)
+
+
+@save_plot("detection_per_replicate")
+def save_number_of_detected_proteins_results(
+        all_heights: Dict[str, pd.Series], intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
+):
+    plt.close("all")
+    # determine number of rows and columns in the plot based on the number of experiments
+    n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(all_heights.keys())
+    fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment,
+                              figsize=(5 * n_cols_experiment, 3 * n_rows_experiment))
+    if show_suptitle:
+        fig.suptitle(f"Number of detected proteins from {intensity_label}")
+
+    for experiment, (pos, ax) in zip(all_heights.keys(), np.ndenumerate(axarr)):
+        experiment_heights = all_heights[experiment]
+        mean_height = experiment_heights[1:].mean()
+        y_pos = [x for x in range(len(experiment_heights))]
+        ax.barh(y_pos, experiment_heights, color="skyblue")
+
+        for y, value in zip(y_pos, experiment_heights):
+            ax.text(experiment_heights[0] / 2, y, value,
+                    verticalalignment='center', horizontalalignment='center')
+        ax.set_title(experiment)
+        ax.axvline(mean_height, linestyle="--", color="black", alpha=0.6)
+        ax.set_yticks([i for i in range(len(experiment_heights.index))])
+        ax.set_yticklabels(experiment_heights.index)
+        ax.set_xlabel("Counts")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, axarr
+
+
+@save_plot("intensity_histograms")
+def save_intensity_histogram_results(
+        hist_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False, **kwargs
+):
+    plt.close("all")
+    n_rows, n_cols = get_number_rows_cols_for_fig(hist_data.columns.get_level_values(0).unique())
+    # make a intensity histogram for every replicate
+    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 5 * n_rows))
+
+    if show_suptitle:
+        fig.suptitle(f"{intensity_label} histograms")
+
+    for col, (pos, ax) in zip(hist_data.columns.get_level_values(0).unique(), np.ndenumerate(axarr)):
+        intensities = hist_data[col]
+
+        if "Log_2" in intensity_label:
+            bins = np.linspace(np.nanmin(intensities.values), np.nanmax(intensities.values), 25)
+        else:
+            bins = np.logspace(np.log2(np.nanmin(intensities.values)), np.log2(np.nanmax(intensities.values)), 25, base=2)
+
+        ax.set_title(col)
+        ax.hist(intensities.T, bins=bins, stacked=True)
+        if "Log_2" not in intensity_label:
+            ax.set_xscale("log", basex=2)
+        ax.set_xlabel(intensity_label)
+        ax.set_ylabel("Counts")
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, axarr
+
+
+@save_plot("{full_name}_scatter")
+def save_scatter_replicates_results(
+        scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False, **kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    plt.close("all")
+    fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+
+    if show_suptitle:
+        fig.suptitle()
+
+    for rep1, rep2 in combinations(scatter_data.columns, 2):
+        x1 = scatter_data.loc[:, rep1]
+        x2 = scatter_data.loc[:, rep2]
+        corr_mask = np.logical_and(x1.notna(), x2.notna())
+        plot_mask = np.logical_or(x1.notna(), x2.notna())
+        exp = r"$r^{2}$"
+        ax.scatter(x1.fillna(x2.min() * 0.95)[plot_mask], x2.fillna(x2.min() * 0.95)[plot_mask],
+                   label=f"{rep1} vs {rep2}, "
+                         fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
+                   alpha=0.5, marker=".")
+        ax.set_xlabel(intensity_label)
+        ax.set_ylabel(intensity_label)
+
+    fig.legend(frameon=False)
+    if "Log_2" not in intensity_label:
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, ax
+
+
+@save_plot("{full_name}_rank")
+def save_rank_results(
+        rank_data: pd.Series, interesting_proteins, intensity_label: str = "Intensity", full_name="Experiment",
+        show_suptitle: bool = False, **kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    plt.close("all")
+    if interesting_proteins.values():
+        all_pathway_proteins = set.union(*(set(x) for x in interesting_proteins.values()))
+    else:
+        all_pathway_proteins = set()
+    # get the experiment intensities calculate mean intensity for the experiment and sort from highest to lowest
+    # TODO apply filter for rare proteins before here?
+    # protein ranks vs intensity
+    # create dict to map each protein its respective rank and mean intensity
+    dic = {idx: (i, value) for i, (idx, value) in enumerate(rank_data.items())}
+
+    found_proteins = set(rank_data.index)
+    # get all proteins that are not part of any pathway
+    non_pathway_proteins = found_proteins - all_pathway_proteins
+    # get all proteins that are part of any pathway
+    pathway_proteins = found_proteins & all_pathway_proteins
+    rank_identified_proteins = [dic[protein][0] for protein in pathway_proteins]
+    # plot the non pathway proteins
+    x = [dic[protein][0] for protein in non_pathway_proteins]
+    y = [dic[protein][1] for protein in non_pathway_proteins]
+
+    fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+    ax.scatter(x, y, c=f"darkgray", s=10, alpha=0.3, marker=".", label="no pathway")
+    # plot all proteins of a specific pathway
+    for i, (pathway, proteins) in enumerate(interesting_proteins.items()):
+        proteins = set(proteins) & found_proteins
+        x = [dic[protein][0] for protein in proteins]
+        y = [dic[protein][1] for protein in proteins]
+        ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.6, marker=".", label=pathway)
+
+    # only if more than 0 proteins are identified
+    if rank_identified_proteins:
+        median_pathway_rank = int(np.median(rank_identified_proteins))
+        median_intensity = rank_data.iloc[median_pathway_rank]
+        xmin, xmax = ax.get_xbound()
+        xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
+        ymin, ymax = ax.get_ybound()
+        ym = (median_intensity - ymin) / (ymax - ymin)
+        # plot the median rank and intensity at that rank
+        ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color="black", alpha=0.6)
+        ax.axhline(median_intensity, xmax=xm, linestyle="--", color="black", alpha=0.6)
+        ax.text(xmin * 0.9, median_intensity * 0.9,
+                f"median rank: {median_pathway_rank} ({median_pathway_rank / len(rank_data) * 100 :.1f}%) "
+                f"with intensity: {median_intensity:.2E}",  # TODO case for log and non log
+                verticalalignment="top", horizontalalignment="left")
+
+    if "Log_2" not in intensity_label:
+        ax.set_yscale("log")
+    ax.set_xlabel("Protein rank")
+    ax.set_ylabel(f"{full_name} mean")
+
+    fig.legend(bbox_to_anchor=(1.02, 0.5), loc="center left")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, ax
+
+
+@save_plot("{sample1}_vs_{sample2}")
+def save_experiment_comparison_results(
+        protein_intensities_sample1: pd.Series, protein_intensities_sample2: pd.Series,
+        exclusive_sample1: pd.Series, exclusive_sample2: pd.Series, sample1: str, sample2: str,
+        intensity_label: str = "Intensity", show_suptitle: bool = False,
+        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None,  **kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    # calculate r
+    try:
+        r = stats.pearsonr(protein_intensities_sample1, protein_intensities_sample2)
+    except ValueError:
+        warnings.warn("Could not calculate pearson r for %s vs %s", sample1, sample2)
+        r = (np.nan,)
+
+    if plot is not None:
+        fig, ax = plot
+    else:
+        plt.close("all")
+        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+
+    exp = r"$r^{2}$"
+    ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=8, alpha=0.6, marker=".",
+               label=f"{sample1} vs {sample2}, {exp}: {r[0] ** 2:.4f}")
+    ax.scatter(exclusive_sample1, [np.min(protein_intensities_sample2) * 0.95] * exclusive_sample1.shape[0],
+               s=8, alpha=0.6, marker=".", label=f"exclusive for {sample1}")
+    ax.scatter([np.min(protein_intensities_sample1) * 0.95] * exclusive_sample2.shape[0], exclusive_sample2,
+               s=8, alpha=0.6, marker=".", label=f"exclusive for {sample2}")
+
+    ax.set_xlabel(sample1)
+    ax.set_ylabel(sample2)
+    fig.legend(frameon=False)
+    if "Log_2" not in intensity_label:
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+
+    xmin, xmax = ax.get_xbound()
+    ymin, ymax = ax.get_ybound()
+    ax.set_xlim(min(xmin, ymin), max(xmax, ymax))
+    ax.set_ylim(min(xmin, ymin), max(xmax, ymax))
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, ax
+
+
+@save_plot("go_analysis")
+def save_go_analysis_results(
+        heights, test_results, go_analysis_gene_names, intensity_label="Intensity", **kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    # TODO also create table
+    # TODO move labels to bars, remove legend
+    plt.close("all")
+    fig, ax = plt.subplots(1, 1, figsize=(7, int(len(heights) * len(go_analysis_gene_names) / 3)))
+
+    bar_width = 0.25
+    for i, experiment in enumerate(heights):
+        y_pos = np.array([(i + (len(heights) + 1) * x) * bar_width for x in range(len(go_analysis_gene_names))])
+        ax.barh(y_pos, heights[experiment], height=bar_width, edgecolor='white', label=experiment)
+        for x, y, text in zip(heights[experiment], y_pos, test_results[experiment]):
+            if text > 0.05:
+                continue
+            text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
+            ax.text(x, y, f" p: {text}", verticalalignment="center", fontsize="8")
+
+    ax.set_ylabel('compartiment')
+    ax.set_xlabel('number of proteins')
+    # add yticks on the middle of the group bars
+    ax.set_yticks([(len(heights) / 2 + (len(heights) + 1) * x) * bar_width
+                   for x in range(len(go_analysis_gene_names))])
+    # replace the y ticks with the compartiment names
+    ax.set_yticklabels([x for x in go_analysis_gene_names])
+    plt.legend()
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, ax
+
+
+@save_plot("pathway_timeline_{pathway}")
+def save_pathway_timeline_results():
+    """plt.close("all")
+    n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
+    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * int(max_time / 5), 4 * n_rows))
+    if show_suptitle:
+        fig.suptitle(pathway)
+
+    protein_minimum = self.all_intensities_dict[df_to_use].max().max()
+    protein_maximum = self.all_intensities_dict[df_to_use].min().min()
+    for protein, (pos, ax) in zip(found_proteins, np.ndenumerate(axarr)):
+        ax.set_title(protein)
+        ax.set_xlabel(f"Age [weeks]")
+        ax.set_ylabel(intensity_label)
+        for idx, experiment in enumerate(level_keys):
+            protein_intensities = self.all_tree_dict[df_to_use][experiment].aggregate(None, index=protein)
+            mask = protein_intensities > 0
+            protein_minimum = min(protein_minimum, protein_intensities[mask].min())
+            protein_maximum = max(protein_maximum, protein_intensities[mask].max())
+            ax.scatter([x_values[experiment]] * sum(mask), protein_intensities[mask],
+                       label=f"{groups[experiment]}", color=group_colors[groups[experiment]])
+    # adjust labels based on overall min and max of the pathway
+    for protein, (pos, ax) in zip(found_proteins, np.ndenumerate(axarr)):
+        ax.set_ylim(bottom=protein_minimum * 0.99, top=protein_maximum * 1.01)
+        ax.set_xlim(left=0, right=max_time + 1)
+    handles, labels = next(np.ndenumerate(axarr))[1].get_legend_handles_labels()
+    fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    return fig, axarr"""
