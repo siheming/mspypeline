@@ -963,10 +963,70 @@ class MaxQuantPlotter(MSPPlots):
             last_aa_counts = last_aa.apply(pd.Series.value_counts)
             last_aa_counts = last_aa_counts.fillna(0).rename(lambda x: x.replace("Experiment ", ""), axis=1)
 
-        with PdfPages(os.path.join(self.start_dir, "MaxQuantReport2.pdf")) as pdf:
-            first_page = plt.figure(figsize=(14, 7))
-            text_conf = dict(transform=first_page.transFigure, size=24, ha="center")
-            first_page.text(0.5, 0.92, "MaxQuant report", **text_conf)
+            before_aa = pd.concat([peptides["Amino acid before"].rename(col)[peptides[col].notna()]
+                                   for col in peptides.columns if col.startswith("Experiment")], axis=1)
+            before_aa_counts = before_aa.apply(pd.Series.value_counts)
+            before_aa_counts = before_aa_counts.fillna(0).rename(lambda x: x.replace("Experiment ", ""), axis=1)
+        except KeyError:
+            self.logger.warning("Did not find peptides")
+            peptides = None
+        try:
+            self.logger.debug("Reading proteinGroups")
+            prot_groups = self.required_reader_data["proteinGroups"]
+            prot_groups_prefix_columns = [x for x in prot_groups.columns if x.startswith(prefix)]
+            prot_groups_colors = [x.replace("Intensity ", "") for x in prot_groups_prefix_columns]
+            plot_colors.update({col: cmap(i/len(prot_groups_colors)) for i, col in enumerate(prot_groups_colors)})
+            prot_groups_intensities = prot_groups[prot_groups_prefix_columns].replace({0: np.nan})
+            prot_groups_intensities.columns = pd.MultiIndex.from_arrays(
+                [["Grouped Intensity"] * len(prot_groups_intensities.columns), prot_groups_intensities.columns],
+                names=("agg", "sample")
+            )
+            has_lfq = str(any([x.startswith("LFQ") for x in prot_groups.columns]))
+            has_ibaq = str(any([x.startswith("iBAQ") for x in prot_groups.columns]))
+        except KeyError:
+            self.logger.warning("Did not find proteinGroups")
+            prot_groups = None
+            has_lfq = "File is missing"
+            has_ibaq = "File is missing"
+        try:
+            self.logger.debug("Reading evidence")
+            evidence = self.required_reader_data["evidence"]
+            mz = evidence.pivot(index=None, columns="Experiment", values="m/z")
+            plot_colors.update({col: cmap(i/len(mz.columns)) for i, col in enumerate(mz.columns)})
+            charge = evidence.pivot(index=None, columns="Experiment", values="Charge")
+            charge = charge.apply(pd.Series.value_counts)
+            charge.index = charge.index.astype(int)
+            missed_cleavages = evidence.pivot(index=None, columns="Experiment", values="Missed cleavages")
+            missed_cleavages = missed_cleavages.apply(pd.Series.value_counts)
+            missed_cleavages.index = missed_cleavages.index.astype(int)
+            retention_length = evidence.pivot(index=None, columns="Experiment", values="Retention length")
+            retention_time = evidence.pivot(index=None, columns="Experiment", values="Retention time")
+        except KeyError:
+            self.logger.warning("Did not find evidence")
+            evidence = None
+        try:
+            self.logger.debug("Reading msScans")
+            ms_scans = self.required_reader_data["msScans"]
+            ms_scan_groups = ms_scans.groupby("Raw file")
+            group_iter = ms_scan_groups.groups
+        except KeyError:
+            self.logger.warning("Did not find msScans")
+            ms_scans = None
+        try:
+            self.logger.debug("Reading msmsScans")
+            msms_scans = self.required_reader_data["msmsScans"]
+            msms_scan_groups = msms_scans.groupby("Raw file")
+            group_iter = msms_scan_groups.groups
+        except KeyError:
+            self.logger.warning("Did not find msmsScans")
+            msms_scans = None
+
+        self.logger.info("Creating plots")
+        with PdfPages(os.path.join(self.start_dir, "MaxQuantReport.pdf")) as pdf:
+            self.logger.debug("Creating start page")
+            fig = plt.figure(figsize=(14, 7))
+            text_conf = dict(transform=fig.transFigure, size=24, ha="center")
+            fig.text(0.5, 0.92, "MaxQuant report", **text_conf)
             text_conf.update({"size": 20})
             fig.text(0.5, 0.85, "parameter.txt info", **text_conf)
             text_conf.pop("size")
