@@ -185,7 +185,7 @@ class MSPInitializer:
                 reader = Reader(self.start_dir, self.configs.get(Reader.name, {}))
                 self.configs[Reader.name] = reader.reader_config
                 self.update_config_file()
-                self.reader_data[Reader.name] = reader.get_full_data()
+                self.reader_data[Reader.name] = reader.full_data
 
             except MissingFilesException:
                 self.logger.debug("No files found for reader: %s", Reader.name)

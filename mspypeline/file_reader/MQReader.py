@@ -91,15 +91,9 @@ class MQReader(BaseReader):
         # update the config
         #self.update_config_file()  # TODO write this to the config file
 
-        # TODO turning this into a property and only preprocessing when required might be a lot better
-        self.full_data = {}
-        for file in MQReader.all_files:
-            if file in self.sample_data:
-                self.logger.debug("Preprocessing %s", file)
-                full_data = getattr(self, f"preprocess_{file.replace('.txt', '')}")()
-                self.full_data[file] = full_data
-
     def rename_df_columns(self, col_names: list) -> list:
+        if self.mapping_txt is None:
+            return col_names
         mapping_dict = {old_name: new_name for old_name, new_name in zip(self.mapping_txt.iloc[:, 0], self.mapping_txt.iloc[:, 1])}
 
         def find_key_match(col):
@@ -144,11 +138,9 @@ class MQReader(BaseReader):
         for file, l in self.intensity_column_names.items():
             unmatched = [x for x in l if x not in self.column_name_sample]
             if len(unmatched) > 0:
-                self.logger.warning("mismatch between files found")
-                continue
-                raise ValueError(
-                    f"Found replicates in {MQReader.proteins_txt}, but not in {MQReader.peptides_txt}: " +
-                    ", ".join(unmatched))
+                self.logger.warning(f"Found replicates in {MQReader.proteins_txt}, but not in {MQReader.peptides_txt}: " +
+                                    ", ".join(unmatched))
+                # raise
 
         # extract the analysis design from the file
         if not self.reader_config.get("analysis_design", False):
@@ -189,7 +181,7 @@ class MQReader(BaseReader):
     def preprocess_proteinGroups(self):
         file_dir = os.path.join(self.data_dir, MQReader.proteins_txt)
         df_protein_groups = pd.read_csv(file_dir, sep="\t")
-        df_protein_groups.columns = self.new_column_names[MQReader.proteins_txt]
+        df_protein_groups.columns = self.rename_df_columns(df_protein_groups.columns)
         not_contaminants = (df_protein_groups[
                                 ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
@@ -269,7 +261,7 @@ class MQReader(BaseReader):
     def preprocess_peptides(self):
         file_dir = os.path.join(self.data_dir, MQReader.peptides_txt)
         df_peptides = pd.read_csv(file_dir, sep="\t")
-        df_peptides.columns = self.new_column_names[MQReader.peptides_txt]
+        df_peptides.columns = self.rename_df_columns(df_peptides.columns)
         not_contaminants = (df_peptides[
                                 ["Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
@@ -282,12 +274,33 @@ class MQReader(BaseReader):
     def preprocess_summary(self):
         file_dir = os.path.join(self.data_dir, MQReader.summary_txt)
         df_summary = pd.read_csv(file_dir, sep="\t")
-        df_summary.columns = self.new_column_names[MQReader.summary_txt]
-        df_summary = df_summary[df_summary["Enzyme"] != ""]
+        df_summary.columns = self.rename_df_columns(df_summary.columns)
+        df_summary = df_summary[df_summary["Enzyme"].notna()]
+        df_summary["Experiment"] = self.rename_df_columns(df_summary["Experiment"])
         return df_summary
 
     def preprocess_parameters(self):
         file_dir = os.path.join(self.data_dir, MQReader.parameters_txt)
         df_parameters = pd.read_csv(file_dir, sep="\t", index_col=[0], squeeze=True)
-        df_parameters.columns = self.new_column_names[MQReader.parameters_txt]
         return df_parameters
+
+    def preprocess_evidence(self):
+        file_dir = os.path.join(self.data_dir, "evidence.txt")
+        df_evidence = pd.read_csv(file_dir, sep="\t")
+        not_contaminants = (df_evidence[["Reverse", "Potential contaminant"]] == "+").sum(axis=1) == 0
+        df_evidence = df_evidence[not_contaminants]
+        df_evidence.columns = self.rename_df_columns(df_evidence.columns)
+        df_evidence["Experiment"] = self.rename_df_columns(df_evidence["Experiment"].tolist())
+        return df_evidence
+
+    def preprocess_msScans(self):
+        file_dir = os.path.join(self.data_dir, "msScans.txt")
+        df_msscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
+                                 usecols=["Raw file", "Total ion current", "Retention time"])
+        return df_msscans
+
+    def preprocess_msmsScans(self):
+        file_dir = os.path.join(self.data_dir, "msmsScans.txt")
+        df_msmsscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
+                                   usecols=["Raw file", "Total ion current", "Retention time"])
+        return df_msmsscans

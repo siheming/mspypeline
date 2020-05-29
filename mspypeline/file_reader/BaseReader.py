@@ -1,10 +1,28 @@
+import logging
 from abc import abstractmethod, ABC, abstractstaticmethod, abstractproperty
 from mspypeline.helpers import get_logger
 
 
+class DataDict(dict):
+    def __init__(self, data_source, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.data_source = data_source
+
+    def __missing__(self, key):
+        try:
+            self.data_source.logger.debug("Reading %s from disk", key)
+            data = getattr(self.data_source, f"preprocess_{key}")()
+            self[key] = data
+            return data
+        except FileNotFoundError as e:
+            raise KeyError("Missing file:", key, e)
+        except AttributeError as e:
+            raise KeyError("Missing function to load:", key, e)
+
+
 class BaseReader(ABC):
-    def __init__(self, start_dir: str, reader_config: dict, loglevel):
-        self.full_data = {}
+    def __init__(self, start_dir: str, reader_config: dict, loglevel=logging.DEBUG):
+        self.full_data = DataDict(data_source=self)
         self.start_dir = start_dir
         self.reader_config = reader_config
         self.logger = get_logger(self.__class__.__name__, loglevel)
@@ -15,8 +33,7 @@ class BaseReader(ABC):
         if start_dir is None:
             raise ValueError("Invalid starting dir")
         if not reader_config:
-            # raise ValueError("Empty configs")
-            pass
+            self.logger.warning("Empty configs")
 
     @property
     @classmethod
@@ -29,11 +46,6 @@ class BaseReader(ABC):
     @abstractmethod
     def all_files(cls):
         raise NotImplementedError
-
-    def get_full_data(self):
-        if not self.full_data:
-            raise NotImplementedError("full_data needs to be filled with the file information")
-        return self.full_data
 
 
 class MissingFilesException(Exception):

@@ -5,6 +5,7 @@ import logging
 
 from mspypeline import MSPInitializer, MSPPlots, MaxQuantPlotter
 from mspypeline import create_app
+from mspypeline.file_reader import BaseReader
 
 
 class UIHandler:
@@ -41,6 +42,7 @@ class MSPGUI(tk.Tk):
     def __init__(self, file_dir, yml_file="default", loglevel=logging.DEBUG, configs: dict = None):
         super().__init__()
         self.yaml_options = ["default"]
+        self.reader_options = {reader.name: reader for reader in BaseReader.__subclasses__()}
         self.selected_reader = MaxQuantPlotter
 
         self.number_of_plots = 0
@@ -111,6 +113,9 @@ class MSPGUI(tk.Tk):
         self.replicate_var.set(self.mspinit.configs.get("has_replicates", True))
         self.update_listboxes()
 
+    def reader_setter(self, *args):
+        self.selected_reader = self.reader_options[self.reader_text.get()]
+
     def update_button(self):
         for plot_name in self.selected_reader.possible_plots:
             plot_settings = plot_name + "_settings"
@@ -142,12 +147,22 @@ class MSPGUI(tk.Tk):
         mspplots.create_results()
         self.running_text.set("Please press Start")
 
+    def report_button(self):
+        self.running_text.set("Creating Report")
+        self.update()
+        self.update_button()
+        mspplots = self.selected_reader.from_MSPInitializer(self.mspinit)
+        mspplots.create_report()
+        self.running_text.set("Please press Start")
+
     def make_layout(self):
-        self.title("MaxQuant Analyzer Pipeline")
+        self.title("mspypeline")
 
         path_label = tk.Label(self, text="Dir to analyze").grid(row=0, column=0)
 
         yaml_label = tk.Label(self, text="Yaml file").grid(row=0, column=1)
+
+        reader_label = tk.Label(self, text="File reader").grid(row=0, column=2)
 
         self.dir_text = tk.StringVar(value=self.mspinit.start_dir)
         dir_button = tk.Button(self, textvariable=self.dir_text,
@@ -158,6 +173,10 @@ class MSPGUI(tk.Tk):
         self.yaml_text = tk.StringVar()
         self.yaml_button = tk.OptionMenu(self, self.yaml_text, *self.yaml_options)
         self.yaml_button.grid(row=1, column=1)
+
+        self.reader_text = tk.StringVar(value="mqreader")
+        self.reader_button = tk.OptionMenu(self, self.reader_text, *self.reader_options.keys())
+        self.reader_button.grid(row=1, column=2)
 
         self.replicate_var = tk.IntVar(value=1)
         replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?", variable=self.replicate_var).grid(
@@ -218,12 +237,17 @@ class MSPGUI(tk.Tk):
                                  command=lambda: self.start_button())
         start_button.grid(row=total_length + 1, column=1)
 
+        report_button = tk.Button(self, text="Create Report",
+                                  command=lambda: self.report_button())
+        report_button.grid(row=total_length + 1, column=2)
+
         self.running_text = tk.StringVar(value="Please press Start")
         self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=1)
 
         # add all tracing to the variables
         self.dir_text.trace("w", self.dir_setter)
         self.yaml_text.trace("w", self.yaml_path_setter)
+        self.reader_text.trace("w", self.reader_setter)
 
     def plot_row(self, text: str, intensity_default: str):
         row = self.heading_length + self.number_of_plots
