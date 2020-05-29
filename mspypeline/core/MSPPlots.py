@@ -699,7 +699,7 @@ class MSPPlots:
             for g1, g2 in combinations(level_keys, 2):
                 data = self.get_r_volcano_data(g1, g2, df_to_use, level)
                 if data:
-                    plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano,
+                    plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use, level=level,
                                        intensity_label=self.intensity_label_names[df_to_use])
                     plot_kwargs.update(**kwargs)
                     matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
