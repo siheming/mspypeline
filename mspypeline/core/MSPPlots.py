@@ -351,10 +351,10 @@ class MSPPlots:
         for level in levels:
             data = self.get_detection_counts_data(df_to_use=df_to_use, level=level, **kwargs)
             if data:
-                matplotlib_plots.save_detection_counts_results(
-                    **data, intensity_label=self.intensity_label_names[df_to_use], df_to_use=df_to_use,
-                    level=level, save_path=self.file_dir_descriptive, **kwargs
-                )
+                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                plot_kwargs.update(**kwargs)
+                matplotlib_plots.save_detection_counts_results(**data, **plot_kwargs)
 
     def get_number_of_detected_proteins_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, Dict[str, pd.Series]]:
         # determine number of rows and columns in the plot based on the number of experiments
@@ -448,10 +448,10 @@ class MSPPlots:
             for full_name in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
                 data = self.get_relative_std_data(df_to_use=df_to_use, full_name=full_name, **kwargs)
                 if data:
-                    matplotlib_plots.save_relative_std_results(
-                        **data, df_to_use=df_to_use, name=full_name, save_path=self.file_dir_descriptive,
-                        intensity_label=self.intensity_label_names[df_to_use], **kwargs
-                    )
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], experiment_name=full_name,
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    matplotlib_plots.save_relative_std_results(**data, **plot_kwargs)
 
     def get_pathway_analysis_data(self, df_to_use, level, pathway, equal_var=True, **kwargs):
         level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
@@ -490,7 +490,10 @@ class MSPPlots:
             for pathway in list(self.interesting_proteins.keys()):
                 data = self.get_pathway_analysis_data(level=level, df_to_use=df_to_use, pathway=pathway, **kwargs)
                 if data:
-                    matplotlib_plots.save_pathway_analysis_results(**data, pathway=pathway, level=level, intensity_label=self.intensity_label_names[df_to_use], save_path=self.file_dir_pathway, **kwargs)
+                    plot_kwargs = dict(pathway=pathway, save_path=self.file_dir_pathway, df_to_use=df_to_use,
+                                       level=level, intensity_label=self.intensity_label_names[df_to_use])
+                    plot_kwargs.update(**kwargs)
+                    matplotlib_plots.save_pathway_analysis_results(**data, **plot_kwargs)
 
     def get_pathway_timeline_data(self):
         pass
@@ -629,7 +632,7 @@ class MSPPlots:
                 plot_kwargs.update(**kwargs)
                 matplotlib_plots.save_go_analysis_results(**data, **plot_kwargs)
 
-    def get_r_volcano_data(self, g1: str, g2: str, df_to_use: str):
+    def get_r_volcano_data(self, g1: str, g2: str, df_to_use: str, level: int):
         # import r interface package
         from rpy2.robjects.packages import importr
         from rpy2.robjects import pandas2ri
