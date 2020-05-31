@@ -1,6 +1,6 @@
 import os
 
-from mspypeline import MSPInitializer, UIHandler
+from mspypeline import MSPInitializer, UIHandler, MaxQuantPlotter
 
 
 def experiment_design_location(experimental_design):
@@ -13,12 +13,10 @@ def experiment_design_location(experimental_design):
 def test_all_designs_raw():
     configs = {
         "global_settings": {
-            "df_to_use": "lfq",
-            "levels": [0, 1],
             "save_path": None
         },
         "plot_r_volcano_settings": {
-            "create_plot": None
+            "create_plot": False
         },
         "plot_pathway_timeline_settings": {
             "create_plot": False
@@ -43,9 +41,20 @@ def test_all_designs_raw():
         else:
             configs["has_replicates"] = False
         target_dir = experiment_design_location(experiment_design)
-        UIHandler(target_dir, configs=configs)
-        for file in os.listdir(target_dir):
-            if file == "config" or file == "txt":
-                continue
-            else:
-                os.rename(os.path.join(target_dir, file), os.path.join(target_dir, file + "_raw"))
+        # UIHandler(target_dir, configs=configs)
+        mspinit = MSPInitializer(target_dir, "default")
+        mspinit.init_config()
+        mspinit.configs.update(configs)
+        mspinit.read_data()
+        # create plotter from initializer
+        for key in mspinit.configs.keys():
+            if "settings" in key:
+                mspinit.configs[key]["levels"] = [1, 2]
+        mspplots = MaxQuantPlotter.from_MSPInitializer(mspinit)
+        # create all plots and other results
+        mspplots.create_results()
+        # for file in os.listdir(target_dir):
+        #     if file == "config" or file == "txt":
+        #         continue
+        #     else:
+        #         os.rename(os.path.join(target_dir, file), os.path.join(target_dir, file + "_raw"))

@@ -135,11 +135,13 @@ class MSPPlots:
         return cls(**default_kwargs)
 
     def create_results(self):
+        global_settings = self.configs.get("global_settings", {})
+        self.logger.debug(f"got global settings: %s", global_settings)
         for plot_name in self.possible_plots:
             plot_settings_name = plot_name + "_settings"
             plot_settings = self.configs.get(plot_settings_name, {})
+            plot_settings.update({k: v for k, v in global_settings.items() if k not in plot_settings})
             if plot_settings.pop("create_plot", False):
-                self.logger.debug(f"creating plot {plot_name}")
                 getattr(self, plot_name)(**plot_settings)
         self.logger.info("Done creating plots")
 
