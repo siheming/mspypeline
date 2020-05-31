@@ -1,7 +1,7 @@
 from collections import defaultdict as ddict
 from collections import deque
 import pandas as pd
-from typing import Union, Callable, Dict, List
+from typing import Union, Callable, Dict, List, Sized, Optional
 
 
 class DataNode:
@@ -41,6 +41,7 @@ class DataNode:
             self.full_name = prefix + self.name
         else:
             self.full_name = ""
+        self.iter_counter = -1
 
     def __str__(self):
         return f"level {self.level}, name: {self.full_name}, n children: {len(self.children)}"
@@ -55,11 +56,15 @@ class DataNode:
         self.children[key] = node
 
     def __iter__(self):
-        return (node for node in self.children.values())
+        self.iter_counter = -1
+        return self
 
     def __next__(self):
-        for child in self.__iter__():
-            return child
+        self.iter_counter += 1
+        if self.iter_counter < len(self.children.keys()):
+            idx = list(self.children.keys())[self.iter_counter]
+            return self.children[idx]
+        raise StopIteration
 
     def get_total_number_children(self, go_max_depth: bool = False) -> int:
         """
@@ -74,23 +79,25 @@ class DataNode:
             The number of all children below this node
 
         """
-        queue = deque([self])
         n_children = 0
+        if self.data is not None and not go_max_depth:
+            return n_children
+        queue = deque([self])
         while queue:
             parent = queue.popleft()
-            has_child = next(parent) is not None
-            should_go_deeper = go_max_depth and has_child
-            if parent.data is not None and not should_go_deeper:
-                n_children += 1
-            else:
-                for child in parent:
+            for child in parent:
+                if child.data is not None and child.children and go_max_depth:
                     queue += [child]
+                elif child.data is None:
+                    queue += [child]
+                else:
+                    n_children += 1
         return n_children
 
     def aggregate(self,
                   method: Union[None, str, Callable] = "mean",
                   go_max_depth: bool = False,
-                  index: Union[None, str, pd.Index] = None):
+                  index: Optional[Union[str, pd.Index]] = None):
         """
 
         Parameters
@@ -111,16 +118,14 @@ class DataNode:
         data = []
         while queue:
             parent = queue.popleft()
-            has_child = next(parent) is not None
-            should_go_deeper = go_max_depth and has_child
+            should_go_deeper = go_max_depth and parent.children
             if parent.data is not None and not should_go_deeper:
                 if index is not None:
                     # append only the items in the index
-                    if isinstance(index, str):
-                        # if index was a str then series.loc will return a np type, thus a new series needs to be build
-                        data.append(pd.Series(parent.data.loc[index], name=parent.data.name, index=[index]))
-                    else:
-                        data.append(parent.data.loc[index])
+                    series_data = parent.data.loc[index]
+                    if not isinstance(series_data, pd.Series):
+                        series_data = pd.Series(series_data, name=parent.data.name, index=[index])
+                    data.append(series_data)
                 else:
                     data.append(parent.data)
             else:
@@ -244,10 +249,10 @@ class DataTree:
         return c
 
     def aggregate(
-            self, key: Union[None, str] = None,
+            self, key: Optional[str] = None,
             method: Union[None, str, Callable] = "mean",
             go_max_depth: bool = False,
-            index=None
+            index: Optional = None
     ) -> Union[pd.Series, pd.DataFrame]:
         """
 
@@ -336,9 +341,8 @@ class DataTree:
         queue = deque([self.root])
         while queue:
             parent = queue.popleft()
-            if parent.children:
-                if next(parent).children:
-                    for child in parent:
-                        queue += [child]
+            for child in parent:
+                if child.children:
+                    queue += [child]
                 else:
                     parent.data = parent.aggregate()
