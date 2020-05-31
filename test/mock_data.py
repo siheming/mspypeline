@@ -16,16 +16,18 @@ class MockData:
     def create_mock_data(
             test_cases = (0, 1, 10, 20, 50, 100, 250, 500),
             number_of_non_pathway_genes = 1000,
-            mu = 26.5,
-            sigma = 2.1,
-            tech_rep_sigma = 0.1,
-            experiment_sigma = 0.5,
+            average = 28,
+            gene_sigma = 2,
             group_sigma = 1,
+            experiment_sigma = 1,
+            tech_rep_sigma = 0.3,
+            noise_sigma = 0.5,
             design_combinations=((True, True), (False, True), (True, False), (False, False)),  #(has group, has technical replicates)
             number_of_technical_replicates = (3, 8, 1, 1),  # bad fix to make it easy
             number_of_experiments = (3, 6, 15, 30),
             number_of_groups = (4, 1, 8, 1),  # bad fix to make it easy
-            seed = 100
+            seed = 100,
+            save_to_disk=True
     ):
         # TODO this seed seems insufficient?
         np.seed = seed
@@ -71,10 +73,6 @@ class MockData:
         assert len(genes) == N
         genes = pd.Series(genes, name="Gene names")
 
-        # this will be exp2 transformed later to create log normal distributed data
-        gene_base_abundance = np.random.normal(mu, sigma, (N,))
-        print(f"{min(gene_base_abundance)} {max(gene_base_abundance)}")
-
         for i, (has_group, has_tech_rep) in enumerate(design_combinations):
             n_experiments = number_of_experiments[i]
             n_tech_reps = number_of_technical_replicates[i]
@@ -90,42 +88,27 @@ class MockData:
                 assert n_tech_reps == 1
             assert n_experiments > 1
 
-            # TODO maybe this should be uniform?
-            group_noise = np.random.normal(0, group_sigma, (N, n_groups))
-            experiment_noise = np.random.normal(0, experiment_sigma, (N, n_groups, n_experiments))
-            tech_rep_noise = np.random.normal(0, tech_rep_sigma, (N, n_groups, n_experiments, n_tech_reps))
+            group_name = np.array([f"Group{x}_" for x in range(n_groups)]).reshape((n_groups, 1, 1))
+            experiment_name = np.array([f"Experiment{x}_" for x in range(n_experiments)]).reshape((1, n_experiments, 1))
+            technical_replicate_name = np.array([f"Rep{x}" for x in range(n_tech_reps)]).reshape((1, 1, n_tech_reps))
 
-            """group_noise = np.zeros((N, n_groups))
-            # then add some constant per dimension
-            for j in range(1, n_groups + 1):
-                b = 10000
-                group_noise[:, j - 1] = b * j
-            experiment_noise = np.zeros((N, n_groups, n_experiments))
-            # then add some constant per dimension
-            for j in range(1, n_experiments + 1):
-                b = 1000
-                experiment_noise[:, :, j - 1] = b * j
+            names = np.core.defchararray.add(
+                np.core.defchararray.add(group_name, experiment_name), technical_replicate_name
+            ).reshape((n_groups * n_experiments * n_tech_reps))
 
-
-            tech_rep_noise = np.zeros((N, n_groups, n_experiments, n_tech_reps))
-            # then add some constant per dimension
-            for j in range(1, n_tech_reps + 1):
-                b = 100
-                tech_rep_noise[:, :, :, j - 1] = b * j"""
-            # add the noises togehter, each time add a new axis
-            experiment_data = np.broadcast_to(gene_base_abundance[..., np.newaxis],
-                                              (N, n_groups)) + group_noise
-            experiment_data = np.broadcast_to(experiment_data[..., np.newaxis],
-                                              (N, n_groups, n_experiments)) + experiment_noise
-            experiment_data = np.broadcast_to(experiment_data[..., np.newaxis],
-                                              (N, n_groups, n_experiments, n_tech_reps)) + tech_rep_noise
+            average_effect = np.ones((N, n_groups, n_experiments, n_tech_reps)) * average
+            gene_effect = np.random.normal(0, gene_sigma, (N, 1, 1, 1))
+            group_effect = np.random.uniform(0, group_sigma, (N, n_groups, 1, 1))
+            experiment_effect = np.random.normal(0, experiment_sigma, (1, 1, n_experiments, 1))
+            technical_replicate_effect = np.random.normal(0, tech_rep_sigma, (1, 1, 1, n_tech_reps))
+            noise = np.random.normal(0, noise_sigma, (N, n_groups, n_experiments, n_tech_reps))
+            experiment_data = average_effect + gene_effect + group_effect + experiment_effect + technical_replicate_effect + noise
 
             assert experiment_data.shape == (N, n_groups, n_experiments, n_tech_reps)
 
-            ex = experiment_data.reshape((N, n_groups * n_experiments * n_tech_reps), order="C")
-            df = pd.DataFrame(ex, index=genes, columns=[f"Intensity group{g + 1}_experiment{e + 1}_rep{t + 1}"
-                                                        for g in range(n_groups) for e in range(n_experiments) for t in
-                                                        range(n_tech_reps)])
+            ex = experiment_data.reshape((N, n_groups * n_experiments * n_tech_reps))
+            df = pd.DataFrame(ex, index=genes, columns=names)
+            df = df.rename(lambda x: f"Intensity {x}", axis=1)
             df = np.exp2(df)
             df_lfq = df.rename({col: col.replace("Intensity", "LFQ intensity") for col in df}, axis=1)
             df_ibaq = df.rename({col: col.replace("Intensity", "iBAQ") for col in df}, axis=1)
@@ -141,10 +124,13 @@ class MockData:
             df["Potential contaminant"] = ""
             df = df.reset_index()
             df["Protein names"] = df["Gene names"] + "P"
-            dir_name = f"{'has_group' if has_group else 'no_group'}_{'has_tech' if has_tech_rep else 'no_tech'}"
-            dir_name = os.path.join(MockData.mock_data_dir, dir_name, "txt")
-            os.makedirs(dir_name, exist_ok=True)
-            df.to_csv(os.path.join(dir_name, "proteinGroups.txt"), index=False, header=True, sep="\t")
+            if save_to_disk:
+                dir_name = f"{'has_group' if has_group else 'no_group'}_{'has_tech' if has_tech_rep else 'no_tech'}"
+                dir_name = os.path.join(MockData.mock_data_dir, dir_name, "txt")
+                os.makedirs(dir_name, exist_ok=True)
+                df.to_csv(os.path.join(dir_name, "proteinGroups.txt"), index=False, header=True, sep="\t")
+            else:
+                return df
 
     @staticmethod
     def delete_mock_data():

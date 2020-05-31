@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 test/mock_data/
 doc/build/*
+.coverage
 
 *.ipynb
 *.df
