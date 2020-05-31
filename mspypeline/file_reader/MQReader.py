@@ -192,7 +192,8 @@ class MQReader(BaseReader):
             self.logger.warning("Missing fasta headers using default columns for information")
             gene_name = df_protein_groups["Gene names"]
             sep_ind = gene_name.str.contains(";").fillna(False)
-            gene_name[sep_ind] = gene_name[sep_ind].str.split(";", expand=True)[0]
+            if sep_ind.sum() > 0:
+                gene_name[sep_ind] = gene_name[sep_ind].str.split(";", expand=True)[0]
             concat_df = pd.DataFrame({
                 "protein id": df_protein_groups["Protein names"],
                 "Gene name": gene_name.str.upper(),
