@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from itertools import combinations
 from collections import defaultdict as ddict
-from _collections_abc import Iterable
 import logging
 import warnings
-from typing import Dict
+from typing import Dict, Iterable, Optional
 from sklearn.decomposition import PCA
 
 from mspypeline import MSPInitializer, matplotlib_plots, DataTree
+from mspypeline.file_reader import BaseReader, MQReader
 from mspypeline.helpers import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, \
     get_intersection_and_unique, get_logger
 
@@ -45,10 +45,10 @@ class MSPPlots:
             start_dir: str,
             reader_data: dict,
             intensity_df_name: str = "",
-            interesting_proteins: Dict[str, pd.Series] = None,
-            go_analysis_gene_names: Dict[str, pd.Series] = None,
-            configs: dict = None,
-            required_reader: str = None,
+            interesting_proteins: Optional[Dict[str, pd.Series]] = None,
+            go_analysis_gene_names: Optional[Dict[str, pd.Series]] = None,
+            configs: Optional[dict] = None,
+            required_reader: Optional[str] = None,
             intensity_entries=(),
             loglevel=logging.DEBUG
     ):
@@ -103,8 +103,8 @@ class MSPPlots:
         os.makedirs(self.file_dir_volcano, exist_ok=True)
 
     @classmethod
-    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, intensity_entries=()):
-        return cls(
+    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, **kwargs):
+        default_kwargs = dict(
             start_dir=mspinti_instance.start_dir,
             reader_data=mspinti_instance.reader_data,
             intensity_df_name="",
@@ -112,9 +112,27 @@ class MSPPlots:
             go_analysis_gene_names=mspinti_instance.go_analysis_gene_names,
             configs=mspinti_instance.configs,
             required_reader=None,
-            intensity_entries=intensity_entries,
+            intensity_entries=(),
             loglevel=mspinti_instance.logger.getEffectiveLevel()
-            )
+        )
+        default_kwargs.update(**kwargs)
+        return cls(**default_kwargs)
+
+    @classmethod
+    def from_file_reader(cls, reader_instance: BaseReader, **kwargs):
+        default_kwargs = dict(
+            start_dir=reader_instance.start_dir,
+            reader_data={reader_instance.name: reader_instance.full_data},
+            intensity_df_name="",
+            interesting_proteins=None,
+            go_analysis_gene_names=None,
+            configs=reader_instance.configs,
+            required_reader=reader_instance.name,
+            intensity_entries=(),
+            loglevel=reader_instance.logger.getEffectiveLevel()
+        )
+        default_kwargs.update(**kwargs)
+        return cls(**default_kwargs)
 
     def create_results(self):
         for plot_name in self.possible_plots:
@@ -849,18 +867,25 @@ class MaxQuantPlotter(MSPPlots):
         )
 
     @classmethod
-    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"), ("ibaq", "iBAQ ", "iBAQ intensity"))):
-        return cls(
-            start_dir=mspinti_instance.start_dir,
-            reader_data=mspinti_instance.reader_data,
+    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, **kwargs):
+        default_kwargs = dict(
+            intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"),
+                               ("ibaq", "iBAQ ", "iBAQ intensity")),
             intensity_df_name="proteinGroups",
-            interesting_proteins=mspinti_instance.interesting_proteins,
-            go_analysis_gene_names=mspinti_instance.go_analysis_gene_names,
-            configs=mspinti_instance.configs,
-            required_reader="mqreader",
-            intensity_entries=intensity_entries,
-            loglevel=mspinti_instance.logger.getEffectiveLevel()
-            )
+            required_reader="mqreader"
+        )
+        default_kwargs.update(**kwargs)
+        return super().from_MSPInitializer(mspinti_instance, **default_kwargs)
+
+    @classmethod
+    def from_file_reader(cls, reader_instance: MQReader, **kwargs):
+        default_kwargs = dict(
+            intensity_df_name="proteinGroups",
+            intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"),
+                               ("ibaq", "iBAQ ", "iBAQ intensity")),
+        )
+        default_kwargs.update(**kwargs)
+        return super().from_file_reader(reader_instance, **default_kwargs)
 
     def create_report(self):
         def bar_from_counts(ax, counts, compare_counts=None, title=None, relative=False, yscale=None, bar_kwargs=None):
