@@ -3,7 +3,6 @@ import numpy as np
 import os
 import functools
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib_venn import venn3, venn2
 import matplotlib.pyplot as plt
 from scipy import stats
 from itertools import combinations
@@ -24,12 +23,6 @@ from mspypeline.helpers import get_number_rows_cols_for_fig, venn_names, get_num
 
 # TODO move these to the yml file
 FIG_FORMAT = ".pdf"
-# Venn diagram settings
-# TODO figsize
-VENN_TITLE_FONT_SIZE = 20
-VENN_SET_LABEL_FONT_SIZE = 16
-VENN_SUBSET_LABEL_FONT_SIZE = 14
-# descriptive plots settings
 
 
 class MSPPlots:
@@ -142,6 +135,7 @@ class MSPPlots:
             plot_settings = self.configs.get(plot_settings_name, {})
             plot_settings.update({k: v for k, v in global_settings.items() if k not in plot_settings})
             if plot_settings.pop("create_plot", False):
+                self.logger.debug(f"creating plot {plot_name}")
                 getattr(self, plot_name)(**plot_settings)
         self.logger.info("Done creating plots")
 
@@ -191,113 +185,6 @@ class MSPPlots:
     def create_report(self):
         raise NotImplementedError
 
-    def save_venn(self, ex: str, named_sets: Dict[str, set], show_suptitle: bool = True):
-        # TODO legend with colors and numbers
-        creates_figure = True
-        plt.close("all")
-        plt.figure(figsize=(14, 7))
-        title = ex
-        if show_suptitle:
-            plt.title(title, fontsize=VENN_TITLE_FONT_SIZE)
-
-        # create venn diagram based on size of set
-        sets = named_sets.values()
-        set_names = named_sets.keys()
-        if len(sets) < 2:
-            creates_figure = False
-            self.logger.warning(f"Could not create venn diagram for {ex} because it has less than 2 replicates")
-        elif len(sets) == 2:
-            venn = venn2(subsets=sets, set_labels=set_names)
-        elif len(sets) == 3:
-            venn = venn3(subsets=sets, set_labels=set_names)
-        else:
-            self.logger.warning(f"Could not create venn diagram for {ex}"
-                                f" because it has more than 3 replicates ({len(sets)})")
-            creates_figure = False
-
-        # if a figure was created, do some further configuration and save it
-        if creates_figure:
-            res_path = os.path.join(
-                self.file_dir_venn, f"venn_replicate_{title.replace(' ', '_')}" + FIG_FORMAT
-            )
-
-            for text in venn.set_labels:
-                try:
-                    text.set_fontsize(VENN_SET_LABEL_FONT_SIZE)
-                except AttributeError:
-                    pass
-            for text in venn.subset_labels:
-                try:
-                    text.set_fontsize(VENN_SUBSET_LABEL_FONT_SIZE)
-                except AttributeError:
-                    pass
-            plt.savefig(res_path, dpi=200, bbox_inches="tight")
-        plt.close("all")
-
-    def save_bar_venn(self, ex: str, named_sets: Dict[str, set], show_suptitle: bool = True):
-        plt.close("all")
-        if len(named_sets) > 6:
-            self.logger.warning("Skipping bar-venn for %s because it has more than 6 experiments", ex)
-            return
-
-        # create a mapping from name to a y coordinate
-        y_mappings = {name: i for i, name in enumerate(named_sets)}
-        # get all the heights and other info required for the plot
-        heights = []
-        x = []
-        ys = []
-        for i, (intersected, unioned, result) in enumerate(venn_names(named_sets)):
-            heights.append(len(result))
-            x.append(i)
-            ys.append([y_mappings[x] for x in intersected])
-
-        # initial figure setup
-        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
-        name = ex
-        if show_suptitle:
-            fig.suptitle(name, fontsize=20)
-        # create the bar plot
-        ax1.bar(x, heights, color="skyblue")
-        # add text to the bar plot
-        for x_level, height in zip(x, heights):
-            ax1.text(x_level, max(heights) / 2, height, verticalalignment='center', horizontalalignment='center')
-        ax1.set_ylabel("Number of proteins")
-
-        # create the line plots
-        for x_level, y in zip(x, ys):
-            # we just want to draw a straight line every time so we repeat x as often as needed
-            ax2.plot([x_level] * len(y), y, linestyle="-", color="gray", marker=".")
-        # replace the yticks with the names of the samples
-        ax2.set_yticks([i for i in range(len(y_mappings))])
-        ax2.set_yticklabels(y_mappings)
-        ax2.set_ylabel("Sample name")
-        ax2.set_xlabel("Number of comparison")
-
-        # save the result with the according name
-        res_path = os.path.join(
-            self.file_dir_venn, f"venn_bar_{name.replace(' ', '_')}" + FIG_FORMAT
-        )
-        fig.savefig(res_path, dpi=200, bbox_inches="tight")
-        plt.close("all")
-
-    def save_venn_names(self, named_sets: dict):
-        if len(named_sets) > 6:
-            self.logger.warning("Skipping save_venn_names because more than 6 experiments were passed at once")
-            return
-
-        for intersected, unioned, result in venn_names(named_sets):
-            # create name based on the intersections and unions that were done
-            intersected_name = "&".join(sorted(intersected))
-            unioned_name = "-" + "-".join(sorted(unioned)) if unioned else ""
-            res_path = os.path.join(
-                self.file_dir_venn,
-                f"set_{intersected_name}{unioned_name}.txt"
-            )
-            # write all names line by line into the file
-            with open(res_path, "w") as out:
-                for re in result:
-                    out.write(re + "\n")
-
     def get_venn_group_data(self, df_to_use: str = "raw", level: int = 0, non_na_function=get_number_of_non_na_values):
         n_children = {
             key: self.all_tree_dict[df_to_use][key].get_total_number_children()
@@ -315,28 +202,30 @@ class MSPPlots:
         per_group_dict = {column: set(df.index[df[column]]) for column in df}
         return per_group_dict
 
-    def plot_venn_groups(self, df_to_use: str = "raw", levels: tuple = (0,), show_suptitle=True):
+    def plot_venn_groups(self, df_to_use: str = "raw", levels: tuple = (0,), **kwargs):
         for level in levels:
+            plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                               ex=f"group_level_{level}",
+                               df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
+            plot_kwargs.update(**kwargs)
             # create venn diagrams comparing all replicates within an experiment
             named_sets = self.get_venn_group_data(df_to_use, level)
-            ex = f"group_level_{level}"
             # save the resulting venn diagram
-            self.save_venn(ex, named_sets, show_suptitle=show_suptitle)
-            # save the sets to txt files
-            self.save_venn_names(named_sets)
+            matplotlib_plots.save_venn(named_sets, **plot_kwargs)
             # create a mixture of bar and venn diagram
-            self.save_bar_venn(ex, named_sets, show_suptitle=show_suptitle)
+            matplotlib_plots.save_bar_venn(named_sets, **plot_kwargs)
 
-    def plot_venn_results(self, df_to_use: str = "raw", levels: tuple = (0,), show_suptitle=True):
+    def plot_venn_results(self, df_to_use: str = "raw", levels: tuple = (0,), **kwargs):
         for level in levels:
             for key in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
+                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], ex=key,
+                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
+                plot_kwargs.update(**kwargs)
                 named_sets = self.get_venn_data_per_key(df_to_use, key)
                 # save the resulting venn diagram
-                self.save_venn(key, named_sets, show_suptitle=show_suptitle)
-                # save the sets to txt files
-                self.save_venn_names(named_sets)
+                matplotlib_plots.save_venn(named_sets, **plot_kwargs)
                 # create a mixture of bar and venn diagram
-                self.save_bar_venn(key, named_sets, show_suptitle=show_suptitle)
+                matplotlib_plots.save_bar_venn(named_sets, **plot_kwargs)
 
     def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """

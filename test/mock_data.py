@@ -115,7 +115,6 @@ class MockData:
             df = pd.concat([df, df_lfq, df_ibaq], axis=1)
             # TODO drop some unimportant genes randomly
 
-            # df["Base"] = gene_base_abundance
             # required csv columns: "Fasta headers", "Only identified by site", "Reverse", "Potential contaminant", all empty
             # required col "Gene names", which is to be sampled from the pathways
             df["Fasta headers"] = ""

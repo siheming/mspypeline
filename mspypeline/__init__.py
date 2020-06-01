@@ -38,13 +38,6 @@ __all__ = [
     "QuantileNormalizer",
     "TailRobustNormalizer",
 ]
-# make sure everything that was imported is a class
-import inspect
-assert inspect.isclass(MSPPlots)
-assert inspect.isclass(MSPInitializer)
-assert inspect.isclass(MSPGUI)
-assert inspect.isclass(MSPParser)
-assert inspect.isclass(UIHandler)
 
 if __name__ == "__main__":
     msparser = MSPParser()

@@ -10,6 +10,7 @@ import matplotlib.cm as cm
 from matplotlib.collections import LineCollection
 from adjustText import adjust_text
 from matplotlib.colorbar import ColorbarBase
+from matplotlib_venn import venn2, venn3
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
 from scipy import stats
@@ -18,7 +19,7 @@ import functools
 import warnings
 
 from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, \
-    get_plot_name_suffix, get_intersection_and_unique
+    get_plot_name_suffix, get_intersection_and_unique, venn_names
 
 FIG_FORMAT = ".pdf"
 
@@ -90,8 +91,7 @@ def save_plot_func(
             res_path = os.path.join(path, plot_name)
             fig.savefig(res_path + fig_format, dpi=dpi, bbox_inches="tight")
         except PermissionError:
-            warnings.warn("Permission error in function %s. Did you forget to close the file?",
-                          str(func).split(" ")[1])
+            warnings.warn(f"Permission error in function {str(func).split(' ')[1]}. Did you forget to close the file?")
 
 
 def save_plot(plot_name: str):
@@ -112,10 +112,11 @@ def save_plot(plot_name: str):
         @functools.wraps(func)
         def wrapper_save_plot(*args, **kwargs):
             # run original function
-            fig, ax = func(*args, **kwargs)
-            path, pn = get_path_and_name_from_kwargs(name=plot_name, **kwargs)
-            save_plot_func(fig, path, pn, func, **kwargs)
-            return fig, ax
+            ret = func(*args, **kwargs)
+            if ret is not None:
+                path, pn = get_path_and_name_from_kwargs(name=plot_name, **kwargs)
+                save_plot_func(ret[0], path, pn, func, **kwargs)
+            return ret
         return wrapper_save_plot
     return decorator_save_plot
 
@@ -144,6 +145,32 @@ def save_csvs(name_map: Dict[str, str]):
             return func(*args, **kwargs)
         return wrapper_save_csvs
     return decorator_save_csvs
+
+
+def save_venn_to_txt(name_map: Dict[str, str]):
+    def decorator_save_venn(func):
+        @functools.wraps(func)
+        def wrapper_save_venn(*args, **kwargs):
+            for kwarg_name, file_name in name_map.items():
+                named_sets = kwargs.get(kwarg_name, None)
+                if named_sets is not None:
+                    if len(named_sets) > 6:
+                        warnings.warn(f"Skipping save_venn_to_txt because more than 6 experiments were passed at once. "
+                                      f"({len(named_sets)}")
+                        return func(*args, **kwargs)
+                    save_path, txt_name = get_path_and_name_from_kwargs(file_name, **kwargs)
+                    for intersected, unioned, result in venn_names(named_sets):
+                        # create name based on the intersections and unions that were done
+                        intersected_name = "&".join(sorted(intersected))
+                        unioned_name = "-" + "-".join(sorted(unioned)) if unioned else ""
+                        res_path = os.path.join(save_path, f"{txt_name}_{intersected_name}{unioned_name}.txt")
+                        # write all names line by line into the file
+                        with open(res_path, "w") as out:
+                            for re in result:
+                                out.write(re + "\n")
+            return func(*args, **kwargs)
+        return wrapper_save_venn
+    return decorator_save_venn
 
 
 class QuantileNormalize(colors.Normalize):
@@ -1002,7 +1029,7 @@ def save_experiment_comparison_results(
     try:
         r = stats.pearsonr(protein_intensities_sample1, protein_intensities_sample2)
     except ValueError:
-        warnings.warn("Could not calculate pearson r for %s vs %s", sample1, sample2)
+        warnings.warn(f"Could not calculate pearson r for {sample1} vs {sample2}")
         r = (np.nan,)
 
     if plot is not None:
@@ -1097,3 +1124,95 @@ def save_pathway_timeline_results():
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     return fig, axarr"""
+
+
+@save_plot("venn_bar_{ex}")
+@save_venn_to_txt({"named_sets": "set"})
+def save_bar_venn(
+        named_sets: Dict[str, set], ex: str, show_suptitle: bool = True, **kwargs
+) -> Optional[Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]]:
+    plt.close("all")
+    if len(named_sets) > 6:
+        warnings.warn(f"Skipping bar-venn for {ex} because it has more than 6 experiments")
+        return
+
+    # create a mapping from name to a y coordinate
+    y_mappings = {name: i for i, name in enumerate(named_sets)}
+    # get all the heights and other info required for the plot
+    heights = []
+    x = []
+    ys = []
+    for i, (intersected, unioned, result) in enumerate(venn_names(named_sets)):
+        heights.append(len(result))
+        x.append(i)
+        ys.append([y_mappings[x] for x in intersected])
+
+    # initial figure setup
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
+    if show_suptitle:
+        fig.suptitle(ex, fontsize=20)
+    # create the bar plot
+    ax1.bar(x, heights, color="skyblue")
+    # add text to the bar plot
+    for x_level, height in zip(x, heights):
+        ax1.text(x_level, max(heights) / 2, height, verticalalignment='center', horizontalalignment='center')
+    ax1.set_ylabel("Number of proteins")
+
+    # create the line plots
+    for x_level, y in zip(x, ys):
+        # we just want to draw a straight line every time so we repeat x as often as needed
+        ax2.plot([x_level] * len(y), y, linestyle="-", color="gray", marker=".")
+    # replace the yticks with the names of the samples
+    ax2.set_yticks([i for i in range(len(y_mappings))])
+    ax2.set_yticklabels(y_mappings)
+    ax2.set_ylabel("Sample name")
+    ax2.set_xlabel("Number of comparison")
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, (ax1, ax2)
+
+
+@save_plot("venn_replicate_{ex}")
+@save_venn_to_txt({"named_sets": "set"})
+def save_venn(
+        named_sets: Dict[str, set], ex: str, show_suptitle: bool = True,
+        title_font_size=20, set_label_font_size=16, subset_label_font_size=14, **kwargs
+) -> Optional[Tuple[plt.Figure, plt.Axes]]:
+    plt.close("all")
+    fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+    if show_suptitle:
+        plt.title(ex, fontsize=title_font_size)
+
+    # create venn diagram based on size of set
+    sets = named_sets.values()
+    set_names = named_sets.keys()
+    if len(sets) < 2:
+        warnings.warn(f"Could not create venn diagram for {ex} because it has less than 2 replicates")
+        return
+    elif len(sets) == 2:
+        venn = venn2(subsets=sets, set_labels=set_names, ax=ax)
+    elif len(sets) == 3:
+        venn = venn3(subsets=sets, set_labels=set_names, ax=ax)
+    else:
+        warnings.warn(f"Could not create venn diagram for {ex}"
+                      f" because it has more than 3 replicates ({len(sets)})")
+        return
+
+    # if a figure was created, do some further configuration
+    for text in venn.set_labels:
+        try:
+            text.set_fontsize(set_label_font_size)
+        except AttributeError:
+            pass
+    handles = []
+    labels = []
+    for text, patch in zip(venn.subset_labels, venn.patches):
+        try:
+            handles.append(patch)
+            labels.append(text.get_text())
+            text.set_fontsize(subset_label_font_size)
+        except AttributeError:
+            pass
+    plt.legend(handles, labels, bbox_to_anchor=(1.02, 0.5), loc="center left")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, ax

@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from mspypeline import MSPInitializer, UIHandler, MaxQuantPlotter
 
@@ -10,6 +11,7 @@ def experiment_design_location(experimental_design):
 
 
 # TODO test case with no pathways and go terms
+@pytest.mark.slow
 def test_all_designs_raw():
     configs = {
         "global_settings": {
@@ -20,18 +22,12 @@ def test_all_designs_raw():
         },
         "plot_pathway_timeline_settings": {
             "create_plot": False
-        },
-        "plot_venn_groups_settings": {
-            "create_plot": False
-        },
-        "plot_venn_results_settings": {
-            "create_plot": False
         }
     }
     # configs = {"pathways": ["A", "B"]}
     # configs = {"go_terms": ["A", "B"]}
     # set all intensites to log2
-    for experiment_design in ("has_group_has_tech", ):  # "has_group_no_tech", "no_group_has_tech", "no_group_no_tech"
+    for experiment_design in ("has_group_has_tech", "has_group_no_tech", "no_group_has_tech", "no_group_no_tech"):
         if "has_group" in experiment_design:
             configs["has_group"] = True
         else:
