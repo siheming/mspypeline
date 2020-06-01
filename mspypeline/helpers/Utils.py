@@ -2,6 +2,7 @@ import difflib
 from typing import Optional
 import pandas as pd
 from collections.abc import Sized
+from collections import defaultdict as ddict
 from difflib import SequenceMatcher
 from itertools import combinations
 from collections import deque
@@ -19,6 +20,30 @@ def get_number_rows_cols_for_fig(obj):
         else:
             n_cols += 1
     return n_rows, n_cols
+
+
+def fill_dict(d: dict, s: str, s_split=None):
+    if s_split is None:
+        s_split = s.split("_")
+    if len(s_split) > 1:
+        fill_dict(d[s_split[0]], s, s_split[1:])
+    else:
+        d[s_split[0]] = s
+
+
+def default_to_regular(d: dict):
+    if isinstance(d, ddict):
+        d = {k: default_to_regular(v) for k, v in d.items()}
+    return d
+
+
+def get_analysis_design(names):
+    factory = lambda: ddict(factory)
+    analysis_design = factory()
+    for name in names:
+        fill_dict(analysis_design, name)
+
+    return default_to_regular(analysis_design)
 
 
 def barplot_annotate_brackets(ax, num1, num2, data, center, height, yerr=None, dh=.05, barh=.05, fs=None,

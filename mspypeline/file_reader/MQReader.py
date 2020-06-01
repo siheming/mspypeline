@@ -4,7 +4,7 @@ from pandas.api.types import is_numeric_dtype
 import logging
 from collections import defaultdict as ddict
 
-from mspypeline.helpers import get_overlap, string_similarity_ratio, dict_depth
+from mspypeline.helpers import get_overlap, string_similarity_ratio, dict_depth, get_analysis_design
 from mspypeline.file_reader import BaseReader, MissingFilesException
 
 
@@ -147,26 +147,7 @@ class MQReader(BaseReader):
             # try to automatically determine experimental setup
             # if the naming convention is followed it is quite easy
             if self.naming_convention:
-                factory = lambda: ddict(factory)
-                analysis_design = factory()
-
-                def fill_dict(d: dict, s: str, s_split=None):
-                    if s_split is None:
-                        s_split = s.split("_")
-                    if len(s_split) > 1:
-                        fill_dict(d[s_split[0]], s, s_split[1:])
-                    else:
-                        d[s_split[0]] = s
-
-                def default_to_regular(d: dict):
-                    if isinstance(d, ddict):
-                        d = {k: default_to_regular(v) for k, v in d.items()}
-                    return d
-
-                for name in self.column_name_sample:
-                    fill_dict(analysis_design, name)
-
-                analysis_design = default_to_regular(analysis_design)
+                analysis_design = get_analysis_design(self.column_name_sample)
             # otherwise we can just guess grouping
             else:
                 analysis_design = self.guess_analysis_design(self.column_name_sample)
@@ -252,7 +233,7 @@ class MQReader(BaseReader):
                 new_index = df_protein_groups.index.drop_duplicates(keep=False)
                 duplicate_index = df_protein_groups.index.difference(new_index)
                 df_dup = df_protein_groups.loc[duplicate_index, :]
-                self.logger.warning("Merging %s rows into %s by summing numerical columns."
+                self.logger.warning("Merging %s rows into %s by summing numerical columns. "
                                     "Some information might be incorrect", df_dup.shape[0], duplicate_index.shape[0])
                 df_dup = df_dup.groupby(df_dup.index).apply(group_sum)
                 df_protein_groups = pd.concat([df_protein_groups.loc[new_index, :], df_dup], axis=0)
