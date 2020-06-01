@@ -9,7 +9,7 @@ from itertools import combinations
 from collections import defaultdict as ddict
 import logging
 import warnings
-from typing import Dict, Iterable, Optional
+from typing import Dict, Type, Iterable, Optional, Union
 from sklearn.decomposition import PCA
 
 from mspypeline import MSPInitializer, matplotlib_plots, DataTree
@@ -21,8 +21,28 @@ from mspypeline.helpers import get_number_rows_cols_for_fig, venn_names, get_num
 
 # plt.style.use('ggplot')
 
-# TODO move these to the yml file
 FIG_FORMAT = ".pdf"
+
+
+def validate_input(f):
+    @functools.wraps(f)
+    def wrapper(self, *args, **kwargs):
+        assert len(args) <= 2
+        dfs_to_use = kwargs.pop("dfs_to_use", None)
+        levels = kwargs.pop("levels", None)
+
+        # this is a convention, otherwise it wont work
+        if dfs_to_use is None:
+            dfs_to_use = args[0]
+        if levels is None:
+            levels = args[1]
+
+        if isinstance(dfs_to_use, str):
+            dfs_to_use = dfs_to_use,
+        if not isinstance(levels, Iterable):
+            levels = levels,
+        return f(self, dfs_to_use=dfs_to_use, levels=levels, **kwargs)
+    return wrapper
 
 
 class MSPPlots:
@@ -119,7 +139,7 @@ class MSPPlots:
             intensity_df_name="",
             interesting_proteins=None,
             go_analysis_gene_names=None,
-            configs=reader_instance.configs,
+            configs=reader_instance.reader_config,
             required_reader=reader_instance.name,
             intensity_entries=(),
             loglevel=reader_instance.logger.getEffectiveLevel()
@@ -140,7 +160,7 @@ class MSPPlots:
         self.logger.info("Done creating plots")
 
     def add_intensity_column(self, option_name: str, name_in_file: str, name_in_plot: str,
-                             scale: str = "normal", df: pd.DataFrame = None):
+                             scale: str = "normal", df: Optional[pd.DataFrame] = None):
         if df is None:
             if self.intensity_df is None:
                 self.logger.warning("No intensity df provided")
@@ -185,7 +205,7 @@ class MSPPlots:
     def create_report(self):
         raise NotImplementedError
 
-    def get_venn_group_data(self, df_to_use: str = "raw", level: int = 0, non_na_function=get_number_of_non_na_values):
+    def get_venn_group_data(self, df_to_use: str, level: int, non_na_function=get_number_of_non_na_values):
         n_children = {
             key: self.all_tree_dict[df_to_use][key].get_total_number_children()
             for key in self.all_tree_dict[df_to_use].level_keys_full_name[level]
@@ -202,30 +222,42 @@ class MSPPlots:
         per_group_dict = {column: set(df.index[df[column]]) for column in df}
         return per_group_dict
 
-    def plot_venn_groups(self, df_to_use: str = "raw", levels: tuple = (0,), **kwargs):
+    @validate_input
+    def plot_venn_groups(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                               ex=f"group_level_{level}",
-                               df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
-            plot_kwargs.update(**kwargs)
-            # create venn diagrams comparing all replicates within an experiment
-            named_sets = self.get_venn_group_data(df_to_use, level)
-            # save the resulting venn diagram
-            matplotlib_plots.save_venn(named_sets, **plot_kwargs)
-            # create a mixture of bar and venn diagram
-            matplotlib_plots.save_bar_venn(named_sets, **plot_kwargs)
-
-    def plot_venn_results(self, df_to_use: str = "raw", levels: tuple = (0,), **kwargs):
-        for level in levels:
-            for key in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], ex=key,
+            for df_to_use in dfs_to_use:
+                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                   ex=f"group_level_{level}",
                                    df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
                 plot_kwargs.update(**kwargs)
-                named_sets = self.get_venn_data_per_key(df_to_use, key)
+                # create venn diagrams comparing all replicates within an experiment
+                named_sets = self.get_venn_group_data(df_to_use, level)
                 # save the resulting venn diagram
-                matplotlib_plots.save_venn(named_sets, **plot_kwargs)
+                plot = matplotlib_plots.save_venn(named_sets, **plot_kwargs)
+                plots.append(plot)
                 # create a mixture of bar and venn diagram
-                matplotlib_plots.save_bar_venn(named_sets, **plot_kwargs)
+                plot = matplotlib_plots.save_bar_venn(named_sets, **plot_kwargs)
+                plots.append(plot)
+        return plots
+
+    @validate_input
+    def plot_venn_results(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
+        for level in levels:
+            for df_to_use in dfs_to_use:
+                for key in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], ex=key,
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
+                    plot_kwargs.update(**kwargs)
+                    named_sets = self.get_venn_data_per_key(df_to_use, key)
+                    # save the resulting venn diagram
+                    plot = matplotlib_plots.save_venn(named_sets, **plot_kwargs)
+                    plots.append(plot)
+                    # create a mixture of bar and venn diagram
+                    plot = matplotlib_plots.save_bar_venn(named_sets, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
     def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """
@@ -256,14 +288,19 @@ class MSPPlots:
         level_counts = pd.concat(level_counts, axis=1).astype("Int64").sort_index()
         return {"counts": level_counts}
 
-    def plot_detection_counts(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
+    @validate_input
+    def plot_detection_counts(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            data = self.get_detection_counts_data(df_to_use=df_to_use, level=level, **kwargs)
-            if data:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                plot_kwargs.update(**kwargs)
-                matplotlib_plots.save_detection_counts_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                data = self.get_detection_counts_data(df_to_use=df_to_use, level=level, **kwargs)
+                if data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_detection_counts_results(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
     def get_number_of_detected_proteins_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, Dict[str, pd.Series]]:
         # determine number of rows and columns in the plot based on the number of experiments
@@ -280,53 +317,73 @@ class MSPPlots:
             all_heights[experiment] = pd.Series(heights, index=["Total"] + intensities.columns.to_list(), name=experiment)
         return {"all_heights": all_heights}
 
-    def plot_number_of_detected_proteins(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
+    @validate_input
+    def plot_number_of_detected_proteins(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            data = self.get_number_of_detected_proteins_data(df_to_use=df_to_use, level=level, **kwargs)
-            if data:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                plot_kwargs.update(**kwargs)
-                matplotlib_plots.save_number_of_detected_proteins_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                data = self.get_number_of_detected_proteins_data(df_to_use=df_to_use, level=level, **kwargs)
+                if data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_number_of_detected_proteins_results(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
     def get_intensity_histograms_data(self, df_to_use: str, level: int, **kwargs):
         return {"hist_data": self.all_tree_dict[df_to_use].groupby(level, method=None)}
 
-    def plot_intensity_histograms(self, df_to_use: str = "raw", levels=(0,), **kwargs):
+    @validate_input
+    def plot_intensity_histograms(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            data = self.get_intensity_histograms_data(df_to_use=df_to_use, level=level, **kwargs)
-            if data:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                plot_kwargs.update(**kwargs)
-                matplotlib_plots.save_intensity_histogram_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                data = self.get_intensity_histograms_data(df_to_use=df_to_use, level=level, **kwargs)
+                if data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_intensity_histogram_results(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
     def get_scatter_replicates_data(self, df_to_use: str, full_name: str) -> Dict[str, pd.DataFrame]:
         return {"scatter_data": self.all_tree_dict[df_to_use][full_name].aggregate(None)}
 
-    def plot_scatter_replicates(self, df_to_use: str = "raw", levels=(0,), **kwargs):
+    @validate_input
+    def plot_scatter_replicates(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            for full_name in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
-                data = self.get_scatter_replicates_data(df_to_use=df_to_use, full_name=full_name)
-                if data:
-                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=full_name,
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                    plot_kwargs.update(**kwargs)
-                    matplotlib_plots.save_scatter_replicates_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                for full_name in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
+                    data = self.get_scatter_replicates_data(df_to_use=df_to_use, full_name=full_name)
+                    if data:
+                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=full_name,
+                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                        plot_kwargs.update(**kwargs)
+                        plot = matplotlib_plots.save_scatter_replicates_results(**data, **plot_kwargs)
+                        plots.append(plot)
+        return plots
 
     def get_rank_data(self, df_to_use: str, full_name: str, **kwargs) -> Dict[str, pd.Series]:
         return {"rank_data": self.all_tree_dict[df_to_use][full_name].aggregate().sort_values(ascending=False)}
 
-    def plot_rank(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
+    @validate_input
+    def plot_rank(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            for level_key in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
-                data = self.get_rank_data(df_to_use=df_to_use, full_name=level_key, **kwargs)
-                if data:
-                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=level_key,
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
-                                       interesting_proteins=self.interesting_proteins)
-                    plot_kwargs.update(**kwargs)
-                    matplotlib_plots.save_rank_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                for level_key in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
+                    data = self.get_rank_data(df_to_use=df_to_use, full_name=level_key, **kwargs)
+                    if data:
+                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=level_key,
+                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                           interesting_proteins=self.interesting_proteins)
+                        plot_kwargs.update(**kwargs)
+                        plot = matplotlib_plots.save_rank_results(**data, **plot_kwargs)
+                        plots.append(plot)
+        return plots
 
     def get_relative_std_data(self, df_to_use: str, full_name: str, **kwargs) -> Dict[str, pd.DataFrame]:
         """
@@ -351,18 +408,23 @@ class MSPPlots:
         intensities = intensities[mask]
         return {"intensities": intensities}
 
-    def plot_relative_std(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
+    @validate_input
+    def plot_relative_std(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         # TODO check with log2 thresholds
         for level in levels:
-            for full_name in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
-                data = self.get_relative_std_data(df_to_use=df_to_use, full_name=full_name, **kwargs)
-                if data:
-                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], experiment_name=full_name,
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                    plot_kwargs.update(**kwargs)
-                    matplotlib_plots.save_relative_std_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                for full_name in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
+                    data = self.get_relative_std_data(df_to_use=df_to_use, full_name=full_name, **kwargs)
+                    if data:
+                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], experiment_name=full_name,
+                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                        plot_kwargs.update(**kwargs)
+                        plot = matplotlib_plots.save_relative_std_results(**data, **plot_kwargs)
+                        plots.append(plot)
+        return plots
 
-    def get_pathway_analysis_data(self, df_to_use, level, pathway, equal_var=True, **kwargs):
+    def get_pathway_analysis_data(self, df_to_use: str, level: int, pathway: str, equal_var=True, **kwargs):
         level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
         found_proteins = set(self.interesting_proteins[pathway])
         found_proteins &= set(self.all_intensities_dict[df_to_use].index)
@@ -394,15 +456,20 @@ class MSPPlots:
                                      columns=pd.MultiIndex.from_tuples([(e1, e2) for e1, e2 in combinations(level_keys, 2)]))
         return {"protein_intensities": protein_intensities, "significances": significances}
 
-    def plot_pathway_analysis(self, df_to_use, levels, **kwargs):
+    @validate_input
+    def plot_pathway_analysis(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            for pathway in list(self.interesting_proteins.keys()):
-                data = self.get_pathway_analysis_data(level=level, df_to_use=df_to_use, pathway=pathway, **kwargs)
-                if data:
-                    plot_kwargs = dict(pathway=pathway, save_path=self.file_dir_pathway, df_to_use=df_to_use,
-                                       level=level, intensity_label=self.intensity_label_names[df_to_use])
-                    plot_kwargs.update(**kwargs)
-                    matplotlib_plots.save_pathway_analysis_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                for pathway in list(self.interesting_proteins.keys()):
+                    data = self.get_pathway_analysis_data(level=level, df_to_use=df_to_use, pathway=pathway, **kwargs)
+                    if data:
+                        plot_kwargs = dict(pathway=pathway, save_path=self.file_dir_pathway, df_to_use=df_to_use,
+                                           level=level, intensity_label=self.intensity_label_names[df_to_use])
+                        plot_kwargs.update(**kwargs)
+                        plot = matplotlib_plots.save_pathway_analysis_results(**data, **plot_kwargs)
+                        plots.append(plot)
+        return plots
 
     def get_pathway_timeline_data(self):
         pass
@@ -470,7 +537,7 @@ class MSPPlots:
                 res_path = os.path.join(self.file_dir_pathway, f"pathway_timeline_{pathway}" + FIG_FORMAT)
                 fig.savefig(res_path, dpi=200, bbox_inches="tight")
 
-    def get_experiment_comparison_data(self, df_to_use: str, full_name1: str, full_name2):
+    def get_experiment_comparison_data(self, df_to_use: str, full_name1: str, full_name2: str):
         protein_intensities_sample1 = self.all_tree_dict[df_to_use][full_name1].aggregate(None)
         protein_intensities_sample2 = self.all_tree_dict[df_to_use][full_name2].aggregate(None)
         mask, exclusive_1, exclusive_2 = get_intersection_and_unique(protein_intensities_sample1, protein_intensities_sample2)
@@ -485,16 +552,21 @@ class MSPPlots:
             "exclusive_sample1": exclusive_sample1, "exclusive_sample2": exclusive_sample2
         }
 
-    def plot_experiment_comparison(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
+    @validate_input
+    def plot_experiment_comparison(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         # TODO correlation of log2 and not log 2 data is different
+        plots = []
         for level in levels:
-            for ex1, ex2 in combinations(self.all_tree_dict[df_to_use].level_keys_full_name[level], 2):
-                data = self.get_experiment_comparison_data(df_to_use=df_to_use, full_name1=ex1, full_name2=ex2)
-                if data:
-                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], sample1=ex1, sample2=ex2,
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                    plot_kwargs.update(**kwargs)
-                    matplotlib_plots.save_experiment_comparison_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                for ex1, ex2 in combinations(self.all_tree_dict[df_to_use].level_keys_full_name[level], 2):
+                    data = self.get_experiment_comparison_data(df_to_use=df_to_use, full_name1=ex1, full_name2=ex2)
+                    if data:
+                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], sample1=ex1, sample2=ex2,
+                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                        plot_kwargs.update(**kwargs)
+                        plot = matplotlib_plots.save_experiment_comparison_results(**data, **plot_kwargs)
+                        plots.append(plot)
+        return plots
 
     def get_go_analysis_data(self, df_to_use: str, level: int):
         background = set(self.all_intensities_dict[df_to_use].index)
@@ -531,15 +603,21 @@ class MSPPlots:
                 test_results[experiment].append(pvalue)
         return {"heights": heights, "test_results": test_results}
 
-    def plot_go_analysis(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
+    @validate_input
+    def plot_go_analysis(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            data = self.get_go_analysis_data(df_to_use=df_to_use, level=level)
-            if data:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                   go_analysis_gene_names=self.go_analysis_gene_names,
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                plot_kwargs.update(**kwargs)
-                matplotlib_plots.save_go_analysis_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                data = self.get_go_analysis_data(df_to_use=df_to_use, level=level)
+                if data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       go_analysis_gene_names=self.go_analysis_gene_names,
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_go_analysis_results(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
+
 
     def get_r_volcano_data(self, g1: str, g2: str, df_to_use: str, level: int):
         # import r interface package
@@ -601,19 +679,23 @@ class MSPPlots:
 
         return {"volcano_data": plot_data, "unique_g1": unique_g1, "unique_g2": unique_g2}
 
-    def plot_r_volcano(self, df_to_use: str, levels, **kwargs):  # TODO Iterable[int]
+    def plot_r_volcano(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         # TODO both adj and un adj should be available
+        plots = []
         for level in levels:
-            level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
-            for g1, g2 in combinations(level_keys, 2):
-                data = self.get_r_volcano_data(g1, g2, df_to_use, level)
-                if data:
-                    plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use, level=level,
-                                       intensity_label=self.intensity_label_names[df_to_use])
-                    plot_kwargs.update(**kwargs)
-                    matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
+                for g1, g2 in combinations(level_keys, 2):
+                    data = self.get_r_volcano_data(g1, g2, df_to_use, level)
+                    if data:
+                        plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use, level=level,
+                                           intensity_label=self.intensity_label_names[df_to_use])
+                        plot_kwargs.update(**kwargs)
+                        plot = matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
+                        plots.append(plot)
+        return plots
 
-    def get_pca_data(self, df_to_use: str = "raw_log2", level: int = 0, n_components: int = 4, fill_value: float = 0, fill_na_before_norm: bool = False, **kwargs):
+    def get_pca_data(self, df_to_use: str, level: int, n_components: int = 4, fill_value: float = 0, fill_na_before_norm: bool = False, **kwargs):
         data_input = self.all_tree_dict[df_to_use].groupby(level, method=None)
         if fill_na_before_norm:
             data_input.fillna(fill_value, inplace=True)
@@ -626,14 +708,19 @@ class MSPPlots:
                           index=[f"PC_{i}" for i in range(1, n_components + 1)])
         return {"pca_data": df, "pca_fit": pca}
 
-    def plot_pca_overview(self, df_to_use: str, levels, **kwargs):  # TODO Iterable[int]
+    @validate_input
+    def plot_pca_overview(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            data = self.get_pca_data(level=level, df_to_use=df_to_use, **kwargs)
-            if data:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                plot_kwargs.update(**kwargs)
-                matplotlib_plots.save_pca_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                data = self.get_pca_data(level=level, df_to_use=df_to_use, **kwargs)
+                if data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_pca_results(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
     def get_boxplot_data(self, df_to_use: str, level: int, **kwargs) -> dict:
         """
@@ -657,16 +744,20 @@ class MSPPlots:
         df = df[df.median().sort_values(ascending=True).index]
         return {"protein_intensities": df}
 
-    def plot_boxplot(self, df_to_use, levels, **kwargs):
+    def plot_boxplot(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
-            if data:
-                plot_kwargs = dict(level=level, df_to_use=df_to_use, save_path=self.file_dir_descriptive,
-                                   intensity_label=self.intensity_label_names[df_to_use])
-                plot_kwargs.update(**kwargs)
-                matplotlib_plots.save_boxplot_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
+                if data:
+                    plot_kwargs = dict(level=level, df_to_use=df_to_use, save_path=self.file_dir_descriptive,
+                                       intensity_label=self.intensity_label_names[df_to_use])
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_boxplot_results(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
-    def get_n_protein_vs_quantile_data(self, df_to_use, level, quantile_range: np.array = None, **kwargs):
+    def get_n_protein_vs_quantile_data(self, df_to_use: str, level: int, quantile_range: Optional[np.array] = None, **kwargs):
         if quantile_range is None:
             quantile_range = np.arange(0.05, 1, 0.05)
         df = self.all_tree_dict[df_to_use].groupby(level)
@@ -674,62 +765,86 @@ class MSPPlots:
         quantiles = df.quantile(quantile_range)
         return {"quantiles": quantiles, "n_proteins": n_proteins}
 
-    def plot_n_proteins_vs_quantile(self, df_to_use, levels, **kwargs):
+    @validate_input
+    def plot_n_proteins_vs_quantile(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
-            if data:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                plot_kwargs.update(**kwargs)
-                matplotlib_plots.save_n_proteins_vs_quantile_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
+                if data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_n_proteins_vs_quantile_results(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
-    def get_kde_data(self, df_to_use, level, **kwargs) -> Dict[str, pd.DataFrame]:
+    def get_kde_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         intensities = self.all_tree_dict[df_to_use].groupby(level)
         return {"intensities": intensities}
 
-    def plot_kde(self, df_to_use, levels, **kwargs):
+    @validate_input
+    def plot_kde(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
         for level in levels:
-            data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
-            if data:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                plot_kwargs.update(**kwargs)
-                matplotlib_plots.save_kde_results(**data, **plot_kwargs)
+            for df_to_use in dfs_to_use:
+                data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
+                if data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_kde_results(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
-    def plot_normalization_overview(self, df_to_use, level, **kwargs):
-        n_prot_data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
-        kde_data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
-        boxplot_data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
+    @validate_input
+    def plot_normalization_overview(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
+        for level in levels:
+            for df_to_use in dfs_to_use:
+                n_prot_data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
+                kde_data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
+                boxplot_data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
 
-        if n_prot_data and kde_data and boxplot_data:
-            plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                               df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-            plot_kwargs.update(**kwargs)
-            matplotlib_plots.save_normalization_overview_results(
-                **n_prot_data, **kde_data, **boxplot_data, **plot_kwargs
-            )
+                if n_prot_data and kde_data and boxplot_data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_normalization_overview_results(
+                        **n_prot_data, **kde_data, **boxplot_data, **plot_kwargs
+                    )
+                    plots.append(plot)
+        return plots
 
-    def get_intensity_heatmap_data(self, df_to_use, level, sort_index: bool = True, sort_columns: bool = True, **kwargs):
+    def get_intensity_heatmap_data(self, df_to_use: str, level: int, sort_index: bool = False,
+                                   sort_index_by_missing: bool = True, sort_columns_by_missing: bool = True, **kwargs):
         intensities = self.all_tree_dict[df_to_use].groupby(level)
-        if sort_index:
+        if sort_index_by_missing:
             index = intensities.isna().sum(axis=1).sort_values().index
+        elif sort_index:
+            index = intensities.index.sort_values()
         else:
             index = intensities.index
-        if sort_columns:
+        if sort_columns_by_missing:
             columns = intensities.isna().sum(axis=0).sort_values().index
         else:
             columns = intensities.columns
 
         return {"intensities": intensities.loc[index, columns]}
 
-    def plot_intensity_heatmap(self, df_to_use, levels, **kwargs):
-        for level in levels:
-            data = self.get_intensity_heatmap_data(df_to_use=df_to_use, level=level, **kwargs)
-            if data:
-                plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
-                plot_kwargs.update(**kwargs)
-                return matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
+    @validate_input
+    def plot_intensity_heatmap(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+        plots = []
+        for df_to_use in dfs_to_use:
+            for level in levels:
+                data = self.get_intensity_heatmap_data(df_to_use=df_to_use, level=level, **kwargs)
+                if data:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
+                    plots.append(plot)
+        return plots
 
 
 class MaxQuantPlotter(MSPPlots):
