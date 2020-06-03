@@ -2,14 +2,15 @@ import argparse
 import tkinter as tk
 from tkinter import filedialog
 import logging
+from typing import Optional, Iterable
 
-from mspypeline import MSPInitializer, MSPPlots, MaxQuantPlotter
-from mspypeline import create_app
-from mspypeline.file_reader import BaseReader
+from mspypeline import MSPInitializer, create_app
+from mspypeline.modules import default_normalizers
+from mspypeline.file_reader import BaseReader, MQReader
 
 
 class UIHandler:
-    def __init__(self, file_dir, yml_file="default", gui=False, host_flask=False, selected_reader=MaxQuantPlotter, loglevel=logging.DEBUG, configs: dict = None):
+    def __init__(self, file_dir, yml_file="default", gui=False, host_flask=False, selected_reader=MQReader.MQReader, loglevel=logging.DEBUG, configs: dict = None):
         base_config = {
             "has_replicates": False,
             "has_groups": False,
@@ -33,7 +34,7 @@ class UIHandler:
             mspinit.configs.update(configs)
             mspinit.read_data()
             # create plotter from initializer
-            mspplots = selected_reader.from_MSPInitializer(mspinit)
+            mspplots = selected_reader.plotter.from_MSPInitializer(mspinit)
             # create all plots and other results
             mspplots.create_results()
 
@@ -43,11 +44,16 @@ class MSPGUI(tk.Tk):
         super().__init__()
         self.yaml_options = ["default"]
         self.reader_options = {reader.name: reader for reader in BaseReader.__subclasses__()}
-        self.selected_reader = MaxQuantPlotter
+        self.selected_reader = MQReader.MQReader
+        self.normalize_options = ["None"] + list(default_normalizers.keys())
 
         self.number_of_plots = 0
 
         self.mspinit = MSPInitializer("", yml_file, loglevel=loglevel)
+        self.plot_settings = {}
+        self.intensity_options = ["lfq", "raw", "ibaq", "lfq_log2", "raw_log2", "ibaq_log2",
+                                  "lfq_normalized", "raw_normalized", "ibaq_normalized", "lfq_normalized_log2",
+                                  "raw_normalized_log2", "ibaq_normalized_log2"]
         self.make_layout()
         if file_dir:
             self.dir_text.set(file_dir)
@@ -95,37 +101,42 @@ class MSPGUI(tk.Tk):
         level_names = self.mspinit.configs.get("level_names", [])
         level_names = {i: name for i, name in enumerate(level_names)}
         levels = self.mspinit.configs.get("levels", 3)
-        for plot_name in self.selected_reader.possible_plots:
+        for plot_name in self.selected_reader.plotter.possible_plots:
             plot_settings_name = plot_name + "_settings"
             plot_settings = self.mspinit.configs.get(plot_settings_name, {})
-            plot_levels = plot_settings.get("levels", [])
             var_name = plot_name.replace("plot_", "") + "_var"
             int_name = var_name.replace("var", "int")
             levels_name = var_name.replace("var", "levels")
-            getattr(self, var_name).set(plot_settings.get("df_to_use", "raw"))
-            getattr(self, int_name).set(plot_settings.get("create_plot", False))
-            selected_levels = getattr(self, levels_name)
-            selected_levels.delete(0, "end")
-            for level in range(levels):
-                selected_levels.insert("end", level_names.get(level, level))
-                if level in plot_levels:
-                    selected_levels.select_set(level)
+            # update all settings in the GUI
+            self.plot_settings[int_name].set(plot_settings.get("create_plot", False))
+
+            plot_intensities = plot_settings.get("dfs_to_use", [])
+            self.plot_settings[var_name].update_selection(plot_intensities)
+
+            plot_levels = plot_settings.get("levels", [])
+            selected_levels = self.plot_settings[levels_name]
+            selected_levels.update_options([level_names.get(l, l) for l in range(levels)])
+            selected_levels.update_selection([level_names.get(pl, pl) for pl in plot_levels])
         self.replicate_var.set(self.mspinit.configs.get("has_replicates", True))
+        self.selected_reader = self.reader_options.get(self.mspinit.configs.get("selected_reader", "mqreader"))
+        self.normalizer_text.set(self.mspinit.configs.get("selected_normalizer", "None"))
         self.update_listboxes()
 
     def reader_setter(self, *args):
         self.selected_reader = self.reader_options[self.reader_text.get()]
 
     def update_button(self):
-        for plot_name in self.selected_reader.possible_plots:
+        level_names = self.mspinit.configs.get("level_names", [])
+        level_names = {name: i for i, name in enumerate(level_names)}
+        for plot_name in self.selected_reader.plotter.possible_plots:
             plot_settings = plot_name + "_settings"
             var_name = plot_name.replace("plot_", "") + "_var"
             int_name = var_name.replace("var", "int")
             levels_name = var_name.replace("var", "levels")
             selected_settings = {
-                "create_plot": bool(getattr(self, int_name).get()),
-                "df_to_use": getattr(self, var_name).get(),
-                "levels": [int(x) for x in getattr(self, levels_name).curselection()]
+                "create_plot": bool(self.plot_settings[int_name].get()),
+                "dfs_to_use": [k for k, v in self.plot_settings[var_name].get_selection().items() if v],
+                "levels": [level_names.get(k, k) for k, v in self.plot_settings[levels_name].get_selection().items() if v]
             }
             self.mspinit.configs.update({plot_settings: selected_settings})
         gos = self.go_proteins_list.curselection()
@@ -135,6 +146,8 @@ class MSPGUI(tk.Tk):
         self.mspinit.configs["go_terms"] = gos
         self.mspinit.configs["pathways"] = pathways
         self.mspinit.configs["has_replicates"] = bool(self.replicate_var.get())
+        self.mspinit.configs["selected_reader"] = str(self.reader_text.get())
+        self.mspinit.configs["selected_normalizer"] = str(self.normalizer_text.get())
         self.mspinit.init_config()
         self.mspinit.read_data()
         self.update_listboxes()
@@ -143,7 +156,7 @@ class MSPGUI(tk.Tk):
         self.running_text.set("Creating Plots")
         self.update()
         self.update_button()
-        mspplots = self.selected_reader.from_MSPInitializer(self.mspinit)
+        mspplots = self.selected_reader.plotter.from_MSPInitializer(self.mspinit)
         mspplots.create_results()
         self.running_text.set("Please press Start")
 
@@ -151,7 +164,7 @@ class MSPGUI(tk.Tk):
         self.running_text.set("Creating Report")
         self.update()
         self.update_button()
-        mspplots = self.selected_reader.from_MSPInitializer(self.mspinit)
+        mspplots = self.selected_reader.plotter.from_MSPInitializer(self.mspinit)
         mspplots.create_report()
         self.running_text.set("Please press Start")
 
@@ -189,6 +202,8 @@ class MSPGUI(tk.Tk):
 
         experiments_label = tk.Label(self, text="Pathway analysis").grid(row=3, column=1)
 
+        normalizer_label = tk.Label(self, text="Normalizer").grid(row=3, column=2)
+
         self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mspinit.possible_gos, key=len)))
         self.go_proteins_list.configure(exportselection=False)
         for x in MSPInitializer.possible_gos:
@@ -203,6 +218,10 @@ class MSPGUI(tk.Tk):
 
         self.pathway_list.grid(row=4, column=1)
 
+        self.normalizer_text = tk.StringVar(value="None")
+        self.normalizer_button = tk.OptionMenu(self, self.normalizer_text, *self.normalize_options)
+        self.normalizer_button.grid(row=4, column=2)
+
         plot_label = tk.Label(self, text="Which plots should be created").grid(row=5, column=0)
 
         intensity_label = tk.Label(self, text="Intensity").grid(row=5, column=1)
@@ -211,23 +230,21 @@ class MSPGUI(tk.Tk):
 
         self.heading_length = 6
 
-        # TODO Replace this with a dictionary
-        self.detection_counts_int, self.detection_counts_var, self.detection_counts_levels = self.plot_row("Detection counts", "raw_log2")
-        self.number_of_detected_proteins_int, self.number_of_detected_proteins_var, self.number_of_detected_proteins_levels = self.plot_row("Number of detected proteins", "raw_log2")
-        self.intensity_histograms_int, self.intensity_histograms_var, self.intensity_histograms_levels = self.plot_row("Intensity histogram", "raw")
-        self.relative_std_int, self.relative_std_var, self.relative_std_levels = self.plot_row("Relative std", "raw_log2")
-        self.rank_int, self.rank_var, self.rank_levels = self.plot_row("Rank", "raw_log2")
-        self.pathway_analysis_int, self.pathway_analysis_var, self.pathway_analysis_levels = self.plot_row("Pathway Analysis", "raw_log2")
-        self.pathway_timeline_int, self.pathway_timeline_var, self.pathway_timeline_levels = self.plot_row("Pathway Timeline", "raw_log2")
-        # self.pathway_proportions_int, self.pathway_proportions_var = self.plot_row("Pathway proportions", "raw_log2")
-        self.scatter_replicates_int, self.scatter_replicates_var, self.scatter_replicates_levels = self.plot_row("Scatter replicates", "raw_log2")
-        self.experiment_comparison_int, self.experiment_comparison_var, self.experiment_comparison_levels = self.plot_row("Experiment comparison", "raw_log2")
-        self.go_analysis_int, self.go_analysis_var, self.go_analysis_levels = self.plot_row("Go analysis", "raw_log2")
-        self.venn_results_int, self.venn_results_var, self.venn_results_levels = self.plot_row("Venn diagrams", "raw_log2")
-        self.venn_groups_int, self.venn_groups_var, self.venn_groups_levels = self.plot_row("Group diagrams", "raw_log2")
-        self.r_volcano_int, self.r_volcano_var, self.r_volcano_levels = self.plot_row("Volcano plot (R)", "raw_log2")
-        self.pca_overview_int, self.pca_overview_var, self.pca_overview_levels = self.plot_row("PCA overview", "raw")
-        self.boxplot_int, self.boxplot_var, self.boxplot_levels = self.plot_row("Boxplot", "raw")
+        self.plot_row("Detection counts", "detection_counts")
+        self.plot_row("Number of detected proteins", "number_of_detected_proteins")
+        self.plot_row("Intensity histogram", "intensity_histograms")
+        self.plot_row("Relative std", "relative_std")
+        self.plot_row("Rank", "rank")
+        self.plot_row("Pathway Analysis", "pathway_analysis")
+        self.plot_row("Pathway Timeline", "pathway_timeline")
+        self.plot_row("Scatter replicates", "scatter_replicates")
+        self.plot_row("Experiment comparison", "experiment_comparison")
+        self.plot_row("Go analysis", "go_analysis")
+        self.plot_row("Venn diagrams", "venn_results")
+        self.plot_row("Group diagrams", "venn_groups")
+        self.plot_row("Volcano plot (R)", "r_volcano")
+        self.plot_row("PCA overview", "pca_overview")
+        self.plot_row("Boxplot", "boxplot")
 
         total_length = self.heading_length + self.number_of_plots
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
@@ -249,22 +266,53 @@ class MSPGUI(tk.Tk):
         self.yaml_text.trace("w", self.yaml_path_setter)
         self.reader_text.trace("w", self.reader_setter)
 
-    def plot_row(self, text: str, intensity_default: str):
+    def plot_row(self, text: str, plot_name: str):
         row = self.heading_length + self.number_of_plots
         int_var = tk.IntVar(value=1)
-        plot_button = tk.Checkbutton(self, text=text, variable=int_var).grid(row=row, column=0)
+        tk.Checkbutton(self, text=text, variable=int_var).grid(row=row, column=0)
 
-        intensity_var = tk.StringVar(value=intensity_default)
+        intensity_list = MultiSelectOptionMenu(self, self.intensity_options, "Select Intensities")
+        intensity_list.grid(row=row, column=1)
 
-        intensity_menu = tk.OptionMenu(self, intensity_var, "lfq", "raw", "ibaq", "lfq_log2", "raw_log2",
-                                       "ibaq_log2").grid(row=row, column=1)
-        level_list = tk.Listbox(self, selectmode="multiple", height=2)
+        level_list = MultiSelectOptionMenu(self, button_text="Select Levels")
         level_list.grid(row=row, column=2)
-        level_list.configure(exportselection=False)
-        for op in [0, 1, 2]:
-            level_list.insert("end", op)
+
         self.number_of_plots += 1
-        return int_var, intensity_var, level_list
+        self.plot_settings.update({
+            f"{plot_name}_int": int_var,
+            f"{plot_name}_var": intensity_list,
+            f"{plot_name}_levels": level_list
+        })
+
+
+class MultiSelectOptionMenu(tk.Frame):
+    def __init__(self, parent, choices: Optional[Iterable] = None, button_text: str = "Default text"):
+        super().__init__(parent)
+        menubutton = tk.Menubutton(self, text=button_text, indicatoron=True, borderwidth=1, relief="raised")
+        self.menu = tk.Menu(menubutton, tearoff=False)
+        menubutton.configure(menu=self.menu)
+        menubutton.pack(pady=3, padx=3)
+        self.choices_dict = {}
+        self.choices = choices if choices is not None else ()
+        self.update_options()
+
+    def update_options(self, choices: Optional[Iterable] = None):
+        if choices is not None:
+            self.choices = choices
+            self.choices_dict.clear()
+        for choice in self.choices:
+            self.choices_dict[choice] = tk.BooleanVar(value=False)
+            self.menu.add_checkbutton(label=choice, variable=self.choices_dict[choice], onvalue=True, offvalue=False)
+
+    def update_selection(self, choices: Iterable):
+        for choice in self.choices:
+            if choice in choices:
+                self.choices_dict[choice].set(True)
+            else:
+                self.choices_dict[choice].set(False)
+
+    def get_selection(self):
+        return {k: v.get() for k, v in self.choices_dict.items()}
 
 
 class MSPParser(argparse.ArgumentParser):

@@ -12,12 +12,13 @@ def create_app(test_config=None):
 
 # flatten package imports for the core package
 from .version import __version__
-from .plotter import plotly_plots, matplotlib_plots
+from .plotting_backend import plotly_plots, matplotlib_plots
 from .modules import DataNode, DataTree
 from .modules import interpolate_data, MedianNormalizer, QuantileNormalizer, TailRobustNormalizer
 from .core.MSPInitializer import MSPInitializer
 from .core.MSPPlots import MSPPlots, MaxQuantPlotter
 from .core.MSPypeline import MSPGUI, MSPParser, UIHandler
+from .file_reader.MQReader import MQReader
 # import for "from package import *"
 __all__ = [
     "create_app",

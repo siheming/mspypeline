@@ -6,6 +6,7 @@ from collections import defaultdict as ddict
 
 from mspypeline.helpers import get_overlap, string_similarity_ratio, dict_depth, get_analysis_design
 from mspypeline.file_reader import BaseReader, MissingFilesException
+from mspypeline import MaxQuantPlotter
 
 
 class MQReader(BaseReader):
@@ -16,6 +17,7 @@ class MQReader(BaseReader):
     parameters_txt = "parameters.txt"
     all_files = [proteins_txt, peptides_txt, summary_txt, parameters_txt]
     name = "mqreader"
+    plotter = MaxQuantPlotter
 
     def __init__(self, start_dir: str,
                  reader_config: dict,

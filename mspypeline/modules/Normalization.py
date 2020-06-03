@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 from collections import defaultdict as ddict
-from typing import Type, Callable
+from typing import Type, Callable, Optional
 import pandas as pd
 import numpy as np
 import logging
@@ -105,7 +105,7 @@ def median_polish(data: pd.DataFrame, max_iter: int = 100, tol: float = 0.001):
 class BaseNormalizer(ABC):
     def __init__(self, input_scale: str = "log2",
                  output_scale: str = "normal",
-                 col_name_prefix: str = None,
+                 col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         """
@@ -148,7 +148,7 @@ class BaseNormalizer(ABC):
 class MedianNormalizer(BaseNormalizer):
     def __init__(self, input_scale: str = "log2",
                  output_scale: str = "normal",
-                 col_name_prefix: str = None,
+                 col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         super().__init__(input_scale, output_scale, col_name_prefix, loglevel, **kwargs)
@@ -179,10 +179,10 @@ class QuantileNormalizer(BaseNormalizer):
     Quantile Normalizer as described on wikipedia
     https://en.wikipedia.org/wiki/Quantile_normalization
     """
-    def __init__(self, missing_value_handler: Callable = interpolate_data,
+    def __init__(self, missing_value_handler: Optional[Callable] = interpolate_data,
                  input_scale: str = "log2",
                  output_scale: str = "normal",
-                 col_name_prefix: str = None,
+                 col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         super().__init__(input_scale, output_scale, col_name_prefix, loglevel, **kwargs)
@@ -226,10 +226,10 @@ class TailRobustNormalizer(BaseNormalizer):
     https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full
     """
     def __init__(self, normalizer: Type[BaseNormalizer] = QuantileNormalizer,
-                 missing_value_handler: Callable = interpolate_data,
+                 missing_value_handler: Optional[Callable] = interpolate_data,
                  input_scale: str = "log2",
                  output_scale: str = "normal",
-                 col_name_prefix: str = None,
+                 col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         super().__init__(input_scale, output_scale, col_name_prefix, loglevel, **kwargs)
@@ -258,3 +258,13 @@ class TailRobustNormalizer(BaseNormalizer):
         if self.col_name_prefix is not None:
             result.rename(lambda x: f"{self.col_name_prefix} {x}", axis=1, inplace=True)
         return result
+
+
+default_normalizers = {
+    "median_norm": MedianNormalizer(),
+    "quantile_norm": QuantileNormalizer(missing_value_handler=None),
+    "quantile_norm_missing_handled": QuantileNormalizer(),
+    "trqn": TailRobustNormalizer(missing_value_handler=None),
+    "trqn_missing_handled": TailRobustNormalizer(),
+    "trmn": TailRobustNormalizer(normalizer=MedianNormalizer, missing_value_handler=None),
+}

@@ -1,12 +1,13 @@
 import os
 from itertools import combinations
-from typing import Tuple, Optional, Union, Callable, Dict
+from typing import Tuple, Optional, Union, Callable, Dict, Iterable
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import matplotlib.cm as cm
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.collections import LineCollection
 from adjustText import adjust_text
 from matplotlib.colorbar import ColorbarBase
@@ -26,6 +27,25 @@ FIG_FORMAT = ".pdf"
 
 def linear(x, m, b):
     return m * x + b
+
+
+def collect_plots_to_pdf(path: str, *args, dpi: int = 200):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with PdfPages(path) as pdf:
+        for plot in args:
+            figure = None
+            if callable(plot):
+                figure, axes = plot()
+            elif isinstance(plot, Iterable):
+                for x in plot:
+                    if isinstance(x, plt.Figure):
+                        figure = x
+                        break
+            elif isinstance(plot, plt.Figure):
+                figure = plot
+            if figure is not None:
+                pdf.savefig(figure, dpi=dpi)
+                plt.close(figure)
 
 
 _get_path_and_name_kwargs_doc = """
@@ -88,6 +108,7 @@ def save_plot_func(
     """
     if path is not None:
         try:
+            os.makedirs(path, exist_ok=True)
             res_path = os.path.join(path, plot_name)
             fig.savefig(res_path + fig_format, dpi=dpi, bbox_inches="tight")
         except PermissionError:
@@ -157,7 +178,7 @@ def save_venn_to_txt(name_map: Dict[str, str]):
                     if len(named_sets) > 6:
                         warnings.warn(f"Skipping save_venn_to_txt because more than 6 experiments were passed at once. "
                                       f"({len(named_sets)}")
-                        return func(*args, **kwargs)
+                        continue
                     save_path, txt_name = get_path_and_name_from_kwargs(file_name, **kwargs)
                     for intersected, unioned, result in venn_names(named_sets):
                         # create name based on the intersections and unions that were done
@@ -1127,7 +1148,7 @@ def save_pathway_timeline_results():
 
 
 @save_plot("venn_bar_{ex}")
-@save_venn_to_txt({"named_sets": "set"})
+@save_venn_to_txt({"named_sets": "set_bar"})
 def save_bar_venn(
         named_sets: Dict[str, set], ex: str, show_suptitle: bool = True, **kwargs
 ) -> Optional[Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]]:

@@ -9,17 +9,21 @@ from itertools import combinations
 from collections import defaultdict as ddict
 import logging
 import warnings
-from typing import Dict, Type, Iterable, Optional, Union
+from typing import Dict, Type, Iterable, Optional, Union, Any
 from sklearn.decomposition import PCA
 
-from mspypeline import MSPInitializer, matplotlib_plots, DataTree
-from mspypeline.file_reader import BaseReader, MQReader
-from mspypeline.helpers import get_number_rows_cols_for_fig, venn_names, get_number_of_non_na_values, \
-    get_intersection_and_unique, get_logger
+from mspypeline.plotting_backend import matplotlib_plots
+from mspypeline.modules import default_normalizers, Normalization, DataTree
+from mspypeline.helpers import get_number_rows_cols_for_fig, get_number_of_non_na_values, \
+    get_intersection_and_unique, get_logger, dict_depth
 
+class MSPInitializer:
+    pass
+class BaseReader:
+    pass
+class MQReader:
+    pass
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
-
-# plt.style.use('ggplot')
 
 FIG_FORMAT = ".pdf"
 
@@ -34,8 +38,11 @@ def validate_input(f):
         # this is a convention, otherwise it wont work
         if dfs_to_use is None:
             dfs_to_use = args[0]
-        if levels is None:
-            levels = args[1]
+            if levels is None:
+                levels = args[1]
+        else:
+            if levels is None:
+                levels = args[0]
 
         if isinstance(dfs_to_use, str):
             dfs_to_use = dfs_to_use,
@@ -73,6 +80,9 @@ class MSPPlots:
         self.configs = {} if configs is None else configs
         self.interesting_proteins = {} if interesting_proteins is None else interesting_proteins
         self.go_analysis_gene_names = {} if go_analysis_gene_names is None else go_analysis_gene_names
+        self.normalizers = default_normalizers.copy()
+        self.selected_normalizer_name = self.configs.get("selected_normalizer", "None")
+        self.selected_normalizer = self.normalizers.get(self.selected_normalizer_name, None)
 
         self.intensity_df = None
         if required_reader is not None:
@@ -94,26 +104,22 @@ class MSPPlots:
 
         for option_name, name_in_file, name_in_plot in intensity_entries:
             self.add_intensity_column(option_name, name_in_file, name_in_plot)
+            if self.selected_normalizer is not None:
+                self.add_normalized_option(option_name, self.selected_normalizer, self.selected_normalizer_name)
+                self.add_normalized_option(option_name, self.selected_normalizer, "normalized")
 
         # set all result dirs
         # create file structure and folders
-        # TODO: for now just create all of them
-        # TODO: dont create them on init
         # path for venn diagrams
         self.file_dir_venn = os.path.join(self.start_dir, "venn")
-        os.makedirs(self.file_dir_venn, exist_ok=True)
         # path for descriptive plots
         self.file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
-        os.makedirs(self.file_dir_descriptive, exist_ok=True)
         # path for pathway analysis
         self.file_dir_pathway = os.path.join(self.start_dir, "pathway_analysis")
-        os.makedirs(self.file_dir_pathway, exist_ok=True)
         # path for go analysis
         self.file_dir_go_analysis = os.path.join(self.start_dir, "go_analysis")
-        os.makedirs(self.file_dir_go_analysis, exist_ok=True)
         # path for volcano plots
         self.file_dir_volcano = os.path.join(self.start_dir, "volcano")
-        os.makedirs(self.file_dir_volcano, exist_ok=True)
 
     @classmethod
     def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, **kwargs):
@@ -170,6 +176,8 @@ class MSPPlots:
             self.logger.warning("%s columns could not be found in data", name_in_file)
             return
         self.logger.debug("Adding option %s and %s_log2", option_name, option_name)
+        if scale == "log2":
+            option_name.replace("_log2", "")
         self.int_mapping.update({option_name: name_in_file, f"{option_name}_log2": name_in_file})
         self.intensity_label_names.update({option_name: name_in_plot, f"{option_name}_log2": rf"$Log_2$ {name_in_plot}"})
 
@@ -201,6 +209,23 @@ class MSPPlots:
                 self.analysis_design, intensities_log2, self.configs.get("has_replicates", False)
             )
         })
+
+    def add_normalized_option(self, df_to_use: str, normalizer: Union[Type[Normalization.BaseNormalizer], Any], norm_option_name: str):
+        import inspect
+        if inspect.isclass(normalizer):
+            normalizer = normalizer()
+        if isinstance(normalizer, Normalization.BaseNormalizer):
+            input_scale = "log2" if "log2" in df_to_use else "normal"
+            setattr(normalizer, "input_scale", input_scale)
+            setattr(normalizer, "output_scale", "normal")
+            setattr(normalizer, "col_name_prefix", norm_option_name)
+        assert hasattr(normalizer, "fit_transform"), "normalizer must have fit_transform method"
+        data = self.all_intensities_dict[df_to_use].copy()
+        data = normalizer.fit_transform(data)
+        df_to_use_no_log2 = df_to_use.replace("_log2", "")
+        self.add_intensity_column(f"{df_to_use_no_log2}_{norm_option_name}", norm_option_name + " ",
+                                  f"{norm_option_name.replace('_', ' ')} {self.intensity_label_names[df_to_use_no_log2]}",
+                                  scale="normal", df=data)
 
     def create_report(self):
         raise NotImplementedError
@@ -618,7 +643,6 @@ class MSPPlots:
                     plots.append(plot)
         return plots
 
-
     def get_r_volcano_data(self, g1: str, g2: str, df_to_use: str, level: int):
         # import r interface package
         from rpy2.robjects.packages import importr
@@ -679,6 +703,7 @@ class MSPPlots:
 
         return {"volcano_data": plot_data, "unique_g1": unique_g1, "unique_g2": unique_g2}
 
+    @validate_input
     def plot_r_volcano(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         # TODO both adj and un adj should be available
         plots = []
@@ -744,6 +769,7 @@ class MSPPlots:
         df = df[df.median().sort_values(ascending=True).index]
         return {"protein_intensities": df}
 
+    @validate_input
     def plot_boxplot(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         plots = []
         for level in levels:
@@ -845,6 +871,38 @@ class MSPPlots:
                     plot = matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
                     plots.append(plot)
         return plots
+
+    def plot_all_normalizer_overview(self, dfs_to_use, levels, func, file_name, **kwargs):
+        max_depth = dict_depth(self.analysis_design)
+        if self.configs.get("has_replicates", False):
+            max_depth -= 1
+        plots = []
+        normalizers = self.normalizers.update(kwargs.get("normalizers", {}))
+        plot_kwargs = dict(save_path=None)
+        plot_kwargs.update(**kwargs)
+        for df_to_use in dfs_to_use:
+            for normaliser_name, normalizer in normalizers.items():
+                self.add_normalized_option(df_to_use, normalizer, normaliser_name)
+            dfs = [x for x in self.all_tree_dict if x.startswith(df_to_use.replace("_log2", ""))]
+            if "log2" in df_to_use:
+                dfs = [x for x in dfs if x.endswith("log2")]
+            plots += func(dfs, max_depth - 1, save_path=None, **plot_kwargs)
+        matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_descriptive, file_name), *plots)
+        return plots
+
+    @validate_input
+    def plot_normalization_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
+        return self.plot_all_normalizer_overview(
+            dfs_to_use=dfs_to_use, levels=levels, func=self.plot_normalization_overview,
+            file_name="normalization_overview_all_normalizers.pdf", **kwargs
+        )
+
+    @validate_input
+    def plot_heatmap_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
+        return self.plot_normalization_overview(
+            dfs_to_use=dfs_to_use, levels=levels, func=self.plot_intensity_heatmap,
+            file_name="heatmap_overview_all_normalizers.pdf", **kwargs
+        )
 
 
 class MaxQuantPlotter(MSPPlots):
