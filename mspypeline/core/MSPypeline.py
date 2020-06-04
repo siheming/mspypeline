@@ -195,14 +195,17 @@ class MSPGUI(tk.Tk):
         replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?", variable=self.replicate_var).grid(
             row=2, column=0)
 
-        self.experiments_list = tk.Listbox(self, height=3)
-        self.experiments_list.grid(row=2, column=1)
+        normalizer_label = tk.Label(self, text="Normalizer:").grid(row=2, column=1)
+
+        self.normalizer_text = tk.StringVar(value="None")
+        self.normalizer_button = tk.OptionMenu(self, self.normalizer_text, *self.normalize_options)
+        self.normalizer_button.grid(row=2, column=2)
 
         go_proteins_label = tk.Label(self, text="Go analysis proteins").grid(row=3, column=0)
 
         experiments_label = tk.Label(self, text="Pathway analysis").grid(row=3, column=1)
 
-        normalizer_label = tk.Label(self, text="Normalizer").grid(row=3, column=2)
+        design_label = tk.Label(self, text="Analysis design").grid(row=3, column=2)
 
         self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mspinit.possible_gos, key=len)))
         self.go_proteins_list.configure(exportselection=False)
@@ -218,9 +221,8 @@ class MSPGUI(tk.Tk):
 
         self.pathway_list.grid(row=4, column=1)
 
-        self.normalizer_text = tk.StringVar(value="None")
-        self.normalizer_button = tk.OptionMenu(self, self.normalizer_text, *self.normalize_options)
-        self.normalizer_button.grid(row=4, column=2)
+        self.experiments_list = tk.Listbox(self, height=5)
+        self.experiments_list.grid(row=4, column=2)
 
         plot_label = tk.Label(self, text="Which plots should be created").grid(row=5, column=0)
 
@@ -230,6 +232,8 @@ class MSPGUI(tk.Tk):
 
         self.heading_length = 6
 
+        self.plot_row("Normalization overview", "normalization_overview_all_normalizers")
+        self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers")
         self.plot_row("Detection counts", "detection_counts")
         self.plot_row("Number of detected proteins", "number_of_detected_proteins")
         self.plot_row("Intensity histogram", "intensity_histograms")
@@ -247,19 +251,20 @@ class MSPGUI(tk.Tk):
         self.plot_row("Boxplot", "boxplot")
 
         total_length = self.heading_length + self.number_of_plots
-        update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
-        update_button.grid(row=total_length + 1, column=0)
-
-        start_button = tk.Button(self, text="Start",
-                                 command=lambda: self.start_button())
-        start_button.grid(row=total_length + 1, column=1)
 
         report_button = tk.Button(self, text="Create Report",
                                   command=lambda: self.report_button())
-        report_button.grid(row=total_length + 1, column=2)
+        report_button.grid(row=total_length + 1, column=0)
+
+        update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
+        update_button.grid(row=total_length + 1, column=1)
+
+        start_button = tk.Button(self, text="Start",
+                                 command=lambda: self.start_button())
+        start_button.grid(row=total_length + 1, column=2)
 
         self.running_text = tk.StringVar(value="Please press Start")
-        self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=1)
+        self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=2)
 
         # add all tracing to the variables
         self.dir_text.trace("w", self.dir_setter)
@@ -300,6 +305,7 @@ class MultiSelectOptionMenu(tk.Frame):
         if choices is not None:
             self.choices = choices
             self.choices_dict.clear()
+            self.menu.delete(0, "end")
         for choice in self.choices:
             self.choices_dict[choice] = tk.BooleanVar(value=False)
             self.menu.add_checkbutton(label=choice, variable=self.choices_dict[choice], onvalue=True, offvalue=False)

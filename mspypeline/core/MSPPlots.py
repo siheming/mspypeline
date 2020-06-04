@@ -57,7 +57,8 @@ class MSPPlots:
         "plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
         "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline",
         "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
-        "plot_venn_groups", "plot_r_volcano", "plot_pca_overview", "plot_boxplot"
+        "plot_venn_groups", "plot_r_volcano", "plot_pca_overview", "plot_boxplot",
+        "plot_normalization_overview_all_normalizers", "plot_heatmap_overview_all_normalizers"
     ]
 
     def __init__(
@@ -211,6 +212,11 @@ class MSPPlots:
         })
 
     def add_normalized_option(self, df_to_use: str, normalizer: Union[Type[Normalization.BaseNormalizer], Any], norm_option_name: str):
+        df_to_use_no_log2 = df_to_use.replace("_log2", "")
+        new_option_name = f"{df_to_use_no_log2}_{norm_option_name}"
+        if new_option_name in self.all_tree_dict:
+            self.logger.info("%s already exists as option")
+            return
         import inspect
         if inspect.isclass(normalizer):
             normalizer = normalizer()
@@ -222,8 +228,7 @@ class MSPPlots:
         assert hasattr(normalizer, "fit_transform"), "normalizer must have fit_transform method"
         data = self.all_intensities_dict[df_to_use].copy()
         data = normalizer.fit_transform(data)
-        df_to_use_no_log2 = df_to_use.replace("_log2", "")
-        self.add_intensity_column(f"{df_to_use_no_log2}_{norm_option_name}", norm_option_name + " ",
+        self.add_intensity_column(new_option_name, norm_option_name + " ",
                                   f"{norm_option_name.replace('_', ' ')} {self.intensity_label_names[df_to_use_no_log2]}",
                                   scale="normal", df=data)
 
@@ -872,36 +877,42 @@ class MSPPlots:
                     plots.append(plot)
         return plots
 
-    def plot_all_normalizer_overview(self, dfs_to_use, levels, func, file_name, **kwargs):
+    def plot_all_normalizer_overview(self, dfs_to_use, levels, plot_function, file_name, **kwargs):
         max_depth = dict_depth(self.analysis_design)
         if self.configs.get("has_replicates", False):
             max_depth -= 1
         plots = []
-        normalizers = self.normalizers.update(kwargs.get("normalizers", {}))
-        plot_kwargs = dict(save_path=None)
+        normalizers = kwargs.get("normalizers", {})
+        normalizers.update(self.normalizers)
+        plot_kwargs = dict()
         plot_kwargs.update(**kwargs)
+        plot_kwargs.update({"save_path": None})
         for df_to_use in dfs_to_use:
             for normaliser_name, normalizer in normalizers.items():
                 self.add_normalized_option(df_to_use, normalizer, normaliser_name)
             dfs = [x for x in self.all_tree_dict if x.startswith(df_to_use.replace("_log2", ""))]
             if "log2" in df_to_use:
                 dfs = [x for x in dfs if x.endswith("log2")]
-            plots += func(dfs, max_depth - 1, save_path=None, **plot_kwargs)
+            plots += plot_function(dfs, max_depth - 1, **plot_kwargs)
         matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_descriptive, file_name), *plots)
         return plots
 
     @validate_input
     def plot_normalization_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
+        plot_kwargs = dict()
+        plot_kwargs.update(kwargs)
         return self.plot_all_normalizer_overview(
-            dfs_to_use=dfs_to_use, levels=levels, func=self.plot_normalization_overview,
-            file_name="normalization_overview_all_normalizers.pdf", **kwargs
+            dfs_to_use=dfs_to_use, levels=levels, plot_function=self.plot_normalization_overview,
+            file_name="normalization_overview_all_normalizers.pdf", **plot_kwargs
         )
 
     @validate_input
     def plot_heatmap_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
-        return self.plot_normalization_overview(
-            dfs_to_use=dfs_to_use, levels=levels, func=self.plot_intensity_heatmap,
-            file_name="heatmap_overview_all_normalizers.pdf", **kwargs
+        plot_kwargs = dict(sort_index=True, sort_index_by_missing=False, sort_columns_by_missing=False)
+        plot_kwargs.update(kwargs)
+        return self.plot_all_normalizer_overview(
+            dfs_to_use=dfs_to_use, levels=levels, plot_function=self.plot_intensity_heatmap,
+            file_name="heatmap_overview_all_normalizers.pdf", **plot_kwargs
         )
 
 
