@@ -39,4 +39,4 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest coverage pytest-cov
-        pytest --conv=mspypeline
+        pytest --con=mspypeline
