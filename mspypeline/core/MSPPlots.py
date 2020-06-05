@@ -302,7 +302,10 @@ class MSPPlots:
                 matplotlib_plots.save_intensity_histogram_results(**data, **plot_kwargs)
 
     def get_scatter_replicates_data(self, df_to_use: str, full_name: str) -> Dict[str, pd.DataFrame]:
-        return {"scatter_data": self.all_tree_dict[df_to_use][full_name].aggregate(None)}
+        data = self.all_tree_dict[df_to_use][full_name].aggregate(None)
+        if data.empty:
+            return {}
+        return {"scatter_data": data}
 
     def plot_scatter_replicates(self, df_to_use: str = "raw", levels=(0,), **kwargs):
         for level in levels:
@@ -349,6 +352,9 @@ class MSPPlots:
         non_na = get_number_of_non_na_values(intensities.shape[1])
         mask = (intensities > 0).sum(axis=1) >= non_na
         intensities = intensities[mask]
+        if intensities.empty:
+            self.logger.warning("data for %s is empty", full_name)
+            return {}
         return {"intensities": intensities}
 
     def plot_relative_std(self, df_to_use: str = "raw", levels: Iterable = (0,), **kwargs):
@@ -407,7 +413,7 @@ class MSPPlots:
     def get_pathway_timeline_data(self):
         pass
 
-    def plot_pathway_timeline(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (2,)):
+    def plot_pathway_timeline(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (2,), **kwargs):
         group_colors = {
             "SD": "#808080",
             "4W": "#0b8040",
@@ -479,6 +485,9 @@ class MSPPlots:
         exclusive_sample2 = protein_intensities_sample2[exclusive_2].mean(axis=1)
         protein_intensities_sample1 = protein_intensities_sample1[mask].mean(axis=1)
         protein_intensities_sample2 = protein_intensities_sample2[mask].mean(axis=1)
+        if protein_intensities_sample1.empty and protein_intensities_sample2.empty:
+            self.logger.warning("protein samples of %s and %s are both empty", full_name1, full_name2)
+            return {}
         return {
             "protein_intensities_sample1": protein_intensities_sample1,
             "protein_intensities_sample2": protein_intensities_sample2,
@@ -497,6 +506,8 @@ class MSPPlots:
                     matplotlib_plots.save_experiment_comparison_results(**data, **plot_kwargs)
 
     def get_go_analysis_data(self, df_to_use: str, level: int):
+        if not self.go_analysis_gene_names:
+            return {}
         background = set(self.all_intensities_dict[df_to_use].index)
         heights = ddict(list)
         test_results = ddict(list)
