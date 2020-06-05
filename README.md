@@ -1,3 +1,6 @@
+![develop testing](https://github.com/siheming/mspypeline/workflows/develop%20testing/badge.svg?branch=workflow_testing_develop)
+[![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/workflow_testing_develop/graphs/badge.svg?branch=workflow_testing_develop)](https://codecov.io/gh/siheming/mspypeline/branch/workflow_testing_develop)
+
 # README
 This pipeline can be used to analyze the results of a MaxQuant analysis.
 
