@@ -47,6 +47,12 @@ class BaseReader(ABC):
     def all_files(cls):
         raise NotImplementedError
 
+    @property
+    @classmethod
+    @abstractmethod
+    def plotter(cls):
+        raise NotImplementedError
+
 
 class MissingFilesException(Exception):
     pass

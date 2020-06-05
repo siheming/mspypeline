@@ -4,7 +4,7 @@ from flask import (
 )
 import json
 
-from mspypeline.plotter import plotly_plots
+from mspypeline.plotting_backend import plotly_plots
 
 bp = Blueprint('analysis_page', __name__)
 
@@ -16,7 +16,7 @@ def index(user_id=0):
     mqinit.init_config()
     # mqinit.configs.update(configs)
     mqinit.read_data()
-    # create plotter from initializer
+    # create plotting_backend from initializer
     mqplots = MQPlots.from_MQInitializer(mqinit)
     df = mqplots.histogram_data()
     fig = plotly_plots.plot_intensity_histogram(df)"""

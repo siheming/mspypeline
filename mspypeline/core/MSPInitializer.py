@@ -8,7 +8,7 @@ import logging
 
 from mspypeline.helpers import get_logger
 from mspypeline import path_package, path_package_config
-from mspypeline.file_reader import MQReader, MissingFilesException, BaseReader
+from mspypeline.file_reader import MissingFilesException, BaseReader
 
 
 class MSPInitializer:
