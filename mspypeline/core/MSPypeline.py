@@ -4,7 +4,8 @@ from tkinter import filedialog
 import logging
 from typing import Optional, Iterable
 
-from mspypeline import MSPInitializer, create_app
+from mspypeline import create_app
+from mspypeline.core import MSPInitializer
 from mspypeline.modules import default_normalizers
 from mspypeline.file_reader import BaseReader, MQReader
 

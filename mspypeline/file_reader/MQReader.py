@@ -2,11 +2,10 @@ import os
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import logging
-from collections import defaultdict as ddict
 
 from mspypeline.helpers import dict_depth, get_analysis_design
 from mspypeline.file_reader import BaseReader, MissingFilesException
-from mspypeline import MaxQuantPlotter
+from mspypeline.core import MaxQuantPlotter
 
 
 class MQReader(BaseReader):

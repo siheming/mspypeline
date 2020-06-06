@@ -45,10 +45,12 @@ def test_all_designs_raw():
         # create plotter from initializer
         for key in mspinit.configs.keys():
             if "settings" in key:
-                mspinit.configs[key]["levels"] = [1, 2]
+                mspinit.configs[key]["levels"] = [0, 1]
         mspplots = MaxQuantPlotter.from_MSPInitializer(mspinit)
         # create all plots and other results
         mspplots.create_results()
+        mspplots.plot_normalization_overview_all_normalizers("raw_log2", 1)
+        mspplots.plot_heatmap_overview_all_normalizers("raw_log2", 1)
         # for file in os.listdir(target_dir):
         #     if file == "config" or file == "txt":
         #         continue
