@@ -4,7 +4,7 @@ from pandas.api.types import is_numeric_dtype
 import logging
 from collections import defaultdict as ddict
 
-from mspypeline.helpers import get_overlap, string_similarity_ratio, dict_depth, get_analysis_design
+from mspypeline.helpers import dict_depth, get_analysis_design
 from mspypeline.file_reader import BaseReader, MissingFilesException
 from mspypeline import MaxQuantPlotter
 

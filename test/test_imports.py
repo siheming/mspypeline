@@ -12,3 +12,10 @@ def test_import():
     from mspypeline import matplotlib_plots, plotly_plots
     assert inspect.ismodule(matplotlib_plots)
     assert inspect.ismodule(plotly_plots)
+
+
+def test_config_available():
+    from mspypeline import path_package_config
+    import os
+    assert os.path.isdir(path_package_config)
+

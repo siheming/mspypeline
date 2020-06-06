@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import logging
 import warnings
+from sklearn.exceptions import ConvergenceWarning
 
 from mspypeline.helpers import get_logger
 
@@ -25,6 +26,8 @@ def interpolate_data(data: pd.DataFrame) -> pd.DataFrame:
     For the non missing entries the new values are very close to the old,
     while the for the missing entries a sampled value is assigned
     """
+    if data.empty:
+        return data
     data_arg_sort = np.argsort(data.values, axis=0)
     data_sorted = np.take_along_axis(data.values, data_arg_sort, axis=0)
     data_index = data.index[data_arg_sort]
@@ -52,7 +55,7 @@ def interpolate_data(data: pd.DataFrame) -> pd.DataFrame:
         series_index = np.empty((rows,))
         series_index[:] = np.nan
 
-        index_mapping = ddict(lambda: (-1, np.inf))
+        index_mapping = ddict(lambda: (np.nan, np.inf))
         for i, (index_val, float_val) in enumerate(zip(index[:, column_index], float_index[:, column_index])):
             decimal = float_val - index_val
             if index_mapping[index_val][1] > decimal:
@@ -98,7 +101,7 @@ def median_polish(data: pd.DataFrame, max_iter: int = 100, tol: float = 0.001):
         if column_medians.abs().sum() + row_medians.abs().sum() <= tol:
             break
     else:
-        warnings.warn("stopping because max iter was reached")
+        warnings.warn("Stopping because max iter was reached", ConvergenceWarning)
     return {"ave": overall, "row_effect": row_effect, "col_effect": column_effect, "residual": residuals}
 
 
@@ -208,7 +211,7 @@ class QuantileNormalizer(BaseNormalizer):
         if not self.rank_replace:
             raise ValueError("Please call fit first or use fit_transform")
         if self.missing_value_handler is not None:
-            na_mask = ~data.isna()
+            na_mask = data.notna()
             data = self.missing_value_handler(data)
         result = data.rank()
         if self.missing_value_handler is not None:

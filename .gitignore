@@ -5,6 +5,7 @@ __pycache__/
 test/mock_data/
 doc/build/*
 .coverage
+htmlcov/
 
 *.ipynb
 *.df

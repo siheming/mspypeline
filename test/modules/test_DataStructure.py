@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_simple_structure():
     from mspypeline import DataNode, DataTree
     import numpy as np
@@ -33,13 +36,23 @@ def test_simple_structure():
     assert isinstance(tree["Ex1"]["A"], DataNode)
     assert isinstance(tree["Ex1_A"], DataNode)
     assert isinstance(tree.root["Ex1"], DataNode)
+    assert isinstance(str(tree["Ex1"]), str)
+    assert isinstance(repr(tree["Ex1"]), str)
+    assert tree.groupby().shape == (10, 2)
+    assert "groupcol" in tree.groupby(0, new_col_name="groupcol").columns.names
     assert tree.groupby(0).shape == (10, 2)
+    assert tree.groupby(0, method=None).shape == (10, 4)
     assert tree.groupby(1).shape == (10, 4)
+    assert tree.groupby("Ex1", method=None).equals(tree["Ex1"].groupby(method=None))
+    with pytest.raises(ValueError):
+        tree.groupby((1, 1))
     assert tree.aggregate().shape == (10,)
     assert tree.aggregate(index=1).shape == (1,)
     assert tree.aggregate(index=[1, 2]).shape == (2,)
     assert tree.aggregate(method=None).shape == (10, 4)
     assert tree.aggregate("Ex1", method=None).shape == (10, 2)
+    with pytest.raises(ValueError):
+        tree.aggregate(123)
     assert tree["Ex1"].aggregate(method=None).shape == (10, 2)
     assert len(tree.level_keys_full_name[0]) == 2
     assert len(tree.level_keys_full_name[1]) == 4

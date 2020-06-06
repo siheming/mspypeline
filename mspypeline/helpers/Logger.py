@@ -1,5 +1,5 @@
 import logging
-import datetime
+import warnings
 from typing import Union
 
 
@@ -30,6 +30,7 @@ def get_logger(name: str = None, loglevel: Union[int, str] = logging.DEBUG) -> l
         try:
             loglevel = int(loglevel)
         except ValueError:
+            warnings.warn(f"Did not recognize loglevel={loglevel}, setting loglevel to DEBUG", RuntimeWarning)
             loglevel = logging.DEBUG
 
     if not logger.handlers:

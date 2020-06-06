@@ -1,16 +1,14 @@
-import difflib
-from typing import Optional
+from typing import Optional, Dict, Tuple, Iterator, Union, Iterable
 import pandas as pd
 from collections.abc import Sized
 from collections import defaultdict as ddict
-from difflib import SequenceMatcher
 from itertools import combinations
 from collections import deque
 import numpy as np
 from matplotlib.lines import Line2D
 
 
-def get_number_rows_cols_for_fig(obj):
+def get_number_rows_cols_for_fig(obj: Union[int, Sized]) -> Tuple[int, int]:
     if isinstance(obj, Sized):
         obj = len(obj)
     n_rows, n_cols = 0, 0
@@ -31,89 +29,19 @@ def fill_dict(d: dict, s: str, s_split=None):
         d[s_split[0]] = s
 
 
-def default_to_regular(d: dict):
+def default_to_regular(d: ddict) -> dict:
     if isinstance(d, ddict):
         d = {k: default_to_regular(v) for k, v in d.items()}
     return d
 
 
-def get_analysis_design(names):
+def get_analysis_design(names: Iterable[str]) -> dict:
     factory = lambda: ddict(factory)
     analysis_design = factory()
     for name in names:
         fill_dict(analysis_design, name)
 
     return default_to_regular(analysis_design)
-
-
-def barplot_annotate_brackets(ax, num1, num2, data, center, height, yerr=None, dh=.05, barh=.05, fs=None,
-                              maxasterix=None):
-    """
-    From: https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph
-    Annotate barplot with p-values.
-
-    :param ax: axis of plot to put the annotaion brackets
-    :param num1: number of left bar to put bracket over
-    :param num2: number of right bar to put bracket over
-    :param data: string to write or number for generating asterixes
-    :param center: centers of all bars (like plt.bar() input)
-    :param height: heights of all bars (like plt.bar() input)
-    :param yerr: yerrs of all bars (like plt.bar() input)
-    :param dh: height offset over bar / bar + yerr in axes coordinates (0 to 1)
-    :param barh: bar height in axes coordinates (0 to 1)
-    :param fs: font size
-    :param maxasterix: maximum number of asterixes to write (for very small p-values)
-    """
-
-    if type(data) is str:
-        text = data
-    else:
-        # * is p < 0.05
-        # ** is p < 0.005
-        # *** is p < 0.0005
-        # etc.
-        text = ''
-        p = .05
-
-        while data < p:
-            text += '*'
-            p /= 10.
-
-            if maxasterix and len(text) == maxasterix:
-                break
-
-        if len(text) == 0:
-            text = 'n. s.'
-
-    lx, ly = center[num1], max(height)
-    rx, ry = center[num2], max(height)
-
-    if yerr:
-        ly += yerr[num1]
-        ry += yerr[num2]
-
-    ax_y0, ax_y1 = ax.get_ylim()
-    log = False
-    if log:
-        dh *= 10 ** (ax_y1 - ax_y0)
-        barh *= 10 ** (ax_y1 - ax_y0)
-    else:
-        dh *= (ax_y1 - ax_y0)
-        barh *= (ax_y1 - ax_y0)
-
-    y = max(ly, ry) + dh
-
-    barx = [lx, lx, rx, rx]
-    bary = [y, y + barh, y + barh, y]
-    mid = ((lx + rx) / 2, y + barh)
-
-    ax.plot(barx, bary, c='black')
-
-    kwargs = dict(ha='center', va='bottom')
-    if fs is not None:
-        kwargs['fontsize'] = fs
-
-    ax.text(*mid, text, **kwargs)
 
 
 def plot_annotate_line(ax, row1, row2, x, data,  fs=None, maxasterix=None):
@@ -163,7 +91,7 @@ def plot_annotate_line(ax, row1, row2, x, data,  fs=None, maxasterix=None):
     ax.text(x, midy, text, rotation=-90, **kwargs)
 
 
-def venn_names(named_sets):
+def venn_names(named_sets: Dict[str, set]) -> Iterator[Tuple[set, set, set]]:
     names = set(named_sets)
     for i in range(1, len(named_sets) + 1):
         for to_intersect in combinations(sorted(named_sets), i):
@@ -191,9 +119,9 @@ def install_r_dependencies(r_package_names, r_bioconducter_package_names):
             biocm.install(p)
 
 
-def get_number_of_non_na_values(x, offset=0):
+def get_number_of_non_na_values(x: int, offset: int = 0) -> int:
     percentage = 1 / (1 + np.exp(0.5 * x - 3.5)) * 0.5 + 0.5
-    return max(int(np.round(percentage * x)), 3)
+    return max(int(np.round(percentage * x)) - offset, 3 - offset)
 
 
 def get_intersection_and_unique(v1: pd.DataFrame, v2: pd.DataFrame, na_function=get_number_of_non_na_values):
@@ -214,17 +142,7 @@ def get_intersection_and_unique(v1: pd.DataFrame, v2: pd.DataFrame, na_function=
     return mask, exclusive_1, exclusive_2
 
 
-def string_similarity_ratio(a, b):
-    return SequenceMatcher(None, a, b).ratio()
-
-
-def get_overlap(s1, s2):
-    s = difflib.SequenceMatcher(None, s1, s2)
-    pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2))
-    return s1[pos_a:pos_a + size]
-
-
-def dict_depth(d: dict):
+def dict_depth(d: dict) -> int:
     level = 0
     queue = deque([(id(d), d, level)])
     memo = set()
