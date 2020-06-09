@@ -4,7 +4,7 @@
 name: Python package
 
 on:
-  pull_request:
+  push:
     branches: [ workflow_testing_master ]
 
 jobs:
@@ -41,5 +41,6 @@ jobs:
         python test/mock_data.py
         pip install pytest coverage pytest-cov
         pytest --cov=mspypeline --cov-report=xml --runslow
+      working-directory: ..
     - name: Upload coverage
       uses: codecov/codecov-action@v1
