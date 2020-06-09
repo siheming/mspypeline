@@ -133,7 +133,8 @@ class MockData:
 
     @staticmethod
     def delete_mock_data():
-        shutil.rmtree(MockData.mock_data_dir)
+        if os.path.exists(MockData.mock_data_dir):
+            shutil.rmtree(MockData.mock_data_dir)
 
 
 if __name__ == "__main__":
