@@ -2,6 +2,7 @@ import os
 import pytest
 
 from mspypeline import MSPInitializer, UIHandler, MaxQuantPlotter
+from test.mock_data import MockData
 
 
 def experiment_design_location(experimental_design):
@@ -13,6 +14,8 @@ def experiment_design_location(experimental_design):
 # TODO test case with no pathways and go terms
 @pytest.mark.slow
 def test_all_designs_raw():
+    MockData.delete_mock_data()
+    MockData.create_mock_data()
     configs = {
         "global_settings": {
             "save_path": None
