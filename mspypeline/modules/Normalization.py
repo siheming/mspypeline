@@ -138,7 +138,7 @@ class BaseNormalizer(ABC):
         self.col_name_prefix = col_name_prefix
 
     def __getstate__(self):
-        return {k: v for k,v in self.__dict__.items() if k is not "logger"}
+        return {k: v for k,v in self.__dict__.items() if k != "logger"}
 
     def __setstate__(self, state):
         self.__dict__ = state
