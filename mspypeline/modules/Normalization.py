@@ -79,8 +79,8 @@ def interpolate_data(data: pd.DataFrame) -> pd.DataFrame:
 
 def median_polish(data: pd.DataFrame, max_iter: int = 100, tol: float = 0.001):
     overall = np.nanmedian(data.values)
-    row_effect = pd.Series([0] * data.shape[0], index=data.index)
-    column_effect = pd.Series([0] * data.shape[1], index=data.columns)
+    row_effect = pd.Series([0] * data.shape[0], index=data.index, dtype="float64")
+    column_effect = pd.Series([0] * data.shape[1], index=data.columns, dtype="float64")
     residuals = data - overall
 
     for i in range(max_iter):
