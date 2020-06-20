@@ -126,7 +126,8 @@ class BaseNormalizer(ABC):
             loglevel of the logger
         kwargs
         """
-        self.logger = get_logger(self.__class__.__name__, loglevel)
+        self.loglevel = loglevel
+        self.logger = get_logger(self.__class__.__name__, self.loglevel)
         allowed_scales = ("log2", "normal")
         if input_scale not in allowed_scales:
             raise ValueError("input_scale should be one of: " + ", ".join(allowed_scales))
@@ -135,6 +136,13 @@ class BaseNormalizer(ABC):
         self.input_scale = input_scale
         self.output_scale = output_scale
         self.col_name_prefix = col_name_prefix
+
+    def __getstate__(self):
+        return {k: v for k,v in self.__dict__.items() if k is not "logger"}
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.logger = get_logger(self.__class__.__name__, self.loglevel)
 
     @abstractmethod
     def fit(self, data: pd.DataFrame):
