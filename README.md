@@ -1,4 +1,4 @@
-![full test run](https://github.com/siheming/mspypeline/workflows/full%20test%20run/badge.svg?branch=master))
+![full test run](https://github.com/siheming/mspypeline/workflows/full%20test%20run/badge.svg?branch=master)
 [![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/siheming/mspypeline/branch/master)
 
 ![basic test run](https://github.com/siheming/mspypeline/workflows/basic%20test%20run/badge.svg?branch=develop)
