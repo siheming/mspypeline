@@ -42,3 +42,5 @@ jobs:
         pytest --cov=mspypeline --cov-report=xml --runslow
     - name: Upload coverage
       uses: codecov/codecov-action@v1
+      with:
+        flags: full-test-run
