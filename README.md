@@ -1,8 +1,8 @@
 ![full test run](https://github.com/siheming/mspypeline/workflows/full%20test%20run/badge.svg?branch=master)
-[![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/siheming/mspypeline/branch/master)
+[![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/develop/graph/badge.svg?flag=full-test-run)](https://codecov.io/gh/siheming/mspypeline/branch/develop)
 
 ![basic test run](https://github.com/siheming/mspypeline/workflows/basic%20test%20run/badge.svg?branch=develop)
-[![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/develop/graphs/badge.svg?branch=develop)](https://codecov.io/gh/siheming/mspypeline/branch/develop)
+[![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/develop/graph/badge.svg?flag=basic-test-run)](https://codecov.io/gh/siheming/mspypeline/branch/develop)
 
 # README
 This pipeline can be used to analyze the results of a MaxQuant analysis.
