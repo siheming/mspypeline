@@ -55,13 +55,14 @@ class MQReader(BaseReader):
             if any(duplicated_new) or any(duplicated_old):
                 raise ValueError(f"{MQReader.mapping_txt} should only contain unique rows, "
                                  f"{self.mapping_txt.iloc[:, 0][duplicated_old]}, {self.mapping_txt.iloc[:, 1][duplicated_new]}")
+            self.logger.info("Successfully loaded %s", MQReader.mapping_txt)
         except FileNotFoundError:
             self.mapping_txt = None
 
         # rename all columns based on the mapping
-        self.logger.info("Renaming columns using %s", MQReader.mapping_txt)
         self.new_column_names = {file: df.columns for file, df in self.sample_data.items()}
         if self.mapping_txt is not None:
+            self.logger.info("Renaming columns using %s", MQReader.mapping_txt)
             for file in self.sample_data:
                 self.new_column_names[file] = self.rename_df_columns(self.sample_data[file].columns)
 
