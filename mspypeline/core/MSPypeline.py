@@ -56,6 +56,8 @@ class MSPGUI(tk.Tk):
                                   "lfq_normalized", "raw_normalized", "ibaq_normalized", "lfq_normalized_log2",
                                   "raw_normalized_log2", "ibaq_normalized_log2"]
         self.make_layout()
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
         if file_dir:
             self.dir_text.set(file_dir)
         self.mspinit.configs.update(configs)
