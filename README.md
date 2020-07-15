@@ -1,5 +1,5 @@
-![full test run](https://github.com/siheming/mspypeline/workflows/full%20test%20run/badge.svg?branch=develop)
-[![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/develop/graph/badge.svg?flag=full-test-run)](https://codecov.io/gh/siheming/mspypeline/branch/develop)
+![full test run](https://github.com/siheming/mspypeline/workflows/full%20test%20run/badge.svg?branch=master)
+[![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/master/graph/badge.svg?flag=full-test-run)](https://codecov.io/gh/siheming/mspypeline/branch/master)
 
 ![basic test run](https://github.com/siheming/mspypeline/workflows/basic%20test%20run/badge.svg?branch=develop)
 [![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/develop/graph/badge.svg?flag=basic-test-run)](https://codecov.io/gh/siheming/mspypeline/branch/develop)
