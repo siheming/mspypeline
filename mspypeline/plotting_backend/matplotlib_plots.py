@@ -162,6 +162,7 @@ def save_csvs(name_map: Dict[str, str]):
                 if df is not None:
                     save_path, csv_name = get_path_and_name_from_kwargs(file_name, **kwargs)
                     if save_path is not None:
+                        os.makedirs(os.path.dirname(save_path), exist_ok=True)
                         df.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
             return func(*args, **kwargs)
         return wrapper_save_csvs
