@@ -6,6 +6,8 @@ name: full test run
 on:
   pull_request:
     branches: [ master ]
+  push:
+    branches: [ master ]
 
 jobs:
   build:
