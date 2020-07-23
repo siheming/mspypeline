@@ -31,6 +31,8 @@ def linear(x, m, b):
 
 def collect_plots_to_pdf(path: str, *args, dpi: int = 200):
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    if not path.endswith(".pdf"):
+        path += ".pdf"
     with PdfPages(path) as pdf:
         for plot in args:
             figure = None
@@ -161,6 +163,7 @@ def save_csvs(name_map: Dict[str, str]):
                 df = kwargs.get(kwarg_name, None)
                 if df is not None:
                     save_path, csv_name = get_path_and_name_from_kwargs(file_name, **kwargs)
+                    os.makedirs(save_path, exist_ok=True)
                     if save_path is not None:
                         os.makedirs(os.path.dirname(save_path), exist_ok=True)
                         df.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
@@ -794,22 +797,25 @@ def save_normalization_overview_results(
     -------
 
     """
-    fig = plt.figure(figsize=(18, 18))
+    fig = plt.figure(figsize=(18, 18), constrained_layout=True)
     gs = fig.add_gridspec(height, 2)
     ax_density = fig.add_subplot(gs[0:height // 2, 0])
     ax_nprot = fig.add_subplot(gs[height // 2:height - 1, 0])
     ax_colorbar = fig.add_subplot(gs[height - 1, 0])
     ax_boxplot = fig.add_subplot(gs[0:height, 1])
 
+    fig.suptitle(f"Normalization overview for {intensity_label}")
     # order the boxplot data after the number of identified peptides
     boxplot_data = protein_intensities.loc[:, n_proteins.sort_values(ascending=False).index[::-1]]
 
     plot_kwargs = dict(intensity_label=intensity_label)
     plot_kwargs.update(**kwargs)
     plot_kwargs["save_path"] = None
-    save_kde_results(intensities=intensities,  plot=(fig, ax_density), **plot_kwargs)
-    save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, plot=(fig, ax_nprot), cbar_ax=ax_colorbar, **plot_kwargs)
-    save_boxplot_results(boxplot_data, plot=(fig, ax_boxplot), vertical=False, **plot_kwargs)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)  # ignore warning for mixing constrained layout with thight_layout
+        save_kde_results(intensities=intensities,  plot=(fig, ax_density), **plot_kwargs)
+        save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, plot=(fig, ax_nprot), cbar_ax=ax_colorbar, **plot_kwargs)
+        save_boxplot_results(boxplot_data, plot=(fig, ax_boxplot), vertical=False, **plot_kwargs)
     ax_density.set_xlim(ax_nprot.get_xlim())
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -819,8 +825,9 @@ def save_normalization_overview_results(
 @save_plot("intensities_heatmap")
 def save_intensities_heatmap_result(
         intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad="dimgray",
-        cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax=None, vmin=None,
-        intensity_label: str = "Intensity", show_suptitle: bool = False, **kwargs
+        cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None,
+        vmin: Optional[float] = None,
+        intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
     f"""
     
@@ -1116,8 +1123,8 @@ def save_go_analysis_results(
     return fig, ax
 
 
-@save_plot("pathway_timeline_{pathway}")
-def save_pathway_timeline_results():
+@save_plot("pathway_timecourse_{pathway}")
+def save_pathway_timecourse_results():
     """plt.close("all")
     n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
     fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * int(max_time / 5), 4 * n_rows))

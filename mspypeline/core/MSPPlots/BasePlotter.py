@@ -51,9 +51,9 @@ def validate_input(f):
 class BasePlotter:
     possible_plots = [
         "plot_detection_counts", "plot_number_of_detected_proteins", "plot_intensity_histograms",
-        "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timeline",
+        "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timecourse",
         "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
-        "plot_venn_groups", "plot_r_volcano", "plot_pca_overview", "plot_boxplot",
+        "plot_venn_groups", "plot_r_volcano", "plot_pca_overview",
         "plot_normalization_overview_all_normalizers", "plot_heatmap_overview_all_normalizers"
     ]
 
@@ -208,10 +208,13 @@ class BasePlotter:
         })
 
     def add_normalized_option(self, df_to_use: str, normalizer: Union[Type[Normalization.BaseNormalizer], Any], norm_option_name: str):
+        if df_to_use not in self.all_intensities_dict:
+            self.logger.warning("normalization option %s could not be added", df_to_use)
+            return
         df_to_use_no_log2 = df_to_use.replace("_log2", "")
         new_option_name = f"{df_to_use_no_log2}_{norm_option_name}"
         if new_option_name in self.all_tree_dict:
-            self.logger.info("%s already exists as option")
+            self.logger.info("%s already exists as option", new_option_name)
             return
         import inspect
         if inspect.isclass(normalizer):
@@ -506,7 +509,7 @@ class BasePlotter:
     def get_pathway_timeline_data(self):
         pass
 
-    def plot_pathway_timeline(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (2,), **kwargs):
+    def plot_pathway_timecourse(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (2,), **kwargs):
         group_colors = {
             "SD": "#808080",
             "4W": "#0b8040",
@@ -910,7 +913,7 @@ class BasePlotter:
         plot_kwargs.update(kwargs)
         return self.plot_all_normalizer_overview(
             dfs_to_use=dfs_to_use, levels=levels, plot_function=self.plot_normalization_overview,
-            file_name="normalization_overview_all_normalizers.pdf", **plot_kwargs
+            file_name="normalization_overview_all_normalizers", **plot_kwargs
         )
 
     @validate_input
@@ -919,5 +922,5 @@ class BasePlotter:
         plot_kwargs.update(kwargs)
         return self.plot_all_normalizer_overview(
             dfs_to_use=dfs_to_use, levels=levels, plot_function=self.plot_intensity_heatmap,
-            file_name="heatmap_overview_all_normalizers.pdf", **plot_kwargs
+            file_name="heatmap_overview_all_normalizers", **plot_kwargs
         )

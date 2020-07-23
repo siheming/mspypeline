@@ -83,8 +83,8 @@ class MSPGUI(tk.Tk):
     def update_listboxes(self):
         # delete all experiments then add from file
         self.experiments_list.delete(0, "end")
-        if self.mspinit.configs.get("experiments"):
-            for op in self.mspinit.configs.get("experiments"):
+        if self.mspinit.configs.get("all_replicates"):
+            for op in self.mspinit.configs.get("all_replicates"):
                 self.experiments_list.insert("end", op)
         # clear selection then select from configs
         for i, pathway in enumerate(MSPInitializer.possible_pathways):
@@ -174,11 +174,11 @@ class MSPGUI(tk.Tk):
     def make_layout(self):
         self.title("mspypeline")
 
-        path_label = tk.Label(self, text="Dir to analyze").grid(row=0, column=0)
+        path_label = tk.Label(self, text="Dir to analyze", font="Helvetica 10 bold").grid(row=0, column=0)
 
-        yaml_label = tk.Label(self, text="Yaml file").grid(row=0, column=1)
+        yaml_label = tk.Label(self, text="Yaml file", font="Helvetica 10 bold").grid(row=0, column=1)
 
-        reader_label = tk.Label(self, text="File reader").grid(row=0, column=2)
+        reader_label = tk.Label(self, text="File reader", font="Helvetica 10 bold").grid(row=0, column=2)
 
         self.dir_text = tk.StringVar(value=self.mspinit.start_dir)
         dir_button = tk.Button(self, textvariable=self.dir_text,
@@ -208,7 +208,7 @@ class MSPGUI(tk.Tk):
 
         experiments_label = tk.Label(self, text="Pathway analysis").grid(row=3, column=1)
 
-        design_label = tk.Label(self, text="Analysis design").grid(row=3, column=2)
+        design_label = tk.Label(self, text="Replicate names").grid(row=3, column=2)
 
         self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5, width=len(max(self.mspinit.possible_gos, key=len)))
         self.go_proteins_list.configure(exportselection=False)
@@ -229,29 +229,36 @@ class MSPGUI(tk.Tk):
 
         plot_label = tk.Label(self, text="Which plots should be created").grid(row=5, column=0)
 
-        intensity_label = tk.Label(self, text="Intensity").grid(row=5, column=1)
+        intensity_label = tk.Label(self, text="Intensities").grid(row=5, column=1)
 
         levels_label = tk.Label(self, text="Levels").grid(row=5, column=2)
 
         self.heading_length = 6
 
+        tk.Label(self, text="Normalization plots", font="Helvetica 10 bold").grid(row=self.heading_length + self.number_of_plots, column=0)
+        self.number_of_plots += 1
         self.plot_row("Normalization overview", "normalization_overview_all_normalizers")
         self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers")
+
+        tk.Label(self, text="Outlier detection / Comparisons", font="Helvetica 10 bold").grid(row=self.heading_length + self.number_of_plots, column=0)
+        self.number_of_plots += 1
         self.plot_row("Detection counts", "detection_counts")
         self.plot_row("Number of detected proteins", "number_of_detected_proteins")
-        self.plot_row("Intensity histogram", "intensity_histograms")
-        self.plot_row("Relative std", "relative_std")
-        self.plot_row("Rank", "rank")
-        self.plot_row("Pathway Analysis", "pathway_analysis")
-        self.plot_row("Pathway Timeline", "pathway_timeline")
-        self.plot_row("Scatter replicates", "scatter_replicates")
-        self.plot_row("Experiment comparison", "experiment_comparison")
-        self.plot_row("Go analysis", "go_analysis")
         self.plot_row("Venn diagrams", "venn_results")
         self.plot_row("Group diagrams", "venn_groups")
-        self.plot_row("Volcano plot (R)", "r_volcano")
         self.plot_row("PCA overview", "pca_overview")
-        self.plot_row("Boxplot", "boxplot")
+        self.plot_row("Intensity histogram", "intensity_histograms")
+        self.plot_row("Relative std", "relative_std")
+        self.plot_row("Scatter replicates", "scatter_replicates")
+        self.plot_row("Experiment comparison", "experiment_comparison")
+        self.plot_row("Rank", "rank")
+
+        tk.Label(self, text="Statistical inference", font="Helvetica 10 bold").grid(row=self.heading_length + self.number_of_plots, column=0)
+        self.number_of_plots += 1
+        self.plot_row("Pathway Analysis", "pathway_analysis")
+        self.plot_row("Pathway Timecourse", "pathway_timecourse")
+        self.plot_row("Go analysis", "go_analysis")
+        self.plot_row("Volcano plot (R)", "r_volcano")
 
         total_length = self.heading_length + self.number_of_plots
 
