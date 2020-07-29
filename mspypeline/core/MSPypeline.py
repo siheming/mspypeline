@@ -227,13 +227,17 @@ class MSPGUI(tk.Tk):
         self.experiments_list = tk.Listbox(self, height=5)
         self.experiments_list.grid(row=4, column=2)
 
-        plot_label = tk.Label(self, text="Which plots should be created").grid(row=5, column=0)
+        report_button = tk.Button(self, text="Create Report",
+                                  command=lambda: self.report_button())
+        report_button.grid(row=5, column=0)
 
-        intensity_label = tk.Label(self, text="Intensities").grid(row=5, column=1)
+        plot_label = tk.Label(self, text="Which plots should be created").grid(row=6, column=0)
 
-        levels_label = tk.Label(self, text="Levels").grid(row=5, column=2)
+        intensity_label = tk.Label(self, text="Intensities").grid(row=6, column=1)
 
-        self.heading_length = 6
+        levels_label = tk.Label(self, text="Levels").grid(row=6, column=2)
+
+        self.heading_length = 7
 
         tk.Label(self, text="Normalization plots", font="Helvetica 10 bold").grid(row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
@@ -261,10 +265,6 @@ class MSPGUI(tk.Tk):
         self.plot_row("Volcano plot (R)", "r_volcano")
 
         total_length = self.heading_length + self.number_of_plots
-
-        report_button = tk.Button(self, text="Create Report",
-                                  command=lambda: self.report_button())
-        report_button.grid(row=total_length + 1, column=0)
 
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
         update_button.grid(row=total_length + 1, column=1)

@@ -14,7 +14,10 @@ class MQReader(BaseReader):
     mapping_txt = "sample_mapping.txt"
     summary_txt = "summary.txt"
     parameters_txt = "parameters.txt"
-    all_files = [proteins_txt, peptides_txt, summary_txt, parameters_txt]
+    msms_scans_txt = "msmsScans.txt"
+    ms_scans_txt = "msScans.txt"
+    evidence_txt = "evidence.txt"
+    required_files = [proteins_txt]
     name = "mqreader"
     plotter = MaxQuantPlotter
 
@@ -25,24 +28,18 @@ class MQReader(BaseReader):
                  loglevel=logging.DEBUG):
         super().__init__(start_dir, reader_config, loglevel=loglevel)
         # TODO connect this to the configs of the initializer
-        self.data_dir = os.path.join(self.start_dir, "txt")
+        self.data_dir = os.path.join(self.start_dir, "txt")  # TODO only add this if is not there
         self.index_col = index_col
         self.duplicate_handling = duplicate_handling
 
-        # start by sampling with all files
-        # only save the dataframe if the file was found
-        self.sample_data = {}
-        for file in MQReader.all_files:
-            try:
-                file_dir = os.path.join(self.data_dir, file)
-                df = pd.read_csv(file_dir, sep="\t", nrows=5)
-                self.sample_data[file] = df
-            except FileNotFoundError:
-                self.logger.info("Did not find file: %s", file)
-
-        # if no files were found throw an error
-        if not self.sample_data:
-            raise MissingFilesException("Could find none of: " + ", ".join(MQReader.all_files))
+        # read a sample of all required files. If any required file is missing exit
+        # but we need only one file from the max quant results
+        try:
+            file_dir = os.path.join(self.data_dir, self.proteins_txt)
+            df = pd.read_csv(file_dir, sep="\t", nrows=5)
+            self.proteins_txt_columns = df.columns
+        except FileNotFoundError:
+            raise MissingFilesException("Could find all of: " + ", ".join(MQReader.required_files))
 
         # read the sample name mapping file
         try:
@@ -54,17 +51,16 @@ class MQReader(BaseReader):
             duplicated_new = self.mapping_txt.iloc[:, 1].duplicated(keep=False)
             if any(duplicated_new) or any(duplicated_old):
                 raise ValueError(f"{MQReader.mapping_txt} should only contain unique rows, "
-                                 f"{self.mapping_txt.iloc[:, 0][duplicated_old]}, {self.mapping_txt.iloc[:, 1][duplicated_new]}")
+                                 f"{self.mapping_txt.iloc[:, 0][duplicated_old]}, "
+                                 f"{self.mapping_txt.iloc[:, 1][duplicated_new]}")
             self.logger.info("Successfully loaded %s", MQReader.mapping_txt)
         except FileNotFoundError:
             self.mapping_txt = None
 
         # rename all columns based on the mapping
-        self.new_column_names = {file: df.columns for file, df in self.sample_data.items()}
+        self.new_proteins_txt_columns = self.proteins_txt_columns
         if self.mapping_txt is not None:
-            self.logger.info("Renaming columns using %s", MQReader.mapping_txt)
-            for file in self.sample_data:
-                self.new_column_names[file] = self.rename_df_columns(self.sample_data[file].columns)
+            self.new_proteins_txt_columns = self.rename_df_columns(self.new_proteins_txt_columns)
 
         # get columns that should be dropped
         to_drop = self.reader_config.get("drop_columns", [])
@@ -73,16 +69,11 @@ class MQReader(BaseReader):
                 to_drop = [to_drop]
 
         # subset on all columns that start with intensity
-        self.intensity_column_names = {}
-        for file, column_name_list in self.new_column_names.items():
-            col_names = sorted([x.replace("Intensity ", "") for x in column_name_list if x.startswith('Intensity ')],
-                               key=len, reverse=True)
-            # drop all columns
-            col_names = [x for x in col_names if x not in to_drop]
-            self.intensity_column_names[file] = col_names
-        self.column_name_sample = self.intensity_column_names[list(self.intensity_column_names.keys())[0]]
+        self.intensity_column_names = sorted([x.replace("Intensity ", "") for x in self.new_proteins_txt_columns
+                                              if x.startswith('Intensity ')], key=len, reverse=True)
+        self.intensity_column_names = [x for x in self.intensity_column_names if x not in to_drop]
         if not self.reader_config.get("all_replicates", False):
-            self.reader_config["all_replicates"] = self.column_name_sample
+            self.reader_config["all_replicates"] = self.intensity_column_names
         # check the naming convention
         self.naming_convention = self.check_naming_convention()
         # determine the grouping
@@ -90,13 +81,15 @@ class MQReader(BaseReader):
         if not self.reader_config.get("analysis_design", False):
             self.reader_config["analysis_design"] = self.analysis_design
             self.reader_config["levels"] = dict_depth(self.analysis_design)
+            self.reader_config["level_names"] = [x for x in range(self.reader_config["levels"])]
         # update the config
         #self.update_config_file()  # TODO write this to the config file
 
     def rename_df_columns(self, col_names: list) -> list:
         if self.mapping_txt is None:
             return col_names
-        mapping_dict = {old_name: new_name for old_name, new_name in zip(self.mapping_txt.iloc[:, 0], self.mapping_txt.iloc[:, 1])}
+        mapping_dict = {old_name: new_name for old_name, new_name
+                        in zip(self.mapping_txt.iloc[:, 0], self.mapping_txt.iloc[:, 1])}
 
         def find_key_match(col):
             matches = []
@@ -115,12 +108,12 @@ class MQReader(BaseReader):
 
     def check_naming_convention(self) -> bool:
         # does the name follow the convention
-        first_rep_split = len(self.column_name_sample[0].split("_"))
-        naming_convention = all(len(rep.split("_")) == first_rep_split for rep in self.column_name_sample)
-        # create a mapping template if the convention is not followed and the file doesn't exist
-        mapping_template_name = os.path.join(self.start_dir, MQReader.mapping_txt.replace("ing", "ing_template"))
+        first_rep_split = len(self.intensity_column_names[0].split("_"))
+        naming_convention = all(len(rep.split("_")) == first_rep_split for rep in self.intensity_column_names)
 
+        # create a mapping template if the convention is not followed and the file doesn't exist
         if not naming_convention:
+            mapping_template_name = os.path.join(self.start_dir, MQReader.mapping_txt.replace("ing", "ing_template"))
             self.logger.warning("Naming of experiments does not follow naming convention, "
                                 "please consider using a %s file", MQReader.mapping_txt)
             if os.path.isfile(mapping_template_name):
@@ -128,8 +121,8 @@ class MQReader(BaseReader):
             else:
                 self.logger.warning("Creating %s file. Please provide a mapping that follows "
                                     "the indicated naming convention", mapping_template_name)
-                old_sample_names = sorted([x.replace('Intensity ', '') for x in self.sample_data[list(self.sample_data.keys())[0]]
-                        if x.startswith('Intensity ')], key=len, reverse=True)
+                old_sample_names = sorted([x.replace('Intensity ', '') for x in self.proteins_txt_columns
+                                           if x.startswith('Intensity ')], key=len, reverse=True)
                 # dump the names that still correspond to the names in the txt files
                 mapping = pd.DataFrame({"old name": old_sample_names,
                                         "new name": ["groupname_experimentname_techrepname"] * len(old_sample_names)})
@@ -137,22 +130,15 @@ class MQReader(BaseReader):
         return naming_convention
 
     def determine_groupings(self):
-        for file, l in self.intensity_column_names.items():
-            unmatched = [x for x in l if x not in self.column_name_sample]
-            if len(unmatched) > 0:
-                self.logger.warning(f"Found replicates in {MQReader.proteins_txt}, but not in {MQReader.peptides_txt}: " +
-                                    ", ".join(unmatched))
-                # raise
-
         # extract the analysis design from the file
         if not self.reader_config.get("analysis_design", False):
             # try to automatically determine experimental setup
             # if the naming convention is followed it is quite easy
             if self.naming_convention:
-                analysis_design = get_analysis_design(self.column_name_sample)
+                analysis_design = get_analysis_design(self.proteins_txt_columns)
             # otherwise we can just guess grouping
             else:
-                analysis_design = self.guess_analysis_design(self.column_name_sample)
+                analysis_design = self.guess_analysis_design(self.proteins_txt_columns)
         else:
             analysis_design = self.reader_config.get("analysis_design")
         return analysis_design
@@ -269,7 +255,7 @@ class MQReader(BaseReader):
         return df_parameters
 
     def preprocess_evidence(self):
-        file_dir = os.path.join(self.data_dir, "evidence.txt")
+        file_dir = os.path.join(self.data_dir, MQReader.evidence_txt)
         df_evidence = pd.read_csv(file_dir, sep="\t")
         not_contaminants = (df_evidence[["Reverse", "Potential contaminant"]] == "+").sum(axis=1) == 0
         df_evidence = df_evidence[not_contaminants]
@@ -278,13 +264,13 @@ class MQReader(BaseReader):
         return df_evidence
 
     def preprocess_msScans(self):
-        file_dir = os.path.join(self.data_dir, "msScans.txt")
+        file_dir = os.path.join(self.data_dir, MQReader.ms_scans_txt)
         df_msscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
                                  usecols=["Raw file", "Total ion current", "Retention time"])
         return df_msscans
 
     def preprocess_msmsScans(self):
-        file_dir = os.path.join(self.data_dir, "msmsScans.txt")
+        file_dir = os.path.join(self.data_dir, MQReader.msms_scans_txt)
         df_msmsscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
                                    usecols=["Raw file", "Total ion current", "Retention time"])
         return df_msmsscans

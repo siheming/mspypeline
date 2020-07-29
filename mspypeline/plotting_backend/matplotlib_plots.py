@@ -144,6 +144,13 @@ def save_plot(plot_name: str):
     return decorator_save_plot
 
 
+def save_csv_fn(save_path: str, csv_name: str, df: Union[pd.Series, pd.DataFrame]):
+    if save_path is not None:
+        os.makedirs(save_path, exist_ok=True)
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        df.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
+
+
 def save_csvs(name_map: Dict[str, str]):
     """
     Saves all dataframes as csv which are specified as dict keys. The values are the file names.
@@ -163,10 +170,7 @@ def save_csvs(name_map: Dict[str, str]):
                 df = kwargs.get(kwarg_name, None)
                 if df is not None:
                     save_path, csv_name = get_path_and_name_from_kwargs(file_name, **kwargs)
-                    os.makedirs(save_path, exist_ok=True)
-                    if save_path is not None:
-                        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-                        df.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
+                    save_csv_fn(save_path, csv_name, df)
             return func(*args, **kwargs)
         return wrapper_save_csvs
     return decorator_save_csvs
@@ -256,15 +260,6 @@ def save_volcano_results(
 
     col_mapping = {"adjpval": "adjusted p value", "pval": "unadjusted p value"}
 
-    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_full_{p}",
-                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
-    if save_path is not None:
-        volcano_data.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
-    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_significant_{p}",
-                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
-    if save_path is not None:
-        volcano_data[volcano_data[col] < 0.05].to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
-
     def get_volcano_significances(fchange, pval, fchange_threshold):
         if pval > 0.05 or abs(fchange) < np.log2(fchange_threshold):
             return "ns"
@@ -274,6 +269,18 @@ def save_volcano_results(
             return "down"
         else:
             raise ValueError(f"heisenbug: fold change: {fchange}, p value: {pval}")
+
+    # add the measured regulation to the data based on the given thresholds
+    volcano_data["regulation"] = [get_volcano_significances(log_fold_change, p_val, fchange_threshold)
+                                  for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
+
+    # save the volcano data csv in full and only the significant part
+    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_full_{p}",
+                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
+    save_csv_fn(save_path, csv_name, volcano_data)
+    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_significant_{p}",
+                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
+    save_csv_fn(save_path, csv_name, volcano_data[volcano_data[col] < 0.05])
 
     significance_to_color = {"ns": "gray", "up": "red", "down": "blue"}
     significance_to_label = {"ns": "non-significant", "up": f"upregulated in {g2}", "down": f"upregulated in {g1}"}
@@ -297,10 +304,8 @@ def save_volcano_results(
     ax_unique_up.tick_params(which='both', bottom=False, labelbottom=False)
 
     # non sign gray, left side significant blue, right side red
-    significances_plot = [get_volcano_significances(log_fold_change, p_val, fchange_threshold)
-                          for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
     for regulation in significance_to_color:
-        mask = [x == regulation for x in significances_plot]
+        mask = [x == regulation for x in volcano_data["regulation"]]
         ax.scatter(volcano_data["logFC"][mask], -np.log10(volcano_data[col])[mask], s=scatter_size,
                    color=significance_to_color[regulation], label=f"{sum(mask)} {significance_to_label[regulation]}")
     # get axis bounds for vertical and horizontal lines
@@ -349,6 +354,7 @@ def save_volcano_results(
                                                          p=col_mapping[col].replace(' ', '_'), **kwargs)
     save_plot_func(fig, path, plot_name, save_volcano_results, **kwargs)
 
+    # add text labels to the most significantly regulated genes
     significant_upregulated = volcano_data[
         (volcano_data["logFC"] > np.log2(fchange_threshold)) & (volcano_data[col] < 0.05)
     ].sort_values(by=[col], ascending=True).head(n_labelled_proteins)
@@ -361,6 +367,7 @@ def save_volcano_results(
         texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center", fontsize=8))
     adjust_text(texts, arrowprops=dict(width=0.15, headwidth=0, color='gray', alpha=0.6), ax=ax)
 
+    # save the final result
     path, plot_name = get_path_and_name_from_kwargs(name="volcano_{g1}_{g2}_annotation_{p}", g1=g1, g2=g2,
                                                          p=col_mapping[col].replace(' ', '_'), **kwargs)
     save_plot_func(fig, path, plot_name, save_volcano_results, **kwargs)
@@ -954,7 +961,7 @@ def save_intensity_histogram_results(
     return fig, axarr
 
 
-@save_plot("{full_name}_scatter")
+@save_plot("scatter_{full_name}")
 def save_scatter_replicates_results(
         scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
@@ -986,7 +993,7 @@ def save_scatter_replicates_results(
     return fig, ax
 
 
-@save_plot("{full_name}_rank")
+@save_plot("rank_{full_name}")
 def save_rank_results(
         rank_data: pd.Series, interesting_proteins, intensity_label: str = "Intensity", full_name="Experiment",
         show_suptitle: bool = False, **kwargs
@@ -1047,7 +1054,7 @@ def save_rank_results(
     return fig, ax
 
 
-@save_plot("{sample1}_vs_{sample2}")
+@save_plot("scatter_comparison_{sample1}_vs_{sample2}")
 def save_experiment_comparison_results(
         protein_intensities_sample1: pd.Series, protein_intensities_sample2: pd.Series,
         exclusive_sample1: pd.Series, exclusive_sample2: pd.Series, sample1: str, sample2: str,

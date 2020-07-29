@@ -21,77 +21,77 @@ has_replicates: true
 
 levels: 3
 
-level_names: ["biological group", "biological replicate", "technical replicate"]
+level_names: ["0", "1", "2"]
 
 # ###### PLOT CREATION SETTINGS #######
 
 plot_detection_counts_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_number_of_detected_proteins_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_intensity_histograms_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_relative_std_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_rank_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_pathway_analysis_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_scatter_replicates_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_experiment_comparison_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_go_analysis_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_venn_results_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_pathway_timecourse_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_r_volcano_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_venn_groups_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_pca_overview_settings:
-  create_plot: true
+  create_plot: false
   dfs_to_use: []
   levels: []
 

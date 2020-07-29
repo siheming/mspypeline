@@ -31,9 +31,8 @@ class MSPInitializer:
 
         # attributes that change upon changing the starting dir
         self.configs = {}
-        self.naming_convention = None
-
         self.reader_data = {}
+
         self.interesting_proteins, self.go_analysis_gene_names = None, None
 
         # properties
@@ -58,8 +57,8 @@ class MSPInitializer:
             self._start_dir = start_dir
         self.logger.info(f"Starting dir: {self.start_dir}")
         # set all attributes back None that where file specific
-        self.naming_convention = None
         self.configs = {}
+        self.reader_data = {}
 
     @property
     def path_config(self):
