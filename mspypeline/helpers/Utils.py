@@ -44,7 +44,7 @@ def get_analysis_design(names: Iterable[str]) -> dict:
     return default_to_regular(analysis_design)
 
 
-def plot_annotate_line(ax, row1, row2, x, data,  fs=None, maxasterix=None):
+def plot_annotate_line(ax, row1, row2, x, data,  fs: int = None, maxasterix: int = 5):
     """
     adjusted function
     from: https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph
@@ -73,6 +73,7 @@ def plot_annotate_line(ax, row1, row2, x, data,  fs=None, maxasterix=None):
             p /= 10.
 
             if maxasterix and len(text) == maxasterix:
+                text = ">" + text
                 break
 
         if len(text) == 0:
