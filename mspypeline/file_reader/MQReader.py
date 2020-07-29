@@ -82,8 +82,6 @@ class MQReader(BaseReader):
             self.reader_config["analysis_design"] = self.analysis_design
             self.reader_config["levels"] = dict_depth(self.analysis_design)
             self.reader_config["level_names"] = [x for x in range(self.reader_config["levels"])]
-        # update the config
-        #self.update_config_file()  # TODO write this to the config file
 
     def rename_df_columns(self, col_names: list) -> list:
         if self.mapping_txt is None:
@@ -135,10 +133,10 @@ class MQReader(BaseReader):
             # try to automatically determine experimental setup
             # if the naming convention is followed it is quite easy
             if self.naming_convention:
-                analysis_design = get_analysis_design(self.proteins_txt_columns)
+                analysis_design = get_analysis_design(self.intensity_column_names)
             # otherwise we can just guess grouping
             else:
-                analysis_design = self.guess_analysis_design(self.proteins_txt_columns)
+                analysis_design = self.guess_analysis_design(self.intensity_column_names)
         else:
             analysis_design = self.reader_config.get("analysis_design")
         return analysis_design

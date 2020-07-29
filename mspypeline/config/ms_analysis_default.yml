@@ -1,13 +1,8 @@
 # ##### MAIN SETTINGS ########
 # settings that effect which results will be created
 
-analysis_design: false
-# list of experiment names in the max quant file
-# if false it will try to infer the experiments automatically
-# TODO naming convention
-# otherwise might look something like:
-# - Urea_Urea_Pellet_0
-# - RIPA_SDS_0
+selected_reader: mqreader
+selected_normalizer: None
 
 pathways: []
 # list of pathways which should be analyzed
@@ -19,11 +14,17 @@ has_replicates: true
 # does the file have replicates
 # can be "true" or "false"
 
-levels: 3
-
-level_names: ["0", "1", "2"]
-
 # ###### PLOT CREATION SETTINGS #######
+
+plot_normalization_overview_all_normalizers_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+
+plot_heatmap_overview_all_normalizers_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
 
 plot_detection_counts_settings:
   create_plot: false

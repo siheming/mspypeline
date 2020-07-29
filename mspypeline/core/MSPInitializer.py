@@ -1,5 +1,6 @@
 import os
-from typing import Tuple, Dict, Type
+from copy import deepcopy
+from typing import Tuple, Dict, Type, Optional
 try:
     from ruamel_yaml import YAML
 except ModuleNotFoundError:
@@ -21,7 +22,7 @@ class MSPInitializer:
     possible_gos = sorted([x for x in os.listdir(os.path.join(path_package_config, go_path)) if x.endswith(".txt")])
     possible_pathways = sorted([x for x in os.listdir(os.path.join(path_package_config, pathway_path)) if x.endswith(".txt")])
 
-    def __init__(self, dir_: str, file_path_yml: str = "file", loglevel=logging.DEBUG):
+    def __init__(self, dir_: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # create a yaml file reader
         self.yaml = YAML()
@@ -37,10 +38,12 @@ class MSPInitializer:
 
         # properties
         self._start_dir = None
-        self.start_dir = dir_
-
         self._file_path_yaml = None
-        self.file_path_yaml = file_path_yml
+
+        # set the specified dirs
+        self.start_dir = dir_
+        if file_path_yml is not None:
+            self.file_path_yaml = file_path_yml
 
     @property
     def start_dir(self):
@@ -59,6 +62,7 @@ class MSPInitializer:
         # set all attributes back None that where file specific
         self.configs = {}
         self.reader_data = {}
+        self.file_path_yaml = "file"
 
     @property
     def path_config(self):
@@ -182,13 +186,14 @@ class MSPInitializer:
             Reader: Type[BaseReader]  # for IDE hints
             try:
                 reader = Reader(self.start_dir, self.configs.get(Reader.name, {}))
-                self.configs[Reader.name] = reader.reader_config
-                self.update_config_file()
+                # reader = Reader(self.start_dir, self.configs)
+                self.configs[str(Reader.name)] = deepcopy(reader.reader_config)
+                # self.update_config_file()
                 self.reader_data[Reader.name] = reader.full_data
 
             except MissingFilesException:
                 self.logger.debug("No files found for reader: %s", Reader.name)
-        self.configs.update(self.configs.pop("mqreader"))
+        # self.configs.update(self.configs.pop("mqreader"))
 
         # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")

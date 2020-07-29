@@ -219,7 +219,7 @@ class QuantileNormalize(colors.Normalize):
             "unique_g2": "volcano_plot_data_{g1}_vs_{g2}_unique_{g2}"})
 def save_volcano_results(
         volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", col: str = "adjpval", intensity_label: str = "Intensity",
+        g2: str = "group2", adj_pval: bool = True, intensity_label: str = "Intensity", split_files: bool = True,
         show_suptitle: bool = True, fchange_threshold: float = 2, scatter_size: float = 10,
         n_labelled_proteins: int = 10, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
@@ -239,8 +239,8 @@ def save_volcano_results(
         Name of group one
     g2
         Name of group two
-    col
-        Column name containing p values
+    adj_pval
+        Should adjusted or unadjusted p values be used
     intensity_label
         From which intensities were the fold changes calculated
     show_suptitle
@@ -259,6 +259,10 @@ def save_volcano_results(
     plt.close("all")
 
     col_mapping = {"adjpval": "adjusted p value", "pval": "unadjusted p value"}
+    if adj_pval:
+        col = "adjpval"
+    else:
+        col = "pval"
 
     def get_volcano_significances(fchange, pval, fchange_threshold):
         if pval > 0.05 or abs(fchange) < np.log2(fchange_threshold):

@@ -86,6 +86,7 @@ class BasePlotter:
             try:
                 self.required_reader_data = reader_data[required_reader]
                 self.intensity_df = self.required_reader_data[intensity_df_name]
+                self.configs.update(configs.pop(required_reader))
             except KeyError:
                 self.logger.exception("Reader data does not provide information from %s reader", required_reader)
                 raise
