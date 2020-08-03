@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
-from mspypeline.version import __version__ as version
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
+
+with open("mspypeline/version.py", "r") as f:
+    version = f.readline().split()[-1]
 
 setup(
     name="mspypeline",
