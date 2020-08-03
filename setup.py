@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 with open("mspypeline/version.py", "r") as f:
-    version = f.readline().split()[-1]
+    version = f.readline().split()[-1].strip('"')
 
 setup(
     name="mspypeline",
