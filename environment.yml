@@ -15,5 +15,8 @@ dependencies:
   - adjusttext=0.7.3.1
   - scikit-learn=0.22.1
   - plotly=4.6.0
+  - sphinx=3.0.4
+  - sphinx-autoapi=1.4.0
+  - sphinx_rtd_theme=0.4.3
 prefix: C:\Users\admvlasov\Anaconda3\envs\mspypeline
 
