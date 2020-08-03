@@ -1,13 +1,8 @@
 # ##### MAIN SETTINGS ########
 # settings that effect which results will be created
 
-analysis_design: false
-# list of experiment names in the max quant file
-# if false it will try to infer the experiments automatically
-# TODO naming convention
-# otherwise might look something like:
-# - Urea_Urea_Pellet_0
-# - RIPA_SDS_0
+selected_reader: mqreader
+selected_normalizer: None
 
 pathways: []
 # list of pathways which should be analyzed
@@ -19,85 +14,86 @@ has_replicates: true
 # does the file have replicates
 # can be "true" or "false"
 
-levels: 3
-
-level_names: ["biological group", "biological replicate", "technical replicate"]
-
 # ###### PLOT CREATION SETTINGS #######
 
+plot_normalization_overview_all_normalizers_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+
+plot_heatmap_overview_all_normalizers_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+
 plot_detection_counts_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_number_of_detected_proteins_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_intensity_histograms_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_relative_std_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_rank_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_pathway_analysis_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_scatter_replicates_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_experiment_comparison_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_go_analysis_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_venn_results_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
-plot_pathway_timeline_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+plot_pathway_timecourse_settings:
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_r_volcano_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_venn_groups_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 plot_pca_overview_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
-  levels: []
-
-plot_boxplot_settings:
-  create_plot: true
-  dfs_to_use: "lfq"
+  create_plot: false
+  dfs_to_use: []
   levels: []
 
 use_protein_id: false

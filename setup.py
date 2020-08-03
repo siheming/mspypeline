@@ -3,9 +3,12 @@ from setuptools import setup, find_packages
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+with open("mspypeline/version.py", "r") as f:
+    version = f.readline().split()[-1].strip('"')
+
 setup(
     name="mspypeline",
-    version="0.7",
+    version=version,
     description="PLACEHOLDER",
     long_description=long_description,
     long_description_content_type="text/markdown",

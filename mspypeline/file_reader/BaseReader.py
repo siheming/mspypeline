@@ -1,5 +1,10 @@
 import logging
-from abc import abstractmethod, ABC, abstractstaticmethod, abstractproperty
+from abc import abstractmethod, ABC
+try:
+    from ruamel_yaml import YAML
+except ModuleNotFoundError:
+    from ruamel.yaml import YAML
+
 from mspypeline.helpers import get_logger
 
 
@@ -28,12 +33,14 @@ class BaseReader(ABC):
         self.logger = get_logger(self.__class__.__name__, loglevel)
 
         # log which files will be read
-        self.logger.info("Reading files: %s", self.all_files)
-        self.logger.debug("Got configs: %s", self.reader_config)
-        if start_dir is None:
-            raise ValueError("Invalid starting dir")
+        self.logger.info("Required files: %s", self.required_files)
+
         if not reader_config:
             self.logger.warning("Empty configs")
+        else:
+            self.logger.debug("Got configs: %s", self.reader_config)
+        if start_dir is None:
+            raise ValueError("Invalid starting dir")
 
     @property
     @classmethod
@@ -44,7 +51,7 @@ class BaseReader(ABC):
     @property
     @classmethod
     @abstractmethod
-    def all_files(cls):
+    def required_files(cls):
         raise NotImplementedError
 
     @property
@@ -62,11 +69,11 @@ if __name__ == "__main__":
     # minimal example of a class implementing the BaseReader
     class Reader(BaseReader):
         name = "reader"  # this is the name of the reader in the yaml file
-        all_files = []  # this is a list of strings of all files that should be parsed
+        required_files = []  # this is a list of strings of all files that should be parsed
 
         def __init__(self, start_dir, reader_config, loglevel):
             super().__init__(start_dir, reader_config, loglevel)
-            for file in Reader.all_files:
+            for file in Reader.required_files:
                 self.full_data[file] = [0, 0, 10]  # this should be the data from the file
 
 

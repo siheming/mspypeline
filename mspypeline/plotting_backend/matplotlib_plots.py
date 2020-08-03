@@ -31,6 +31,8 @@ def linear(x, m, b):
 
 def collect_plots_to_pdf(path: str, *args, dpi: int = 200):
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    if not path.endswith(".pdf"):
+        path += ".pdf"
     with PdfPages(path) as pdf:
         for plot in args:
             figure = None
@@ -142,6 +144,13 @@ def save_plot(plot_name: str):
     return decorator_save_plot
 
 
+def save_csv_fn(save_path: str, csv_name: str, df: Union[pd.Series, pd.DataFrame]):
+    if save_path is not None:
+        os.makedirs(save_path, exist_ok=True)
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        df.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
+
+
 def save_csvs(name_map: Dict[str, str]):
     """
     Saves all dataframes as csv which are specified as dict keys. The values are the file names.
@@ -161,8 +170,7 @@ def save_csvs(name_map: Dict[str, str]):
                 df = kwargs.get(kwarg_name, None)
                 if df is not None:
                     save_path, csv_name = get_path_and_name_from_kwargs(file_name, **kwargs)
-                    if save_path is not None:
-                        df.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
+                    save_csv_fn(save_path, csv_name, df)
             return func(*args, **kwargs)
         return wrapper_save_csvs
     return decorator_save_csvs
@@ -211,7 +219,7 @@ class QuantileNormalize(colors.Normalize):
             "unique_g2": "volcano_plot_data_{g1}_vs_{g2}_unique_{g2}"})
 def save_volcano_results(
         volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", col: str = "adjpval", intensity_label: str = "Intensity",
+        g2: str = "group2", adj_pval: bool = True, intensity_label: str = "Intensity", split_files: bool = True,
         show_suptitle: bool = True, fchange_threshold: float = 2, scatter_size: float = 10,
         n_labelled_proteins: int = 10, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
@@ -231,8 +239,8 @@ def save_volcano_results(
         Name of group one
     g2
         Name of group two
-    col
-        Column name containing p values
+    adj_pval
+        Should adjusted or unadjusted p values be used
     intensity_label
         From which intensities were the fold changes calculated
     show_suptitle
@@ -251,15 +259,10 @@ def save_volcano_results(
     plt.close("all")
 
     col_mapping = {"adjpval": "adjusted p value", "pval": "unadjusted p value"}
-
-    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_full_{p}",
-                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
-    if save_path is not None:
-        volcano_data.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
-    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_significant_{p}",
-                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
-    if save_path is not None:
-        volcano_data[volcano_data[col] < 0.05].to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
+    if adj_pval:
+        col = "adjpval"
+    else:
+        col = "pval"
 
     def get_volcano_significances(fchange, pval, fchange_threshold):
         if pval > 0.05 or abs(fchange) < np.log2(fchange_threshold):
@@ -270,6 +273,18 @@ def save_volcano_results(
             return "down"
         else:
             raise ValueError(f"heisenbug: fold change: {fchange}, p value: {pval}")
+
+    # add the measured regulation to the data based on the given thresholds
+    volcano_data["regulation"] = [get_volcano_significances(log_fold_change, p_val, fchange_threshold)
+                                  for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
+
+    # save the volcano data csv in full and only the significant part
+    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_full_{p}",
+                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
+    save_csv_fn(save_path, csv_name, volcano_data)
+    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_significant_{p}",
+                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
+    save_csv_fn(save_path, csv_name, volcano_data[volcano_data[col] < 0.05])
 
     significance_to_color = {"ns": "gray", "up": "red", "down": "blue"}
     significance_to_label = {"ns": "non-significant", "up": f"upregulated in {g2}", "down": f"upregulated in {g1}"}
@@ -293,10 +308,8 @@ def save_volcano_results(
     ax_unique_up.tick_params(which='both', bottom=False, labelbottom=False)
 
     # non sign gray, left side significant blue, right side red
-    significances_plot = [get_volcano_significances(log_fold_change, p_val, fchange_threshold)
-                          for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
     for regulation in significance_to_color:
-        mask = [x == regulation for x in significances_plot]
+        mask = [x == regulation for x in volcano_data["regulation"]]
         ax.scatter(volcano_data["logFC"][mask], -np.log10(volcano_data[col])[mask], s=scatter_size,
                    color=significance_to_color[regulation], label=f"{sum(mask)} {significance_to_label[regulation]}")
     # get axis bounds for vertical and horizontal lines
@@ -345,6 +358,7 @@ def save_volcano_results(
                                                          p=col_mapping[col].replace(' ', '_'), **kwargs)
     save_plot_func(fig, path, plot_name, save_volcano_results, **kwargs)
 
+    # add text labels to the most significantly regulated genes
     significant_upregulated = volcano_data[
         (volcano_data["logFC"] > np.log2(fchange_threshold)) & (volcano_data[col] < 0.05)
     ].sort_values(by=[col], ascending=True).head(n_labelled_proteins)
@@ -357,6 +371,7 @@ def save_volcano_results(
         texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center", fontsize=8))
     adjust_text(texts, arrowprops=dict(width=0.15, headwidth=0, color='gray', alpha=0.6), ax=ax)
 
+    # save the final result
     path, plot_name = get_path_and_name_from_kwargs(name="volcano_{g1}_{g2}_annotation_{p}", g1=g1, g2=g2,
                                                          p=col_mapping[col].replace(' ', '_'), **kwargs)
     save_plot_func(fig, path, plot_name, save_volcano_results, **kwargs)
@@ -793,22 +808,25 @@ def save_normalization_overview_results(
     -------
 
     """
-    fig = plt.figure(figsize=(18, 18))
+    fig = plt.figure(figsize=(18, 18), constrained_layout=True)
     gs = fig.add_gridspec(height, 2)
     ax_density = fig.add_subplot(gs[0:height // 2, 0])
     ax_nprot = fig.add_subplot(gs[height // 2:height - 1, 0])
     ax_colorbar = fig.add_subplot(gs[height - 1, 0])
     ax_boxplot = fig.add_subplot(gs[0:height, 1])
 
+    fig.suptitle(f"Normalization overview for {intensity_label}")
     # order the boxplot data after the number of identified peptides
     boxplot_data = protein_intensities.loc[:, n_proteins.sort_values(ascending=False).index[::-1]]
 
     plot_kwargs = dict(intensity_label=intensity_label)
     plot_kwargs.update(**kwargs)
     plot_kwargs["save_path"] = None
-    save_kde_results(intensities=intensities,  plot=(fig, ax_density), **plot_kwargs)
-    save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, plot=(fig, ax_nprot), cbar_ax=ax_colorbar, **plot_kwargs)
-    save_boxplot_results(boxplot_data, plot=(fig, ax_boxplot), vertical=False, **plot_kwargs)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)  # ignore warning for mixing constrained layout with thight_layout
+        save_kde_results(intensities=intensities,  plot=(fig, ax_density), **plot_kwargs)
+        save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, plot=(fig, ax_nprot), cbar_ax=ax_colorbar, **plot_kwargs)
+        save_boxplot_results(boxplot_data, plot=(fig, ax_boxplot), vertical=False, **plot_kwargs)
     ax_density.set_xlim(ax_nprot.get_xlim())
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -818,8 +836,9 @@ def save_normalization_overview_results(
 @save_plot("intensities_heatmap")
 def save_intensities_heatmap_result(
         intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad="dimgray",
-        cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax=None, vmin=None,
-        intensity_label: str = "Intensity", show_suptitle: bool = False, **kwargs
+        cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None,
+        vmin: Optional[float] = None,
+        intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
     f"""
     
@@ -946,7 +965,7 @@ def save_intensity_histogram_results(
     return fig, axarr
 
 
-@save_plot("{full_name}_scatter")
+@save_plot("scatter_{full_name}")
 def save_scatter_replicates_results(
         scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
@@ -978,7 +997,7 @@ def save_scatter_replicates_results(
     return fig, ax
 
 
-@save_plot("{full_name}_rank")
+@save_plot("rank_{full_name}")
 def save_rank_results(
         rank_data: pd.Series, interesting_proteins, intensity_label: str = "Intensity", full_name="Experiment",
         show_suptitle: bool = False, **kwargs
@@ -1039,7 +1058,7 @@ def save_rank_results(
     return fig, ax
 
 
-@save_plot("{sample1}_vs_{sample2}")
+@save_plot("scatter_comparison_{sample1}_vs_{sample2}")
 def save_experiment_comparison_results(
         protein_intensities_sample1: pd.Series, protein_intensities_sample2: pd.Series,
         exclusive_sample1: pd.Series, exclusive_sample2: pd.Series, sample1: str, sample2: str,
@@ -1115,8 +1134,8 @@ def save_go_analysis_results(
     return fig, ax
 
 
-@save_plot("pathway_timeline_{pathway}")
-def save_pathway_timeline_results():
+@save_plot("pathway_timecourse_{pathway}")
+def save_pathway_timecourse_results():
     """plt.close("all")
     n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
     fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * int(max_time / 5), 4 * n_rows))

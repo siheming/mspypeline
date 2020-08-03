@@ -281,7 +281,8 @@ class MaxQuantPlotter(BasePlotter):
             self.logger.debug("Creating start ??")  # TODO
             fig, axarr = plt.subplots(3, 1, figsize=(14, 7))
             if peptides is not None:
-                bar_from_counts(axarr[0], peptides["Charges"].value_counts(), title="Peptide Charges")
+                bar_from_counts(axarr[0], peptides["Charges"].str.split(";").explode().value_counts().sort_index(),
+                                title="Peptide Charges")
 
             if evidence is not None:
                 axarr[1].hist(evidence["m/z"])
@@ -398,6 +399,7 @@ class MaxQuantPlotter(BasePlotter):
                     # axarr[0, 0].hist(mz_flat, histtype="step", density=True, color="black", bins=bins, linewidth=2)
                     axarr[0, 0].set_xlabel("m/z")
                     axarr[0, 0].set_ylabel("density")
+                    axarr[0, 0].set_title("peptide m/z")
 
                     bar_from_counts(axarr[0, 1], charge[experiment],
                                     compare_counts=charge_flat,
