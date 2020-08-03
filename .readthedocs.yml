@@ -3,9 +3,4 @@ version: 2
 python:
   version: 3.7
   install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - sphinx=3.0.4
-        - sphinx-autoapi=1.4.0
-        - sphinx_rtd_theme=0.4.3
+    - requirements: doc/requirements.txt
