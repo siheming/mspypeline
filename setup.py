@@ -9,7 +9,7 @@ with open("mspypeline/version.py", "r") as f:
 setup(
     name="mspypeline",
     version=version,
-    description="PLACEHOLDER",
+    description="Package to analyze Mass Spec Data",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(),
@@ -31,5 +31,10 @@ setup(
         "adjusttext>=0.7.3",
         "scikit-learn>=0.22.1",
         "plotly>=4.6.0",
-    ]
+    ],
+    project_urls={
+        "Documentation": "https://mspypeline.readthedocs.io/en/latest/",
+        "Source": "https://github.com/siheming/mspypeline",
+        "Bug Tracker": "https://github.com/siheming/mspypeline/issues",
+    }
 )
