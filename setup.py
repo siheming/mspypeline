@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from mspypeline import __version__ as version
+from mspypeline.version import __version__ as version
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
