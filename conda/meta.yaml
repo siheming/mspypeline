@@ -1,0 +1,52 @@
+{% set data = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
+
+package:
+  name: "{{ data['name']|lower }}"
+  version: "{{ data['version'] }}"
+
+source:
+  url: "https://pypi.io/packages/source/{{ data['name'][0] }}/{{ data['name'] }}/{{ data['name'] }}-{{ data['version'] }}.tar.gz"
+  sha256: 01790da968c8b434c7e3608864e2d55491267cb5cf22f39bbec3657dc007ba94
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  host:
+    - pip
+    - python
+  {% for package in resolved_packages('host') %}
+    - {{ package }}
+  {% endfor %}
+  run:
+    - python
+  {% for package in resolved_packages('host') %}
+    - {{ package }}
+  {% endfor %}
+
+test:
+  imports:
+    - mspypeline
+    - mspypeline.core
+    - mspypeline.core.MSPPlots
+    - mspypeline.file_reader
+    - mspypeline.flask_scripts
+    - mspypeline.flask_scripts.blueprints
+    - mspypeline.helpers
+    - mspypeline.modules
+    - mspypeline.plotting_backend
+
+about:
+  home: The package home page
+  license: MIT
+  license_family: MIT
+  license_file: 
+  summary: "Package to analyze Mass Spec Data"
+  doc_url: {{ data['project_urls']['Documentation'] }}
+  dev_url: {{ data['project_urls']['Source'] }}
+
+extra:
+  recipe-maintainers:
+    - siheming
+    - anoburn
