@@ -16,12 +16,12 @@ requirements:
   host:
     - pip
     - python
-  {% for package in resolved_packages('host') %}
+  {% for package in data['install_requires'] %}
     - {{ package }}
   {% endfor %}
   run:
     - python
-  {% for package in resolved_packages('host') %}
+  {% for package in data['install_requires'] %}
     - {{ package }}
   {% endfor %}
 
