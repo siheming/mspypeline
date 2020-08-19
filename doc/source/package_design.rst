@@ -54,7 +54,7 @@ If the configuration setting `has_techrep` is set to True or the corresponding c
 lowest level of the analysis design is considered as a technical replicate. Technical replicates are averaged to one
 level higher in the analysis design by taking the mean of all samples below a node. Values that are 0 are replaced with
 missing values, then for calculating the mean missing values are ignored (meaning the average of the three values
-32, 30, 0 would be replaced with 32, 30 and NaN resulting in an average of 30).
+32, 30, 0 would be replaced with 32, 30 and NaN resulting in an average of 31).
 
 .. ipython:: python
 
