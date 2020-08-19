@@ -52,7 +52,7 @@ def test_default_normalizers():
     from mspypeline.modules.Normalization import default_normalizers
     data = pd.DataFrame(np.random.random((100, 100)))
     data_copy = data.copy()
-    for norm_name, norm in default_normalizers.items():
+    for norm_name, norm in default_normalizers.copy().items():
         setattr(norm, "input_scale", "normal")
         setattr(norm, "col_name_prefix", norm_name)
         with pytest.raises(ValueError):

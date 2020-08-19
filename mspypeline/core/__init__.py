@@ -1,5 +1,5 @@
-from .MSPPlots import *
 from .MSPInitializer import MSPInitializer
+from .MSPPlots import *
 from .MSPypeline import MSPGUI, MSPParser, UIHandler
 
 __all__ = [

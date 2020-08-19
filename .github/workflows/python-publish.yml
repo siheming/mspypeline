@@ -5,10 +5,10 @@ name: Upload Python Package
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
-  deploy:
+  deploy_to_pypi:
 
     runs-on: ubuntu-latest
 
@@ -42,3 +42,15 @@ jobs:
       with:
         user: __token__
         password: ${{ secrets.PYPI_TOKEN }}
+
+  deploy_to_conda:
+    needs: deploy_to_pypi
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: publish-to-conda
+      uses: fcakyon/conda-publish-action@v1.3
+      with:
+        subdir: 'conda'
+        anacondatoken: ${{ secrets.ANACONDA_TOKEN }}
+        platforms: 'win osx linux'

@@ -33,7 +33,7 @@ setup(
         "plotly>=4.6.0",
     ],
     project_urls={
-        "Documentation": "https://mspypeline.readthedocs.io/en/latest/",
+        "Documentation": "https://mspypeline.readthedocs.io/en/stable/",
         "Source": "https://github.com/siheming/mspypeline",
         "Bug Tracker": "https://github.com/siheming/mspypeline/issues",
     }

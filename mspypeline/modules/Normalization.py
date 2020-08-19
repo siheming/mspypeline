@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 from collections import defaultdict as ddict
-from typing import Type, Callable, Optional
+from typing import Type, Callable, Optional, Tuple
 import pandas as pd
 import numpy as np
 import logging
@@ -15,16 +15,18 @@ def interpolate_data(data: pd.DataFrame) -> pd.DataFrame:
     Performs interpolation on the data by sampling from the same distribution as the input distribution.
     Adopted from https://github.com/bmbolstad/preprocessCore,
     more specifically: https://github.com/bmbolstad/preprocessCore/blob/master/src/qnorm.c
+
     Parameters
     ----------
     data
-        A DataFrame with columns being the experiments and rows and being the features
+        A DataFrame with columns being the samples and rows and being the features
 
     Returns
     -------
-    A DataFrame where all values have been replaced by interpolating from the old data column wise.
-    For the non missing entries the new values are very close to the old,
-    while the for the missing entries a sampled value is assigned
+    DataFrame
+        filled data where all values have been replaced by interpolating from the old data column wise.
+        For the non missing entries the new values are very close to the old,
+        while the for the missing entries a sampled value is assigned
     """
     if data.empty:
         return data
@@ -105,6 +107,31 @@ def median_polish(data: pd.DataFrame, max_iter: int = 100, tol: float = 0.001):
     return {"ave": overall, "row_effect": row_effect, "col_effect": column_effect, "residual": residuals}
 
 
+def determine_rank_invariance(df: pd.DataFrame, nri_threshold: float = 0.5) -> Tuple[pd.Index, pd.Index]:
+    """
+    Determines rank invariance along axis 0, meaning columns should be samples, rows genes or proteins.
+    The rank invariant (RI) and near rank invariant (NRI) indices can give information about how problematic a
+    Quantile Normalization might be, since biological variance would be lost.
+
+    Parameters
+    ----------
+    df
+        input dataframe with
+    nri_threshold
+        the percentage threshold at which near rank invariance condition is fulfilled. Should be between 0 and 1.
+
+    Returns
+    -------
+
+    """
+    df_rank = df.rank()
+    max_rank_percentages = df_rank.apply(pd.Series.value_counts, axis=1).max() / df.shape[1]
+    ri = df.index[max_rank_percentages == 1]
+    nri = df.index[max_rank_percentages >= nri_threshold]
+    nri = nri.difference(ri)
+    return ri, nri
+
+
 class BaseNormalizer(ABC):
     def __init__(self, input_scale: str = "log2",
                  output_scale: str = "normal",
@@ -112,7 +139,7 @@ class BaseNormalizer(ABC):
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         """
-        Abstract base class for Normalizers
+        Abstract base class for Normalizers. Derived normalizers should implement the :meth:`fit` and :meth:`transform`.
 
         Parameters
         ----------
@@ -125,6 +152,7 @@ class BaseNormalizer(ABC):
         loglevel
             loglevel of the logger
         kwargs
+            accepts kwargs
         """
         self.loglevel = loglevel
         self.logger = get_logger(self.__class__.__name__, self.loglevel)
@@ -138,7 +166,7 @@ class BaseNormalizer(ABC):
         self.col_name_prefix = col_name_prefix
 
     def __getstate__(self):
-        return {k: v for k,v in self.__dict__.items() if k != "logger"}
+        return {k: v for k, v in self.__dict__.items() if k != "logger"}
 
     def __setstate__(self, state):
         self.__dict__ = state
@@ -146,13 +174,53 @@ class BaseNormalizer(ABC):
 
     @abstractmethod
     def fit(self, data: pd.DataFrame):
+        """
+        Abstract fit method. Should return self.
+
+        Parameters
+        ----------
+        data
+            Should be a DataFrame or ndarray.
+
+        Returns
+        -------
+        self
+            The normalizer instance.
+
+        """
         raise NotImplementedError
 
     @abstractmethod
     def transform(self, data: pd.DataFrame):
+        """
+        Abstract transform method. Should return transformed data.
+
+        Parameters
+        ----------
+        data
+            Should be a DataFrame or ndarray.
+
+        Returns
+        -------
+        DataFrame
+            transformed data
+        """
         raise NotImplementedError
 
     def fit_transform(self, data: pd.DataFrame):
+        """
+        Chains the fit and transform method.
+
+        Parameters
+        ----------
+        data
+            Should be a DataFrame or ndarray.
+
+        Returns
+        -------
+        DataFrame
+            transformed data
+        """
         return self.fit(data).transform(data)
 
 
@@ -162,6 +230,23 @@ class MedianNormalizer(BaseNormalizer):
                  col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
+        """
+        Median normalizer, which calculates a factor for each column (sample) by taking the column wise median.
+        Then from each column wise median the mean of all medians is subtracted.
+
+        Parameters
+        ----------
+        input_scale
+            Scale of the input data. Either normal or log2
+        output_scale
+            Scale of the output data. Either normal or log2
+        col_name_prefix
+            If not None the prefix is added to each column name
+        loglevel
+            loglevel of the logger
+        kwargs
+            accepts kwargs
+        """
         super().__init__(input_scale, output_scale, col_name_prefix, loglevel, **kwargs)
         self.factors = None
 
@@ -186,16 +271,31 @@ class MedianNormalizer(BaseNormalizer):
 
 
 class QuantileNormalizer(BaseNormalizer):
-    """
-    Quantile Normalizer as described on wikipedia
-    https://en.wikipedia.org/wiki/Quantile_normalization
-    """
     def __init__(self, missing_value_handler: Optional[Callable] = interpolate_data,
                  input_scale: str = "log2",
                  output_scale: str = "normal",
                  col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
+        """
+        Quantile Normalizer as described on wikipedia
+        https://en.wikipedia.org/wiki/Quantile_normalization
+
+        Parameters
+        ----------
+        missing_value_handler
+            function to fill missing values
+        input_scale
+            Scale of the input data. Either normal or log2
+        output_scale
+            Scale of the output data. Either normal or log2
+        col_name_prefix
+            If not None the prefix is added to each column name
+        loglevel
+            loglevel of the logger
+        kwargs
+            accepts kwargs
+        """
         super().__init__(input_scale, output_scale, col_name_prefix, loglevel, **kwargs)
         self.missing_value_handler = missing_value_handler
         self.rank_replace = {}
@@ -218,6 +318,7 @@ class QuantileNormalizer(BaseNormalizer):
     def transform(self, data: pd.DataFrame):
         if not self.rank_replace:
             raise ValueError("Please call fit first or use fit_transform")
+        # TODO include test for rank invariant proteins
         if self.missing_value_handler is not None:
             na_mask = data.notna()
             data = self.missing_value_handler(data)
@@ -233,9 +334,6 @@ class QuantileNormalizer(BaseNormalizer):
 
 
 class TailRobustNormalizer(BaseNormalizer):
-    """
-    https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full
-    """
     def __init__(self, normalizer: Type[BaseNormalizer] = QuantileNormalizer,
                  missing_value_handler: Optional[Callable] = interpolate_data,
                  input_scale: str = "log2",
@@ -243,6 +341,29 @@ class TailRobustNormalizer(BaseNormalizer):
                  col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
+        """
+        An abstracted implementation of the Tail Robust Quantile Normalization as described here:
+        https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full . Caclulates an offset factor by taking the
+        column wise mean. Then before a normalization is applied the offset factor is subtracted from each column.
+        Then the normalizer is applied and lastly the offset factor is added again.
+
+        Parameters
+        ----------
+        normalizer
+            a normalizer that should be used in combination with this normalizer
+        missing_value_handler
+            function to fill missing values
+        input_scale
+            Scale of the input data. Either normal or log2
+        output_scale
+            Scale of the output data. Either normal or log2
+        col_name_prefix
+            If not None the prefix is added to each column name
+        loglevel
+            loglevel of the logger
+        kwargs
+            accepts kwargs
+        """
         super().__init__(input_scale, output_scale, col_name_prefix, loglevel, **kwargs)
         self.offset_factor = None
         self.normalizer = normalizer
@@ -273,7 +394,6 @@ class TailRobustNormalizer(BaseNormalizer):
 
 default_normalizers = {
     "median_norm": MedianNormalizer(),
-    "quantile_norm": QuantileNormalizer(missing_value_handler=None),
     "quantile_norm_missing_handled": QuantileNormalizer(),
     "trqn": TailRobustNormalizer(missing_value_handler=None),
     "trqn_missing_handled": TailRobustNormalizer(),

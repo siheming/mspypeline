@@ -1,28 +1,12 @@
 import logging
 from abc import abstractmethod, ABC
+from typing import Iterable
 try:
     from ruamel_yaml import YAML
 except ModuleNotFoundError:
     from ruamel.yaml import YAML
 
-from mspypeline.helpers import get_logger
-
-
-class DataDict(dict):
-    def __init__(self, data_source, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.data_source = data_source
-
-    def __missing__(self, key):
-        try:
-            self.data_source.logger.debug("Reading %s from disk", key)
-            data = getattr(self.data_source, f"preprocess_{key}")()
-            self[key] = data
-            return data
-        except FileNotFoundError as e:
-            raise KeyError("Missing file:", key, e)
-        except AttributeError as e:
-            raise KeyError("Missing function to load:", key, e)
+from mspypeline.helpers import get_logger, DataDict
 
 
 class BaseReader(ABC):
@@ -45,19 +29,19 @@ class BaseReader(ABC):
     @property
     @classmethod
     @abstractmethod
-    def name(cls):
+    def name(cls) -> str:
         raise NotImplementedError
 
     @property
     @classmethod
     @abstractmethod
-    def required_files(cls):
+    def required_files(cls) -> Iterable[str]:
         raise NotImplementedError
 
     @property
     @classmethod
     @abstractmethod
-    def plotter(cls):
+    def plotter(cls):  # -> Type[BasePlotter]
         raise NotImplementedError
 
 

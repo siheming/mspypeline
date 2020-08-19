@@ -1,4 +1,5 @@
 import os
+from typing import Union
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import logging
@@ -25,12 +26,17 @@ class MQReader(BaseReader):
                  reader_config: dict,
                  index_col: str = "Gene name",
                  duplicate_handling: str = "sum",
+                 drop_columns: Union[list, tuple, str] = None,
                  loglevel=logging.DEBUG):
         super().__init__(start_dir, reader_config, loglevel=loglevel)
-        # TODO connect this to the configs of the initializer
-        self.data_dir = os.path.join(self.start_dir, "txt")  # TODO only add this if is not there
-        self.index_col = index_col
-        self.duplicate_handling = duplicate_handling
+
+        if os.path.split(self.start_dir)[1] != "txt":
+            self.data_dir = os.path.join(self.start_dir, "txt")
+        else:
+            self.data_dir = self.start_dir
+        self.index_col = self.reader_config.get("index_col", index_col)
+        self.duplicate_handling = self.reader_config.get("duplicate_handling", duplicate_handling)
+        to_drop = self.reader_config.get("drop_columns", drop_columns if drop_columns is not None else [])
 
         # read a sample of all required files. If any required file is missing exit
         # but we need only one file from the max quant results
@@ -63,10 +69,8 @@ class MQReader(BaseReader):
             self.new_proteins_txt_columns = self.rename_df_columns(self.new_proteins_txt_columns)
 
         # get columns that should be dropped
-        to_drop = self.reader_config.get("drop_columns", [])
-        if to_drop:
-            if not isinstance(to_drop, list):
-                to_drop = [to_drop]
+        if isinstance(to_drop, str):
+            to_drop = [to_drop]
 
         # subset on all columns that start with intensity
         self.intensity_column_names = sorted([x.replace("Intensity ", "") for x in self.new_proteins_txt_columns
