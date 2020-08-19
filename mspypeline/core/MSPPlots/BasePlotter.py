@@ -904,8 +904,10 @@ class BasePlotter:
             dfs = [x for x in self.all_tree_dict if x.startswith(df_to_use.replace("_log2", ""))]
             if "log2" in df_to_use:
                 dfs = [x for x in dfs if x.endswith("log2")]
-            plots += plot_function(dfs, max_depth - 1, **plot_kwargs)
-        matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_descriptive, file_name), *plots)
+            df_plots = plot_function(dfs, max_depth - 1, **plot_kwargs)
+            plots += df_plots
+            save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(file_name, **plot_kwargs, df_to_use=df_to_use)
+            matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_descriptive, result_name), *df_plots)
         return plots
 
     @validate_input
