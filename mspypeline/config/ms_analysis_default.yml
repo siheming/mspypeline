@@ -10,8 +10,8 @@ pathways: []
 go_terms: []
 # list of go_terms which should be analyzed
 
-has_replicates: true
-# does the file have replicates
+has_techrep: true
+# does the file have technical replicates
 # can be "true" or "false"
 
 # ###### PLOT CREATION SETTINGS #######

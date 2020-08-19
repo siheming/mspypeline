@@ -1,5 +1,6 @@
 import os
 from copy import deepcopy
+from inspect import isclass
 from typing import Tuple, Dict, Type, Optional
 try:
     from ruamel_yaml import YAML
@@ -8,7 +9,7 @@ except ModuleNotFoundError:
 import logging
 
 from mspypeline.helpers import get_logger
-from mspypeline import path_package, path_package_config
+from mspypeline import path_package, path_package_config, version
 from mspypeline.file_reader import MissingFilesException, BaseReader
 
 
@@ -19,8 +20,10 @@ class MSPInitializer:
     default_yml_name = "ms_analysis_default.yml"
     go_path = "go_terms"
     pathway_path = "pathways"
-    possible_gos = sorted([x for x in os.listdir(os.path.join(path_package_config, go_path)) if x.endswith(".txt")])
-    possible_pathways = sorted([x for x in os.listdir(os.path.join(path_package_config, pathway_path)) if x.endswith(".txt")])
+    possible_gos = sorted([x for x in os.listdir(os.path.join(path_package_config, go_path))
+                           if x.endswith(".txt")])
+    possible_pathways = sorted([x for x in os.listdir(os.path.join(path_package_config, pathway_path))
+                                if x.endswith(".txt")])
 
     def __init__(self, dir_: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
@@ -29,6 +32,7 @@ class MSPInitializer:
         # self.yaml.indent(mapping=2, sequence=4, offset=2)
         self.yaml.indent(offset=2)
         self.yaml.default_flow_style = False
+        self.yaml.width = 4096
 
         # attributes that change upon changing the starting dir
         self.configs = {}
@@ -112,11 +116,14 @@ class MSPInitializer:
         self.logger.debug(f"Config file contents: {self.configs}")
 
     def init_config(self):
+        """
+        Creates the directory to save the configuration file and saves the configuration
+        """
         os.makedirs(self.path_config, exist_ok=True)
         self.update_config_file()
 
     def has_yml_file(self) -> bool:
-        if not self.start_dir:
+        if not os.path.isdir(self.start_dir):
             return False
         if "config" in os.listdir(self.start_dir):
             self.logger.debug("Found config dir")
@@ -129,11 +136,7 @@ class MSPInitializer:
     def get_default_yml_path(self) -> str:
         self.logger.debug("Loading default yml file from: %s, since no (valid) file was selected",
                           path_package)
-        if MSPInitializer.default_yml_name in os.listdir(path_package_config):
-            yaml_file = os.path.join(path_package_config, MSPInitializer.default_yml_name)
-        else:
-            raise ValueError("Could not find default yaml file. Please select one.")
-        return yaml_file
+        return os.path.join(path_package_config, MSPInitializer.default_yml_name)
 
     def init_interest_from_txt(self) -> Tuple[Dict[str, list], Dict[str, list]]:
         dict_pathway = {}
@@ -186,14 +189,11 @@ class MSPInitializer:
             Reader: Type[BaseReader]  # for IDE hints
             try:
                 reader = Reader(self.start_dir, self.configs.get(Reader.name, {}))
-                # reader = Reader(self.start_dir, self.configs)
                 self.configs[str(Reader.name)] = deepcopy(reader.reader_config)
-                # self.update_config_file()
                 self.reader_data[Reader.name] = reader.full_data
 
             except MissingFilesException:
                 self.logger.debug("No files found for reader: %s", Reader.name)
-        # self.configs.update(self.configs.pop("mqreader"))
 
         # read all proteins and receptors of interest from the config dir
         self.logger.info("Reading proteins and receptors of interest")

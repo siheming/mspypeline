@@ -20,7 +20,7 @@ import functools
 import warnings
 
 from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, \
-    get_plot_name_suffix, get_intersection_and_unique, venn_names
+    get_plot_name_suffix, get_intersection_and_unique, venn_names, format_docstrings
 
 FIG_FORMAT = ".pdf"
 
@@ -51,36 +51,45 @@ def collect_plots_to_pdf(path: str, *args, dpi: int = 200):
 
 
 _get_path_and_name_kwargs_doc = """
-Uses following kwargs to generate a path and file name.
-save_path
-df_to_use
-level
+        Uses following kwargs to generate a path and file name.
+        
+        * save_path (str): directory where file should be saved
+        * df_to_use (str): used to generate a name suffix
+        * level (int): used to generate a name suffix
+        * split_files (bool): should the file be saved in a subdirectory
 
-Additionally, all parts of the passed name enclosed by "{}"
-will be replaced from passed kwargs.
-E.g. if the passed name is "plot_{stuff}", a stuff kwarg is expected and will be replaced by the passed value.
+        Additionally, all parts of the passed name enclosed by curly brackets will be replaced from passed kwargs.
 """
 
 
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def get_path_and_name_from_kwargs(name: str, **kwargs) -> Tuple[str, str]:
-    f"""
-    generates stuff
+    """
+    creates a the path and file name for a plot
 
     Parameters
     ----------
     name
     kwargs
-        {_get_path_and_name_kwargs_doc}
+        {kwargs}
 
     Returns
     -------
-    The path where the file will be saved and a name for the file without a file type.
+    tuple(str, str)
+        The path where the file will be saved and a name for the file without a file type.
     """
     save_path = kwargs.get("save_path", None)
     # get values with default
     # suffix
     df_to_use = kwargs.get("df_to_use", None)
     level = kwargs.get("level", None)
+
+    # get path modifications from the name
+    prefix, name = os.path.split(name)
+    # modify the save path if specified
+    split_files = kwargs.get("split_files", True)
+    if save_path is not None and split_files:
+        save_path = os.path.join(save_path, prefix)
 
     suffix = get_plot_name_suffix(df_to_use=df_to_use, level=level)
     name = f"{name}{suffix}"
@@ -93,19 +102,24 @@ def save_plot_func(
         dpi: int = 200, **kwargs
 ) -> None:
     """
+    Saves figure in path. Directories will be created if they not exist.
 
     Parameters
     ----------
     fig
+        figure to be saved
     path
+        path to the plot
     plot_name
+        name of the saved figure
     func
+        function used to save the plots
     fig_format
+        figure format of the plot. default is PDF.
     dpi
+        DPI of saved figure
     kwargs
-
-    Returns
-    -------
+        accepts kwargs
 
     """
     if path is not None:
@@ -125,13 +139,14 @@ def save_plot(plot_name: str):
     Parameters
     ----------
     plot_name
-
-    Returns
-    -------
-    figure and axes of the decorated function
+        string to be saved to. Sting can contain "/" to indicate a folder structure where the plot
+        should be saved. Also can contain preformatted parts like: "plot_{name}". The {name} will then be replaced
+        by a passed kwarg "name".
 
     """
     def decorator_save_plot(func):
+        func.__doc__ = func.__doc__.format(name=plot_name)
+
         @functools.wraps(func)
         def wrapper_save_plot(*args, **kwargs):
             # run original function
@@ -147,7 +162,6 @@ def save_plot(plot_name: str):
 def save_csv_fn(save_path: str, csv_name: str, df: Union[pd.Series, pd.DataFrame]):
     if save_path is not None:
         os.makedirs(save_path, exist_ok=True)
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         df.to_csv(os.path.join(save_path, csv_name) + ".csv", header=True)
 
 
@@ -158,10 +172,8 @@ def save_csvs(name_map: Dict[str, str]):
     Parameters
     ----------
     name_map
+        mapping of kwarg name to file name
 
-    Returns
-    -------
-    original function
     """
     def decorator_save_csvs(func):
         @functools.wraps(func)
@@ -188,6 +200,7 @@ def save_venn_to_txt(name_map: Dict[str, str]):
                                       f"({len(named_sets)}")
                         continue
                     save_path, txt_name = get_path_and_name_from_kwargs(file_name, **kwargs)
+                    os.makedirs(save_path, exist_ok=True)
                     for intersected, unioned, result in venn_names(named_sets):
                         # create name based on the intersections and unions that were done
                         intersected_name = "&".join(sorted(intersected))
@@ -204,6 +217,14 @@ def save_venn_to_txt(name_map: Dict[str, str]):
 
 class QuantileNormalize(colors.Normalize):
     def __init__(self, quantiles: pd.Series):
+        """
+        Can be used to color the values of a dataset according to the quantiles.
+
+        Parameters
+        ----------
+        quantiles
+            calculated quantiles of the dataset
+        """
         self.quantiles = quantiles
         assert self.quantiles.index.min() >= 0
         assert self.quantiles.index.max() <= 1
@@ -215,15 +236,36 @@ class QuantileNormalize(colors.Normalize):
         return np.ma.array(self.outputs[index], fill_value=0)
 
 
-@save_csvs({"unique_g1": "volcano_plot_data_{g1}_vs_{g2}_unique_{g1}",
-            "unique_g2": "volcano_plot_data_{g1}_vs_{g2}_unique_{g2}"})
+def split_plot(n_rows, n_cols, figsize=(7, 7), plot_name="", data=None, plot_fn=None, save_path=None):
+    n_figures = int(np.ceil(len(data.columns) / (n_rows * n_cols)))
+
+    if save_path is not None:
+        with PdfPages(os.path.join(save_path, plot_name + ".pdf")) as pdf:
+            for n_figure in range(n_figures):
+                fig, axarr = plt.subplots(n_rows, n_cols, figsize=figsize)
+                for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
+                    idx = n_figure * (n_rows * n_cols) + i
+                    try:
+                        experiment = data.columns[idx]
+                    except IndexError:
+                        break
+                    plot_fn(ax, data[experiment], experiment)
+                fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+                pdf.savefig(fig)
+                plt.close(fig)
+
+
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
+@save_csvs({"unique_g1": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g1}",
+            "unique_g2": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g2}"})
 def save_volcano_results(
         volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", adj_pval: bool = True, intensity_label: str = "Intensity", split_files: bool = True,
-        show_suptitle: bool = True, fchange_threshold: float = 2, scatter_size: float = 10,
-        n_labelled_proteins: int = 10, **kwargs
+        g2: str = "group2", adj_pval: bool = True, intensity_label: str = "Intensity",
+        show_suptitle: bool = True, pval_threshold: float = 0.05, fchange_threshold: float = 2,
+        scatter_size: float = 10, n_labelled_proteins: int = 10, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
-    f"""
+    """
     Saves multiple csv files and images containing the information of the volcano plot
 
     Parameters
@@ -245,15 +287,16 @@ def save_volcano_results(
         From which intensities were the fold changes calculated
     show_suptitle
         Should the figure title be shown
+    pval_threshold
+        Maximum p value to be considered significant
     fchange_threshold
-        Minimum fold change threshold to be labelled significant
+        Minimum fold change threshold (before log2 transformation) to be labelled significant
     scatter_size
         size of the points in the scatter plots
     n_labelled_proteins
         number of points that will be marked in th plot
     kwargs
-        {_get_path_and_name_kwargs_doc}
-
+        {kwargs}
 
     """
     plt.close("all")
@@ -264,8 +307,8 @@ def save_volcano_results(
     else:
         col = "pval"
 
-    def get_volcano_significances(fchange, pval, fchange_threshold):
-        if pval > 0.05 or abs(fchange) < np.log2(fchange_threshold):
+    def get_volcano_significances(fchange, pval, pval_threshold, fchange_threshold):
+        if pval > pval_threshold or abs(fchange) < np.log2(fchange_threshold):
             return "ns"
         elif fchange >= 0:
             return "up"
@@ -275,14 +318,14 @@ def save_volcano_results(
             raise ValueError(f"heisenbug: fold change: {fchange}, p value: {pval}")
 
     # add the measured regulation to the data based on the given thresholds
-    volcano_data["regulation"] = [get_volcano_significances(log_fold_change, p_val, fchange_threshold)
+    volcano_data["regulation"] = [get_volcano_significances(log_fold_change, p_val, pval_threshold, fchange_threshold)
                                   for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
 
     # save the volcano data csv in full and only the significant part
-    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_full_{p}",
+    save_path, csv_name = get_path_and_name_from_kwargs("csv_full/volcano_plot_data_{g1}_vs_{g2}_full_{p}",
                                                         g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
     save_csv_fn(save_path, csv_name, volcano_data)
-    save_path, csv_name = get_path_and_name_from_kwargs("volcano_plot_data_{g1}_vs_{g2}_significant_{p}",
+    save_path, csv_name = get_path_and_name_from_kwargs("csv_significant/volcano_plot_data_{g1}_vs_{g2}_significant_{p}",
                                                         g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
     save_csv_fn(save_path, csv_name, volcano_data[volcano_data[col] < 0.05])
 
@@ -354,7 +397,7 @@ def save_volcano_results(
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     # save intermediate results
-    path, plot_name = get_path_and_name_from_kwargs(name="volcano_{g1}_{g2}_no_annotation_{p}", g1=g1, g2=g2,
+    path, plot_name = get_path_and_name_from_kwargs(name="plots/volcano_{g1}_{g2}_no_annotation_{p}", g1=g1, g2=g2,
                                                          p=col_mapping[col].replace(' ', '_'), **kwargs)
     save_plot_func(fig, path, plot_name, save_volcano_results, **kwargs)
 
@@ -372,7 +415,7 @@ def save_volcano_results(
     adjust_text(texts, arrowprops=dict(width=0.15, headwidth=0, color='gray', alpha=0.6), ax=ax)
 
     # save the final result
-    path, plot_name = get_path_and_name_from_kwargs(name="volcano_{g1}_{g2}_annotation_{p}", g1=g1, g2=g2,
+    path, plot_name = get_path_and_name_from_kwargs(name="plots/volcano_{g1}_{g2}_annotation_{p}", g1=g1, g2=g2,
                                                          p=col_mapping[col].replace(' ', '_'), **kwargs)
     save_plot_func(fig, path, plot_name, save_volcano_results, **kwargs)
     # TODO scatter plot of significant genes
@@ -380,28 +423,30 @@ def save_volcano_results(
 
 
 @save_plot("pca_overview")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_pca_results(
         pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, intensity_label: str = "Intensity",
         color_map: Optional[dict] = None, show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
-    Saves image containing the pca results
+    Saves image containing the pca results with prefix: {{name}}
 
     Parameters
     ----------
-    pca_data:
+    pca_data
         DataFrame containing transformed/dimensionally-reduced data with which PCA was performed
-    pca_fit:
+    pca_fit
         PCA object that was fitted to normalized input data
-    normalize:
+    normalize
         Boolean whether the transformed data should be normalized with the singular values before plotting
     intensity_label
-
+        figure title
     color_map
-
+        mapping from column name to color if custom colors are wanted
     show_suptitle:
         Should the figure title be shown
-
+    kwargs
+        {kwargs}
 
     """
     plt.close("all")
@@ -414,19 +459,29 @@ def save_pca_results(
         warnings.warn("Normalizing not possible when pca_fit is None")
     elif normalize and pca_fit is not None:
         singular_values = pca_fit.singular_values_
-    fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
-    for row in range(n_components):
-        row_pc = row + 1
-        for col in range(n_components):
-            col_pc = col + 1
-            if row > col:
-                ax = axarr[col, row]
-                ax.scatter(
-                    pca_data.loc[f"PC_{row_pc}"] / singular_values[row],
-                    pca_data.loc[f"PC_{col_pc}"] / singular_values[col],
-                    c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-                ax.set_xlabel(f"PC_{row_pc}")
-                ax.set_ylabel(f"PC_{col_pc}")
+    if n_components == 2:
+        fig, axarr = plt.subplots(1, 1, figsize=(14, 14))
+        ax = axarr[0]
+        ax.scatter(
+            pca_data.loc["PC_1"] / singular_values[0],
+            pca_data.loc["PC_2"] / singular_values[1],
+            c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
+        ax.set_xlabel("PC_1")
+        ax.set_ylabel("PC_2")
+    else:
+        fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
+        for row in range(n_components):
+            row_pc = row + 1
+            for col in range(n_components):
+                col_pc = col + 1
+                if row > col:
+                    ax = axarr[col, row]
+                    ax.scatter(
+                        pca_data.loc[f"PC_{row_pc}"] / singular_values[row],
+                        pca_data.loc[f"PC_{col_pc}"] / singular_values[col],
+                        c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
+                    ax.set_xlabel(f"PC_{row_pc}")
+                    ax.set_ylabel(f"PC_{col_pc}")
 
     if show_suptitle:
         fig.suptitle(intensity_label, fontsize="xx-large")
@@ -436,24 +491,35 @@ def save_pca_results(
     return fig, axarr
 
 
-@save_csvs({"protein_intensities": "{pathway}_protein_intensities",
-            "significances": "{pathway}_pvalues"})
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
+@save_csvs({"protein_intensities": "csv_intensity/{pathway}_protein_intensities",
+            "significances": "csv_pval/{pathway}_pvalues"})
 def save_pathway_analysis_results(
         protein_intensities: pd.DataFrame, significances: pd.DataFrame = None, pathway: str = "",
-        show_suptitle: bool = False, threshold: float = 0.05, intensity_label: str = "Intensity", **kwargs
+        show_suptitle: bool = False, threshold: float = 0.05, intensity_label: str = "Intensity",
+        color_map: Optional[dict] = None, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
-    f"""
+    """
+    Saves plots into the pathway_analysis dir.
     
     Parameters
     ----------
     protein_intensities
+        data of intensities
     significances
+        significances between different conditions
     pathway
+        name of the pathway
     show_suptitle
+        should the pathway name be shown as overall title
     threshold
+        maximum p value indicating significance
     intensity_label
+        from which intensity was the data. will be shown on x axis
+    color_map
+        a mapping from the column names to a color
     kwargs
-        {_get_path_and_name_kwargs_doc}
+        {kwargs}
 
     Returns
     -------
@@ -463,13 +529,13 @@ def save_pathway_analysis_results(
     level_keys = list(protein_intensities.columns.get_level_values(0).unique())
     n_rows, n_cols = get_number_rows_cols_for_fig(protein_intensities.index)
     fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(level_keys) / 1.5)))
-    color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
-    color_map.update(kwargs.get("color_map", {}))  # TODO move to function deceleration
+    result_color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
+    result_color_map.update(color_map if color_map is not None else {})
     if show_suptitle:
-        fig.suptitle(pathway)
+        fig.suptitle(pathway, size=28)
     for protein, (pos, ax) in zip(protein_intensities.index, np.ndenumerate(axarr)):
         ax.scatter(protein_intensities.loc[protein], [level_keys.index(c) for c in protein_intensities.columns.get_level_values(0)],
-                   c=[color_map[c] for c in protein_intensities.columns.get_level_values(0)])
+                   c=[result_color_map[c] for c in protein_intensities.columns.get_level_values(0)])
         ax.set_title(protein)
         ax.set_ylim((-1, len(level_keys)))
         ax.set_yticks([i for i in range(len(level_keys))])
@@ -477,7 +543,7 @@ def save_pathway_analysis_results(
         ax.set_xlabel(intensity_label)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-    path, plot_name = get_path_and_name_from_kwargs(name="{pathway}_no_labels", pathway=pathway, **kwargs)
+    path, plot_name = get_path_and_name_from_kwargs(name="plots/{pathway}_no_labels", pathway=pathway, **kwargs)
     save_plot_func(fig, path, plot_name, save_pathway_analysis_results, **kwargs)
 
     if significances is not None:
@@ -492,18 +558,19 @@ def save_pathway_analysis_results(
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-        path, plot_name = get_path_and_name_from_kwargs(name="{pathway}", pathway=pathway, **kwargs)
+        path, plot_name = get_path_and_name_from_kwargs(name="plots/{pathway}", pathway=pathway, **kwargs)
         save_plot_func(fig, path, plot_name, save_pathway_analysis_results, **kwargs)
     return fig, axarr
 
 
 @save_plot("boxplot")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_boxplot_results(
         protein_intensities: pd.DataFrame, intensity_label: str = "Intensity",
         plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vertical: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
-    f"""
-    Boxplot of intensities
+    """
+    Boxplot of intensities. Saves the plot with prefix: {{name}}
 
     Parameters
     ----------
@@ -512,11 +579,11 @@ def save_boxplot_results(
     intensity_label
         label of the x axis of the plot
     plot
-        asd
+        figure to put plot
     vertical
-
+        Should a vertical boxplot be created
     kwargs
-        {_get_path_and_name_kwargs_doc}
+        {kwargs}
 
     """
     # TODO give colors to the different groups
@@ -547,12 +614,14 @@ def save_boxplot_results(
 
 
 @save_plot("rel_std_{experiment_name}")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_relative_std_results(
         intensities: pd.DataFrame, experiment_name: str, intensity_label: str = "Intensity",
         show_suptitle: bool = False, bins=(10, 20, 30), cmap: dict = None, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
-    f"""
-    Relative standard deviations of passed intensities with color marking based on the specified bins and color map
+    """
+    Relative standard deviations of passed intensities with color marking based on the specified bins and color map.
+    Save the plot with prefix: {{name}}
 
     Parameters
     ----------
@@ -569,11 +638,7 @@ def save_relative_std_results(
     cmap
         mapping for the digitized labels to a color
     kwargs
-        {_get_path_and_name_kwargs_doc}
-
-    Returns
-    -------
-    figure and axis of the plot
+        {kwargs}
 
     """
     # TODO add percentage to absolute numbers
@@ -581,14 +646,16 @@ def save_relative_std_results(
     plt.close("all")
 
     bins = np.array(bins)
-    if "Log_2" in intensity_label:
-        bins = np.log2(bins)
 
     default_cm = {0: "navy", 1: "royalblue", 2: "skyblue", 3: "darkgray"}
     if cmap is not None:
         default_cm.update(cmap)
 
-    relative_std_percent = intensities.std(axis=1) / intensities.mean(axis=1) * 100
+    if "Log_2" in intensity_label:
+        relative_std_percent = intensities.std(axis=1) / intensities.mean(axis=1) * 100
+    else:
+        intensities = np.log2(intensities)
+        relative_std_percent = intensities.std(axis=1) / intensities.mean(axis=1) * 100
 
     inds = np.digitize(relative_std_percent, bins).astype(int)
     plot_colors = pd.Series([default_cm.get(x, "black") for x in inds], index=relative_std_percent.index)
@@ -615,10 +682,12 @@ def save_relative_std_results(
 
 
 @save_plot("detected_counts")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_detection_counts_results(
         counts: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
-    f"""
+    """
+    Saves the plot with prefix: {{name}}
 
     Parameters
     ----------
@@ -629,11 +698,7 @@ def save_detection_counts_results(
     show_suptitle
         should the figure title be shown
     kwargs
-        {_get_path_and_name_kwargs_doc}
-
-    Returns
-    -------
-    figure and axis of the plot
+        {kwargs}
 
     """
     plt.close("all")
@@ -663,23 +728,31 @@ def save_detection_counts_results(
 
 
 @save_plot("kde")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_kde_results(
         intensities: pd.DataFrame, quantile_range: Optional[np.array] = None, n_points: int = 1000,
         cmap: Union[str, colors.Colormap] = "viridis", plot: Optional[Tuple[plt.Figure, plt.Axes]] = None,
         intensity_label: str = "Intensity", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
-    f"""
+    """
+    saves the plot with prefix: {{name}}
     
     Parameters
     ----------
     intensities
+        protein intensities to be plotted
     quantile_range
+        default is np.arange(0.05, 1, 0.05)
     n_points
+        number of points to sample from distribution
     cmap
+        color map to use
     plot
+        figure to put plot
     intensity_label
+        label to be put on x axis
     kwargs
-        {_get_path_and_name_kwargs_doc}
+        {kwargs}
 
     Returns
     -------
@@ -725,25 +798,35 @@ def save_kde_results(
 
 
 @save_plot("n_proteins_vs_quantile")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_n_proteins_vs_quantile_results(
         quantiles: pd.DataFrame, n_proteins: pd.Series, nstd: int = 1, cmap: Union[str, colors.Colormap] = "viridis",
         plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, cbar_ax: Optional[plt.Axes] = None,
         intensity_label: str = "Intensity", fill_between: bool = False, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
-    f"""
+    """
+    saves plot with prefix: {{name}}
     
     Parameters
     ----------
     quantiles
+        quantiles to be plotted
     n_proteins
+        number of identified proteins
     nstd
+        how many standard deviations should the the line will between
     cmap
+        color map to use
     plot
+        figure to put plot
     cbar_ax
+        axis for colorbar
     intensity_label
+        label to put on x label
     fill_between
+        should the area around the line be filled
     kwargs
-        {_get_path_and_name_kwargs_doc}
+        {kwargs}
 
     Returns
     -------
@@ -787,25 +870,30 @@ def save_n_proteins_vs_quantile_results(
 
 
 @save_plot("normalization_overview")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_normalization_overview_results(
         quantiles, n_proteins, intensities, protein_intensities,
         height: int = 15, intensity_label: str = "Intensity", **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]:
-    f"""
-    
+    """
+    saves plot with prefix: {{name}}
+
     Parameters
     ----------
     quantiles
+        quantiles for save_n_proteins_vs_quantile_results
     n_proteins
+        n_proteins for save_n_proteins_vs_quantile_results
     intensities
+        intensities for save_kde_results
     protein_intensities
+        intensities for boxplot data
     height
+        height of the figure
     intensity_label
+        name of the experiment
     kwargs
-        {_get_path_and_name_kwargs_doc}
-
-    Returns
-    -------
+        {kwargs}
 
     """
     fig = plt.figure(figsize=(18, 18), constrained_layout=True)
@@ -815,7 +903,7 @@ def save_normalization_overview_results(
     ax_colorbar = fig.add_subplot(gs[height - 1, 0])
     ax_boxplot = fig.add_subplot(gs[0:height, 1])
 
-    fig.suptitle(f"Normalization overview for {intensity_label}")
+    fig.suptitle(f"Normalization overview for {intensity_label}", size=28)
     # order the boxplot data after the number of identified peptides
     boxplot_data = protein_intensities.loc[:, n_proteins.sort_values(ascending=False).index[::-1]]
 
@@ -834,30 +922,37 @@ def save_normalization_overview_results(
 
 
 @save_plot("intensities_heatmap")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_intensities_heatmap_result(
-        intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad="dimgray",
+        intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad: str ="dimgray",
         cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None,
         vmin: Optional[float] = None,
         intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
-    f"""
+    """
+    saves plot with prefix: {{name}}
     
     Parameters
     ----------
     intensities
     cmap
+        color map to use for heatmap coloring
     cmap_bad
+        color for missing values
     cax
+        axis for the color bar
     plot
+        figure to put plot
     vmax
+        passed to imshow
     vmin
+        passed to imshow
     intensity_label
+        name of the experiment
     show_suptitle
+        should figure title be shown
     kwargs
-        {_get_path_and_name_kwargs_doc}
-
-    Returns
-    -------
+        {kwargs}
 
     """
     if plot is not None:
@@ -891,9 +986,25 @@ def save_intensities_heatmap_result(
 
 
 @save_plot("detection_per_replicate")
-def save_number_of_detected_proteins_results(
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
+def save_detected_proteins_per_replicate_results(
         all_heights: Dict[str, pd.Series], intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ):
+    """
+    saves plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    all_heights
+        mapping of sample to a pd.Series of heights
+    intensity_label
+        name of the experiment
+    show_suptitle
+        should a figure title be shown
+    kwargs
+        {kwargs}
+
+    """
     plt.close("all")
     # determine number of rows and columns in the plot based on the number of experiments
     n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(all_heights.keys())
@@ -921,11 +1032,37 @@ def save_number_of_detected_proteins_results(
 
 
 @save_plot("intensity_histograms")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_intensity_histogram_results(
         hist_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False,
         compare_to_remaining: bool = False, n_bins: int = 25, histtype="bar", color=None,
         plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, **kwargs
 ):
+    """
+    saves plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    hist_data
+        data to be plotted
+    intensity_label
+        name of experiment
+    show_suptitle
+        should a figure title be shown
+    compare_to_remaining
+        should the sample be compared to the overall samples
+    n_bins
+        how many bins should the histograms have
+    histtype
+        passed to hist
+    color
+        passed to hist
+    plot
+        figure to put plot
+    kwargs
+        {kwargs}
+
+    """
     if plot is not None:
         fig, axarr = plot
     else:
@@ -966,9 +1103,25 @@ def save_intensity_histogram_results(
 
 
 @save_plot("scatter_{full_name}")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_scatter_replicates_results(
         scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
+    """
+    saves plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    scatter_data
+        data to create scatter plots
+    intensity_label
+        name of the experiment
+    show_suptitle
+        should a figure title be shown
+    kwargs
+        {kwargs}
+
+    """
     plt.close("all")
     fig, ax = plt.subplots(1, 1, figsize=(7, 7))
 
@@ -998,10 +1151,29 @@ def save_scatter_replicates_results(
 
 
 @save_plot("rank_{full_name}")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_rank_results(
         rank_data: pd.Series, interesting_proteins, intensity_label: str = "Intensity", full_name="Experiment",
         show_suptitle: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
+    """
+    saves plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    rank_data
+        data for rank plot
+    interesting_proteins
+        mapping of pathway names to a list of proteins
+    intensity_label
+        name of the experiment
+    full_name
+    show_suptitle
+        should figure title be shown
+    kwargs
+        {kwargs}
+
+    """
     plt.close("all")
     if interesting_proteins.values():
         all_pathway_proteins = set.union(*(set(x) for x in interesting_proteins.values()))
@@ -1059,12 +1231,40 @@ def save_rank_results(
 
 
 @save_plot("scatter_comparison_{sample1}_vs_{sample2}")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_experiment_comparison_results(
         protein_intensities_sample1: pd.Series, protein_intensities_sample2: pd.Series,
         exclusive_sample1: pd.Series, exclusive_sample2: pd.Series, sample1: str, sample2: str,
         intensity_label: str = "Intensity", show_suptitle: bool = False,
         plot: Optional[Tuple[plt.Figure, plt.Axes]] = None,  **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
+    """
+    saves plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    protein_intensities_sample1
+        intensities of sample 1
+    protein_intensities_sample2
+        intensities of sample 2
+    exclusive_sample1
+        intensities exclusive to sample 1
+    exclusive_sample2
+        intensities exclusive to sample 2
+    sample1
+        name of sample 1
+    sample2
+        name of sample 2
+    intensity_label
+        name of experiment
+    show_suptitle
+        should figure title be shown
+    plot
+        figure to put plot
+    kwargs
+        {kwargs}
+
+    """
     # calculate r
     try:
         r = stats.pearsonr(protein_intensities_sample1, protein_intensities_sample2)
@@ -1103,9 +1303,28 @@ def save_experiment_comparison_results(
 
 
 @save_plot("go_analysis")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_go_analysis_results(
-        heights, test_results, go_analysis_gene_names, intensity_label="Intensity", **kwargs
+        heights: Dict[str, list], test_results: Dict[str, list], go_analysis_gene_names: list,
+        intensity_label="Intensity", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
+    """
+    saves plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    heights
+        mapping from samples to bar height
+    test_results
+        mapping from samples to p value
+    go_analysis_gene_names
+        names of the go term lists
+    intensity_label
+        name of the experiment
+    kwargs
+        {kwargs}
+
+    """
     # TODO also create table
     # TODO move labels to bars, remove legend
     plt.close("all")
@@ -1136,6 +1355,10 @@ def save_go_analysis_results(
 
 @save_plot("pathway_timecourse_{pathway}")
 def save_pathway_timecourse_results():
+    """
+    Not Implemented at the moment
+    """
+    raise NotImplementedError
     """plt.close("all")
     n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
     fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * int(max_time / 5), 4 * n_rows))
@@ -1166,11 +1389,27 @@ def save_pathway_timecourse_results():
     return fig, axarr"""
 
 
-@save_plot("venn_bar_{ex}")
-@save_venn_to_txt({"named_sets": "set_bar"})
+@save_plot("plots/venn_bar_{ex}")
+@save_venn_to_txt({"named_sets": "txts/set_bar"})
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_bar_venn(
         named_sets: Dict[str, set], ex: str, show_suptitle: bool = True, **kwargs
 ) -> Optional[Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]]:
+    """
+    saves plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    named_sets
+        a mapping of samples to protein names
+    ex
+        figure title
+    show_suptitle
+        should figure title be shown
+    kwargs
+        {kwargs}
+
+    """
     plt.close("all")
     if len(named_sets) > 6:
         warnings.warn(f"Skipping bar-venn for {ex} because it has more than 6 experiments")
@@ -1212,12 +1451,33 @@ def save_bar_venn(
     return fig, (ax1, ax2)
 
 
-@save_plot("venn_replicate_{ex}")
-@save_venn_to_txt({"named_sets": "set"})
+@save_plot("plots/venn_replicate_{ex}")
+@save_venn_to_txt({"named_sets": "txts/set"})
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_venn(
         named_sets: Dict[str, set], ex: str, show_suptitle: bool = True,
         title_font_size=20, set_label_font_size=16, subset_label_font_size=14, **kwargs
 ) -> Optional[Tuple[plt.Figure, plt.Axes]]:
+    """
+    Creates Venn Diagrams from passed data. saves plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    named_sets
+    ex
+        title for the plot
+    show_suptitle
+        should the title be shown
+    title_font_size
+        font size of the title
+    set_label_font_size
+        font size of sets
+    subset_label_font_size
+        font size of subsets
+    kwargs
+        {kwargs}
+
+    """
     plt.close("all")
     fig, ax = plt.subplots(1, 1, figsize=(14, 7))
     if show_suptitle:

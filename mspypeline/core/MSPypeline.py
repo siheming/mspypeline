@@ -14,7 +14,7 @@ from mspypeline.file_reader import BaseReader, MQReader
 class UIHandler:
     def __init__(self, file_dir, yml_file=None, gui=False, host_flask=False, selected_reader=MQReader.MQReader, loglevel=logging.DEBUG, configs: dict = None):
         base_config = {
-            "has_replicates": False,
+            "has_techrep": False,
             "has_groups": False,
         }
         if configs is None:
@@ -136,7 +136,7 @@ class MSPGUI(tk.Tk):
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
         self.plot_row("Detection counts", "detection_counts")
-        self.plot_row("Number of detected proteins", "number_of_detected_proteins")
+        self.plot_row("Number of detected proteins", "detected_proteins_per_replicate")
         self.plot_row("Venn diagrams", "venn_results")
         self.plot_row("Group diagrams", "venn_groups")
         self.plot_row("PCA overview", "pca_overview")
@@ -244,7 +244,7 @@ class MSPGUI(tk.Tk):
             selected_levels = self.plot_settings[levels_name]
             selected_levels.update_options([level_names.get(l, l) for l in range(levels)])
             selected_levels.update_selection([level_names.get(pl, pl) for pl in plot_levels])
-        self.replicate_var.set(self.mspinit.configs.get("has_replicates", True))
+        self.replicate_var.set(self.mspinit.configs.get("has_techrep", True))
         self.normalizer_text.set(self.mspinit.configs.get("selected_normalizer", "None"))
         self.update_listboxes()
 
@@ -252,7 +252,7 @@ class MSPGUI(tk.Tk):
         self.selected_reader = self.reader_options[self.reader_text.get()]
 
     def update_button(self):
-        self.mspinit.configs["has_replicates"] = bool(self.replicate_var.get())
+        self.mspinit.configs["has_techrep"] = bool(self.replicate_var.get())
         self.mspinit.configs["selected_reader"] = str(self.reader_text.get())
         self.mspinit.configs["selected_normalizer"] = str(self.normalizer_text.get())
         reader_settings = self.mspinit.configs.get(self.selected_reader.name, {})
@@ -378,22 +378,12 @@ class MSPParser(argparse.ArgumentParser):
                  "The higher the logging level the fewer messages are shown. Default: WARNING"
         )
         self.add_argument(
-            "--has-replicates",
-            dest="has_replicates",
+            "--has-techrep",
+            dest="has_techrep",
             default=False,
             const=True,
             nargs="?",
             help="If you have replicates of each experiment specify this"
-                 "Replicates need to be enumerated in a way that numbers are added at the end of the name"
-                 "If no replicates are in data set no venn diagrams will be generated"
-        )
-        self.add_argument(
-            "--has-groups",
-            dest="has_groups",
-            default=False,
-            const=True,
-            nargs="?",
-            help="If you have groups of experiments specify this"
                  "Replicates need to be enumerated in a way that numbers are added at the end of the name"
                  "If no replicates are in data set no venn diagrams will be generated"
         )
@@ -414,7 +404,7 @@ class MSPParser(argparse.ArgumentParser):
         )
         self.args = self.parse_args()
         self.args_dict = vars(self.args)
-        move_to_config = ["has_replicates", "has_groups"]
+        move_to_config = ["has_techrep"]
         self.args_dict["configs"] = {k: self.args_dict.pop(k) for k in move_to_config}
 
 

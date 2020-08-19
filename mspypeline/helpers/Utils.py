@@ -1,6 +1,5 @@
-from typing import Optional, Dict, Tuple, Iterator, Union, Iterable
+from typing import Optional, Dict, Tuple, Iterator, Union, Iterable, Sized
 import pandas as pd
-from collections.abc import Sized
 from collections import defaultdict as ddict
 from itertools import combinations
 from collections import deque
@@ -120,8 +119,12 @@ def install_r_dependencies(r_package_names, r_bioconducter_package_names):
             biocm.install(p)
 
 
+def get_non_na_percentage(x: int) -> float:
+    return 1 / (1 + np.exp(0.5 * x - 3.5)) * 0.5 + 0.5
+
+
 def get_number_of_non_na_values(x: int, offset: int = 0) -> int:
-    percentage = 1 / (1 + np.exp(0.5 * x - 3.5)) * 0.5 + 0.5
+    percentage = get_non_na_percentage(x)
     return max(int(np.round(percentage * x)) - offset, 3 - offset)
 
 
@@ -197,3 +200,50 @@ def get_plot_name_suffix(df_to_use: Optional[str] = None, level: Optional[int] =
     s = "" if df_to_use is None else f"_{df_to_use}"
     s += "" if level is None else f"_level_{level}"
     return s
+
+
+class DataDict(dict):
+    def __init__(self, data_source, *args, **kwargs):
+        """
+        Overwrites the standard dictionary to provide an additional DataSource.
+        When a missing key is looked up the DataSource is searched for a method named:
+        e.g. looking up key=parameters, looking for method named "preprocess_parameters",
+        which is expected to return data, which will then be stored under the key.
+        This allows data from disk to be loaded on demand instead of loading all possible data at the beginning.
+
+        Parameters
+        ----------
+        data_source
+            class which will be searched for methods
+        args
+            passed to dict.__init__
+        kwargs
+            passed to dict.__init__
+        """
+        super().__init__(*args, **kwargs)
+        self.data_source = data_source
+
+    def __missing__(self, key):
+        try:
+            self.data_source.logger.debug("Reading %s from disk", key)
+            data = getattr(self.data_source, f"preprocess_{key}")()
+            self[key] = data
+            return data
+        except FileNotFoundError as e:
+            raise KeyError("Missing file:", key, e)
+        except AttributeError as e:
+            raise KeyError("Missing function to load:", key, e)
+
+
+def format_docstrings(**mapping):
+    def docstring_decorator(fn):
+        fn.__doc__ = fn.__doc__.format(**mapping)
+        return fn
+    return docstring_decorator
+
+
+def add_end_docstrings(*docstr):
+    def docstring_decorator(fn):
+        fn.__doc__ = fn.__doc__ + "".join(docstr)
+        return fn
+    return docstring_decorator

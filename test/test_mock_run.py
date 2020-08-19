@@ -30,15 +30,15 @@ def test_all_designs_raw():
     # configs = {"pathways": ["A", "B"]}
     # configs = {"go_terms": ["A", "B"]}
     # set all intensites to log2
-    for experiment_design in ("has_group_has_tech", "has_group_no_tech", "no_group_has_tech", "no_group_no_tech"):
+    for experiment_design in ("has_group_has_tech", ):  # "has_group_no_tech", "no_group_has_tech", "no_group_no_tech"
         if "has_group" in experiment_design:
             configs["has_group"] = True
         else:
             configs["has_group"] = False
         if "has_tech" in experiment_design:
-            configs["has_replicates"] = True
+            configs["has_techrep"] = True
         else:
-            configs["has_replicates"] = False
+            configs["has_techrep"] = False
         target_dir = experiment_design_location(experiment_design)
         # UIHandler(target_dir, configs=configs)
         mspinit = MSPInitializer(target_dir, "default")

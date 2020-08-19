@@ -12,7 +12,8 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath("../../"))
+sys.path.insert(0, os.path.abspath("./_ext"))  # for custom extensions
+sys.path.insert(0, os.path.abspath("../.."))  # to find the package
 
 
 # -- Project information -----------------------------------------------------
@@ -27,11 +28,15 @@ author = 'Simon Heming'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'autoapi.extension'
+extensions = [
+    'sphinx.ext.autodoc',
+    'IPython.sphinxext.ipython_console_highlighting',
+    'IPython.sphinxext.ipython_directive',
+    'sphinx.ext.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ['_templates', "_autoapi_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -51,8 +56,12 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# autoapi options
-autoapi_dirs = ['../../mspypeline/']
-autoapi_add_toctree_entry = False
-autoapi_keep_files = False
-autoapi_root = "autoapi"
+# autodoc
+autodoc_typehints = "description"
+autoclass_content = "init"
+
+
+# napoleon options
+napoleon_google_docstring = False
+napoleon_include_init_with_doc = False
+

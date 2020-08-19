@@ -44,7 +44,7 @@ class DataNode:
         self.iter_counter = -1
 
     def __str__(self):
-        return f"level {self.level}, name: {self.full_name}, n children: {len(self.children)}"
+        return f"level {self.level}, name: {self.full_name}, n children: {self.get_total_number_children()}"
 
     def __repr__(self):
         return f"DataNode(name={self.name}, level={self.level}, parent={self.parent}, data={self.data}, children={self.children}"
@@ -68,14 +68,17 @@ class DataNode:
 
     def get_total_number_children(self, go_max_depth: bool = False) -> int:
         """
+        Gets the number of children containing data below this node. If go_max_depth will search for the deepest
+        DataNodes.
 
         Parameters
         ----------
         go_max_depth
+            default false
 
         Returns
         -------
-        n_children
+        int
             The number of all children below this node
 
         """
@@ -335,7 +338,7 @@ class DataTree:
 
     def aggregate_technical_replicates(self):
         """
-        aggregates all the stuff!
+        Aggregates the deepest level to one level above by using aggregate
 
         """
         queue = deque([self.root])

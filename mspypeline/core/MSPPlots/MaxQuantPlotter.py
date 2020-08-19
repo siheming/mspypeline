@@ -1,6 +1,5 @@
 import logging
 import os
-
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -41,7 +40,7 @@ class MaxQuantPlotter(BasePlotter):
         )
 
     @classmethod
-    def from_MSPInitializer(cls, mspinti_instance: MSPInitializer, **kwargs):
+    def from_MSPInitializer(cls, mspinit_instance: MSPInitializer, **kwargs):
         default_kwargs = dict(
             intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"),
                                ("ibaq", "iBAQ ", "iBAQ intensity")),
@@ -49,7 +48,7 @@ class MaxQuantPlotter(BasePlotter):
             required_reader="mqreader"
         )
         default_kwargs.update(**kwargs)
-        return super().from_MSPInitializer(mspinti_instance, **default_kwargs)
+        return super().from_MSPInitializer(mspinit_instance, **default_kwargs)
 
     @classmethod
     def from_file_reader(cls, reader_instance: MQReader, **kwargs):
@@ -62,6 +61,14 @@ class MaxQuantPlotter(BasePlotter):
         return super().from_file_reader(reader_instance, **default_kwargs)
 
     def create_report(self):
+        """
+        Creates a MaxQuantReport.pdf, which can be used as quality control.
+
+        Returns
+        -------
+        None
+
+        """
         def bar_from_counts(ax, counts, compare_counts=None, title=None, relative=False, yscale=None, bar_kwargs=None):
             if relative:
                 ax.set_ylabel("Relative counts")
@@ -176,7 +183,7 @@ class MaxQuantPlotter(BasePlotter):
             self.logger.debug("Reading proteinGroups")
             prot_groups = self.required_reader_data["proteinGroups"]
             prot_groups_prefix_columns = [x for x in prot_groups.columns if x.startswith(prefix)]
-            prot_groups_colors = [x.replace("Intensity ", "") for x in prot_groups_prefix_columns]
+            prot_groups_colors = [x.replace(prefix, "") for x in prot_groups_prefix_columns]
             plot_colors.update({col: cmap(i/len(prot_groups_colors)) for i, col in enumerate(prot_groups_colors)})
             prot_groups_intensities = prot_groups[prot_groups_prefix_columns].replace({0: np.nan})
             prot_groups_intensities.columns = pd.MultiIndex.from_arrays(
@@ -463,6 +470,36 @@ class MaxQuantPlotter(BasePlotter):
                     plt.close(fig)
             # ################
 
+            def split_plot_to_multiple_figures(fig_rows_cols, total_size, figsize):
+                n_figures = int(np.ceil(total_size / sum(fig_rows_cols)))
+                plots = []
+                for n_figure in range(n_figures):
+                    fig, axarr = plt.subplots(*fig_rows_cols, figsize=figsize)
+                    for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
+                        idx = n_figure * sum(fig_rows_cols) + i
+                        yield
+                        if idx == sum(fig_rows_cols):
+                            plots += (fig, axarr)
+                            break
+                yield plots
+
+            def split_p(n_rwos, n_cols, figsize=(7, 7), plot_name="", data=None, plot_fn=None):
+                n_figures = int(np.ceil(len(retention_time.columns) / (n_rwos * n_cols)))
+
+                with PdfPages(os.path.join(self.start_dir, plot_name + ".pdf")) as pdf:
+                    for n_figure in range(n_figures):
+                        fig, axarr = plt.subplots(n_rwos, n_cols, figsize=figsize)
+                        for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
+                            idx = n_figure * (n_rwos * n_cols) + i
+                            try:
+                                experiment = retention_time.columns[idx]
+                            except IndexError:
+                                break
+                            plot_fn(ax, data[experiment], experiment)
+                        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+                        pdf.savefig(fig)
+                        plt.close(fig)
             # Retention time of individuals samples vs remaining
             if evidence is not None:
                 self.logger.debug("Creating individual retention time histograms")
