@@ -1,4 +1,0 @@
-sphinx==3.0.4
-sphinx-autoapi==1.4.0
-sphinx_rtd_theme==0.4.3
-ipython==7.13.0
