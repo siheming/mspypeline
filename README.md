@@ -4,6 +4,8 @@
 ![basic test run](https://github.com/siheming/mspypeline/workflows/basic%20test%20run/badge.svg?branch=develop)
 [![Coverage](https://codecov.io/gh/siheming/mspypeline/branch/develop/graph/badge.svg?flag=basic-test-run)](https://codecov.io/gh/siheming/mspypeline/branch/develop)
 
+[![Documentation Status](https://readthedocs.org/projects/mspypeline/badge/?version=latest)](https://mspypeline.readthedocs.io/en/latest/?badge=latest)
+
 # README
 This pipeline can be used to analyze the results of a MaxQuant analysis.  
 To use this package please refer to [the docs](https://mspypeline.readthedocs.io/en/latest/index.html).  
