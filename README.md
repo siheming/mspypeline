@@ -11,7 +11,7 @@ This pipeline can be used to analyze the results of a MaxQuant analysis.
 To use this package please refer to [the docs](https://mspypeline.readthedocs.io/en/latest/index.html).  
 
 The sources can be found at [PyPI](https://pypi.org/project/mspypeline/) or
-[conda](https://anaconda.org/sschaum/mspypeline).
+[conda](https://anaconda.org/siheming/mspypeline).
 
 # Contribute
 If you want to contribute to the project please create a pull request on the develop branch.
