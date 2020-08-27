@@ -12,7 +12,7 @@ The source code is available on `github <https://github.com/siheming/mspypeline/
 Usage
 =====
 Please refer to the other parts of the documentation for :ref:`installation <installation>`,
-:ref:`how to get started <get-started>`, or use the search. hallo hier ist pauline.
+:ref:`how to get started <get-started>`, or use the search.
 
 
 Citation
