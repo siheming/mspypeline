@@ -251,6 +251,10 @@ class BasePlotter:
             plot_settings.update({k: v for k, v in global_settings.items() if k not in plot_settings})
             if plot_settings.pop("create_plot", False):
                 self.logger.debug(f"creating plot {plot_name}")
+                if self.selected_normalizer is not None:
+                    dfs_to_use = plot_settings.get("dfs_to_use", [])
+                    dfs_to_use = [x.split("_") for x in dfs_to_use]
+                    plot_settings.update({"dfs_to_use": dfs_to_use})
                 getattr(self, plot_name)(**plot_settings)
         self.logger.info("Done creating plots")
 
@@ -937,7 +941,7 @@ class BasePlotter:
         # extract index
         ress.index = pd.Index([x for x in res.rownames], name="Gene_names")
         # possible names are keys of this dict
-        plot_data = ress.loc[:, ["logFC", "AveExpr", "P.Value", "adj.P.Val"]]
+        plot_data = data2.loc[:, ["logFC", "AveExpr", "P.Value", "adj.P.Val"]]
         plot_data = plot_data.rename({"P.Value": "pval", "adj.P.Val": "adjpval"}, axis=1)
         # calculate mean intensity for unique genes
         unique_g1 = v1[exclusive_1].mean(axis=1).rename(f"{df_to_use} mean intensity")

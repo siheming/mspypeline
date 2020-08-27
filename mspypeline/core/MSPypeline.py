@@ -52,9 +52,7 @@ class MSPGUI(tk.Tk):
         self.number_of_plots = 0
 
         self.plot_settings = {}
-        self.intensity_options = ["lfq", "raw", "ibaq", "lfq_log2", "raw_log2", "ibaq_log2",
-                                  "lfq_normalized", "raw_normalized", "ibaq_normalized", "lfq_normalized_log2",
-                                  "raw_normalized_log2", "ibaq_normalized_log2"]
+        self.intensity_options = ["lfq_log2", "raw_log2", "ibaq_log2"]
 
         self.title("mspypeline")
 
