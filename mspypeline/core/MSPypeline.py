@@ -53,6 +53,7 @@ class MSPGUI(tk.Tk):
 
         self.plot_settings = {}
         self.intensity_options = ["lfq_log2", "raw_log2", "ibaq_log2"]
+        #,"lfq_normalized_log2", "raw_normalized_log2", "ibaq_normalized_log2]
 
         self.title("mspypeline")
 
@@ -129,6 +130,11 @@ class MSPGUI(tk.Tk):
         self.number_of_plots += 1
         self.plot_row("Normalization overview", "normalization_overview_all_normalizers")
         self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers")
+
+        #tk.Label(self, text= "Choose a Normalization Method:", font = "Helvetica 10 bold").grid(
+        #   row=self.heading_length + self.number_of_plots, column=1)
+        #self.number_of_plots += 1
+        #self.plot_intermediate_row("Choose a Normalization Method")
 
         tk.Label(self, text="Outlier detection / Comparisons", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
@@ -297,6 +303,15 @@ class MSPGUI(tk.Tk):
         mspplots = self.selected_reader.plotter.from_MSPInitializer(self.mspinit)
         mspplots.create_report()
         self.running_text.set("Please press Start")
+
+    def plot_intermediate_row(self, text: str):
+        row = self.heading_length + self.number_of_plots
+        int_var = tk.IntVar(value=1)
+        #self.normalizer_text = tk.StringVar(value="None")
+        self.normalizer_button = tk.OptionMenu(self.normalizer_text, *self.normalize_options)
+        self.normalizer_button.grid(row=row, column=1)
+
+        self.number_of_plots += 1
 
     def plot_row(self, text: str, plot_name: str):
         row = self.heading_length + self.number_of_plots

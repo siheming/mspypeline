@@ -461,7 +461,7 @@ def save_pca_results(
         singular_values = pca_fit.singular_values_
     if n_components == 2:
         fig, axarr = plt.subplots(1, 1, figsize=(14, 14))
-        ax = axarr[0]
+        ax = axarr#[0]
         ax.scatter(
             pca_data.loc["PC_1"] / singular_values[0],
             pca_data.loc["PC_2"] / singular_values[1],
@@ -528,7 +528,7 @@ def save_pathway_analysis_results(
     plt.close("all")
     level_keys = list(protein_intensities.columns.get_level_values(0).unique())
     n_rows, n_cols = get_number_rows_cols_for_fig(protein_intensities.index)
-    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(level_keys) / 1.5)))
+    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(level_keys)))) #/ 1.5)))
     result_color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
     result_color_map.update(color_map if color_map is not None else {})
     if show_suptitle:
