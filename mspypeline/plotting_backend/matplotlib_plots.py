@@ -528,7 +528,7 @@ def save_pathway_analysis_results(
     plt.close("all")
     level_keys = list(protein_intensities.columns.get_level_values(0).unique())
     n_rows, n_cols = get_number_rows_cols_for_fig(protein_intensities.index)
-    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(level_keys)))) #/ 1.5)))
+    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(level_keys) / 1.2)))
     result_color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
     result_color_map.update(color_map if color_map is not None else {})
     if show_suptitle:
@@ -715,12 +715,21 @@ def save_detection_counts_results(
 
         ax.set_title(f"{col},\ntotal detected: {int(col_data.sum())}")
         ax.barh(col_data.index, col_data, color="skyblue")
+
+        fsize = 10
+        if max(col_data.index) in range(1, 9):
+            fsize = 11
+        elif max(col_data.index) in range(9, 13):
+            fsize = 7
+        else:
+            fsize = 5
+
         for y, value in zip(col_data.index, col_data):
             ax.text(col_data.max() / 2, y, value,
-                    verticalalignment='center', horizontalalignment='center')
+                    verticalalignment='center', horizontalalignment='center', fontsize = fsize)
 
         ax.set_yticks(col_data.index)
-        ax.set_yticklabels([f"detected in {i} replicates" for i in col_data.index])
+        ax.set_yticklabels([f"detected in {i} replicates" for i in col_data.index], fontsize=fsize)
         ax.set_xlabel("Counts")
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -1019,13 +1028,20 @@ def save_detected_proteins_per_replicate_results(
         y_pos = [x for x in range(len(experiment_heights))]
         ax.barh(y_pos, experiment_heights, color="skyblue")
 
+        fsize = 10
+        if max(experiment_heights.index) in range(1, 9):
+            fsize = 11
+        else:
+            fsize = 7
+
         for y, value in zip(y_pos, experiment_heights):
             ax.text(experiment_heights[0] / 2, y, value,
-                    verticalalignment='center', horizontalalignment='center')
+                    verticalalignment='center', horizontalalignment='center', fontsize = fsize)
+
         ax.set_title(experiment)
         ax.axvline(mean_height, linestyle="--", color="black", alpha=0.6)
         ax.set_yticks([i for i in range(len(experiment_heights.index))])
-        ax.set_yticklabels(experiment_heights.index)
+        ax.set_yticklabels(experiment_heights.index, fontsize = fsize)
         ax.set_xlabel("Counts")
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, axarr
@@ -1326,31 +1342,47 @@ def save_go_analysis_results(
 
     """
     # TODO also create table
-    # TODO move labels to bars, remove legend
     plt.close("all")
-    fig, ax = plt.subplots(1, 1, figsize=(7, int(len(heights) * len(go_analysis_gene_names) / 3)))
 
-    bar_width = 0.25
-    for i, experiment in enumerate(heights):
-        y_pos = np.array([(i + (len(heights) + 1) * x) * bar_width for x in range(len(go_analysis_gene_names))])
-        ax.barh(y_pos, heights[experiment], height=bar_width, edgecolor='white', label=experiment)
-        for x, y, text in zip(heights[experiment], y_pos, test_results[experiment]):
-            if text > 0.05:
-                continue
-            text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
-            ax.text(x, y, f" p: {text}", verticalalignment="center", fontsize="8")
+    df = pd.DataFrame(data=heights, index=go_analysis_gene_names)
+    df_test = pd.DataFrame(data=test_results, index=go_analysis_gene_names)
+    df_test.insert(0, "background", [1] * len(go_analysis_gene_names), True)
 
+    list_test_results = df_test.T.to_numpy().tolist()
+    list_test = sum(list_test_results, [])
+
+    bar_width = 0.8
+    # fig, ax = plt.subplots(1,1, figsize = (7, int(len(heights) * len(go_analysis_gene_names) / 2)))
+    ax = df.plot(kind="barh", width=bar_width, edgecolor="white",
+                 figsize=(7, int(len(heights) * len(go_analysis_gene_names) / 1.5)))
+
+    for patch, text in zip(ax.patches, list_test):
+        if text > 0.05:
+            continue
+        text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
+        ax.annotate(f" p: {text}", xy=(patch.get_width(), (patch.get_y() + patch.get_height() / 2)))
+
+    lab_pos = []
+    for p in ax.patches:
+        lab_pos.append(p.get_y() + (p.get_height() / 2) + 0.0001)
+
+    lab = []
+    for i in range(len(lab_pos)):
+        l = df.columns.values[i // len(df.index.values)]
+        lab.append(l)
+
+    ax.set_yticks(lab_pos, minor=True)
+    ax.set_yticklabels(lab, minor=True)
+    ax.tick_params(axis="y", which="major", pad=150, size=0)
     ax.set_ylabel('compartiment')
+    ax.set_xlim(0, df.max().max() + 2)
     ax.set_xlabel('number of proteins')
-    # add yticks on the middle of the group bars
-    ax.set_yticks([(len(heights) / 2 + (len(heights) + 1) * x) * bar_width
-                   for x in range(len(go_analysis_gene_names))])
-    # replace the y ticks with the compartiment names
-    ax.set_yticklabels([x for x in go_analysis_gene_names])
-    plt.legend()
+    ax.get_legend().remove()
 
-    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    return fig, ax
+    # fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    return plt, ax
+
 
 
 @save_plot("pathway_timecourse_{pathway}")

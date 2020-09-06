@@ -166,7 +166,9 @@ class BasePlotter:
         # path for venn diagrams
         self.file_dir_venn = os.path.join(self.start_dir, "venn")
         # path for descriptive plots
-        self.file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
+        self.file_dir_descriptive = os.path.join(self.start_dir, "outliers_detection_&_comparison")
+        # path for normalization plots (heatmap and normalization overview)
+        self.file_dir_normalization = os.path.join(self.start_dir, "normalization")
         # path for pathway analysis
         self.file_dir_pathway = os.path.join(self.start_dir, "pathway_analysis")
         # path for go analysis
@@ -1176,7 +1178,7 @@ class BasePlotter:
                 data = self.get_intensity_heatmap_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_normalization)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1217,7 +1219,7 @@ class BasePlotter:
             df_plots = plot_function(dfs, max_depth - 1, **plot_kwargs)
             plots += df_plots
             save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(file_name, **plot_kwargs, df_to_use=df_to_use)
-            matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_descriptive, result_name), *df_plots)
+            matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_normalization, result_name), *df_plots)
         return plots
 
     @validate_input
