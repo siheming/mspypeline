@@ -1344,42 +1344,49 @@ def save_go_analysis_results(
     # TODO also create table
     plt.close("all")
 
-    df = pd.DataFrame(data=heights, index=go_analysis_gene_names)
-    df_test = pd.DataFrame(data=test_results, index=go_analysis_gene_names)
-    df_test.insert(0, "background", [1] * len(go_analysis_gene_names), True)
 
-    list_test_results = df_test.T.to_numpy().tolist()
+    go_analysis_results_df = pd.DataFrame(data = heights, index = go_analysis_gene_names)
+    test_results_df = pd.DataFrame(data = test_results, index=go_analysis_gene_names)
+    test_results_df.insert(0, "background", [1]*len(go_analysis_gene_names), True)
+
+    save_path, csv_name = get_path_and_name_from_kwargs(name = "tables/go_analysis_data", **kwargs)
+    save_csv_fn(save_path, csv_name, go_analysis_results_df)
+    save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_pvals", **kwargs)
+    save_csv_fn(save_path, csv_name, test_results_df)
+    save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_pvals_sign", **kwargs)
+    save_csv_fn(save_path, csv_name, test_results_df[test_results_df <= 0.05])
+
+    list_test_results = test_results_df.T.to_numpy().tolist()
     list_test = sum(list_test_results, [])
 
     bar_width = 0.8
-    # fig, ax = plt.subplots(1,1, figsize = (7, int(len(heights) * len(go_analysis_gene_names) / 2)))
-    ax = df.plot(kind="barh", width=bar_width, edgecolor="white",
-                 figsize=(7, int(len(heights) * len(go_analysis_gene_names) / 1.5)))
+    #fig, ax = plt.subplots(1,1, figsize = (7, int(len(heights) * len(go_analysis_gene_names) / 2)))
+    ax = go_analysis_results_df.plot(kind="barh", width = bar_width, edgecolor = "white",
+                 figsize = (7, int(len(heights) * len(go_analysis_gene_names) / 1.5)))
 
     for patch, text in zip(ax.patches, list_test):
         if text > 0.05:
             continue
         text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
-        ax.annotate(f" p: {text}", xy=(patch.get_width(), (patch.get_y() + patch.get_height() / 2)))
+        ax.annotate(f" p: {text}" , xy = (patch.get_width(), (patch.get_y() + patch.get_height() / 2)))
 
     lab_pos = []
     for p in ax.patches:
-        lab_pos.append(p.get_y() + (p.get_height() / 2) + 0.0001)
+        lab_pos.append(p.get_y()+ (p.get_height() / 2) + 0.0001)
 
-    lab = []
+    lab=[]
     for i in range(len(lab_pos)):
-        l = df.columns.values[i // len(df.index.values)]
+        l = go_analysis_results_df.columns.values[i//len(go_analysis_results_df.index.values)]
         lab.append(l)
+
 
     ax.set_yticks(lab_pos, minor=True)
     ax.set_yticklabels(lab, minor=True)
-    ax.tick_params(axis="y", which="major", pad=150, size=0)
+    ax.tick_params(axis="y", which="major", pad=150, size = 0)
     ax.set_ylabel('compartiment')
-    ax.set_xlim(0, df.max().max() + 2)
+    ax.set_xlim(0, go_analysis_results_df.max().max() + 2)
     ax.set_xlabel('number of proteins')
     ax.get_legend().remove()
-
-    # fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     return plt, ax
 
