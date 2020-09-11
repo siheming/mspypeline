@@ -716,7 +716,6 @@ def save_detection_counts_results(
         ax.set_title(f"{col},\ntotal detected: {int(col_data.sum())}")
         ax.barh(col_data.index, col_data, color="skyblue")
 
-        fsize = 10
         if max(col_data.index) in range(1, 9):
             fsize = 11
         elif max(col_data.index) in range(9, 13):
@@ -1028,7 +1027,6 @@ def save_detected_proteins_per_replicate_results(
         y_pos = [x for x in range(len(experiment_heights))]
         ax.barh(y_pos, experiment_heights, color="skyblue")
 
-        fsize = 10
         if max(experiment_heights.index) in range(1, 9):
             fsize = 11
         else:
@@ -1341,30 +1339,29 @@ def save_go_analysis_results(
         {kwargs}
 
     """
-    # TODO also create table
+
     plt.close("all")
 
-
-    go_analysis_results_df = pd.DataFrame(data = heights, index = go_analysis_gene_names)
-    test_results_df = pd.DataFrame(data = test_results, index=go_analysis_gene_names)
-    test_results_df.insert(0, "background", [1]*len(go_analysis_gene_names), True)
+    go_analysis_protein_counts_df = pd.DataFrame(data = heights, index = go_analysis_gene_names)
+    p_values_df = pd.DataFrame(data = test_results, index=go_analysis_gene_names)
+    p_values_df.insert(0, "background", [1]*len(go_analysis_gene_names), True)
 
     save_path, csv_name = get_path_and_name_from_kwargs(name = "tables/go_analysis_data", **kwargs)
-    save_csv_fn(save_path, csv_name, go_analysis_results_df)
+    save_csv_fn(save_path, csv_name, go_analysis_protein_counts_df)
     save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_pvals", **kwargs)
-    save_csv_fn(save_path, csv_name, test_results_df)
+    save_csv_fn(save_path, csv_name, p_values_df)
     save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_pvals_sign", **kwargs)
-    save_csv_fn(save_path, csv_name, test_results_df[test_results_df <= 0.05])
+    save_csv_fn(save_path, csv_name, p_values_df[p_values_df <= 0.05])
 
-    list_test_results = test_results_df.T.to_numpy().tolist()
-    list_test = sum(list_test_results, [])
+    list_p_values = p_values_df.T.to_numpy().tolist()
+    list_p_values_together = sum(list_p_values, [])
 
     bar_width = 0.8
     #fig, ax = plt.subplots(1,1, figsize = (7, int(len(heights) * len(go_analysis_gene_names) / 2)))
-    ax = go_analysis_results_df.plot(kind="barh", width = bar_width, edgecolor = "white",
+    ax = go_analysis_protein_counts_df.plot(kind="barh", width = bar_width, edgecolor = "white",
                  figsize = (7, int(len(heights) * len(go_analysis_gene_names) / 1.5)))
 
-    for patch, text in zip(ax.patches, list_test):
+    for patch, text in zip(ax.patches, list_p_values_together):
         if text > 0.05:
             continue
         text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
@@ -1376,7 +1373,7 @@ def save_go_analysis_results(
 
     lab=[]
     for i in range(len(lab_pos)):
-        l = go_analysis_results_df.columns.values[i//len(go_analysis_results_df.index.values)]
+        l = go_analysis_protein_counts_df.columns.values[i//len(go_analysis_protein_counts_df.index.values)]
         lab.append(l)
 
 
@@ -1384,7 +1381,7 @@ def save_go_analysis_results(
     ax.set_yticklabels(lab, minor=True)
     ax.tick_params(axis="y", which="major", pad=150, size = 0)
     ax.set_ylabel('compartiment')
-    ax.set_xlim(0, go_analysis_results_df.max().max() + 2)
+    ax.set_xlim(0, go_analysis_protein_counts_df.max().max() + 2)
     ax.set_xlabel('number of proteins')
     ax.get_legend().remove()
 
