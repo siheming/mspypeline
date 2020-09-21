@@ -528,7 +528,7 @@ def save_pathway_analysis_results(
     plt.close("all")
     level_keys = list(protein_intensities.columns.get_level_values(0).unique())
     n_rows, n_cols = get_number_rows_cols_for_fig(protein_intensities.index)
-    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, int(n_rows * len(level_keys) / 1.2)))
+    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 5, int(n_rows * len(level_keys) / 1.2)))
     result_color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
     result_color_map.update(color_map if color_map is not None else {})
     if show_suptitle:
@@ -1029,8 +1029,10 @@ def save_detected_proteins_per_replicate_results(
 
         if max(experiment_heights.index) in range(1, 9):
             fsize = 11
-        else:
+        if max(experiment_heights.index) in range(10, 19):
             fsize = 7
+        else:
+            fsize = 4
 
         for y, value in zip(y_pos, experiment_heights):
             ax.text(experiment_heights[0] / 2, y, value,
@@ -1381,7 +1383,8 @@ def save_go_analysis_results(
     ax.set_yticklabels(lab, minor=True)
     ax.tick_params(axis="y", which="major", pad=150, size = 0)
     ax.set_ylabel('compartiment')
-    ax.set_xlim(0, go_analysis_protein_counts_df.max().max() + 2)
+    max_prot_count = go_analysis_protein_counts_df.max().max()
+    ax.set_xlim(0, max_prot_count + max_prot_count*0.2)
     ax.set_xlabel('number of proteins')
     ax.get_legend().remove()
 

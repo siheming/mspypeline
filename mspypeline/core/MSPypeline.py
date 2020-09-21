@@ -147,7 +147,7 @@ class MSPGUI(tk.Tk):
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
         self.plot_row("Pathway Analysis", "pathway_analysis")
-        self.plot_row("Pathway Timecourse", "pathway_timecourse")
+        #self.plot_row("Pathway Timecourse", "pathway_timecourse")
         self.plot_row("Go analysis", "go_analysis")
         self.plot_row("Volcano plot (R)", "r_volcano")
 

@@ -76,11 +76,6 @@ plot_venn_results_settings:
   dfs_to_use: []
   levels: []
 
-plot_pathway_timecourse_settings:
-  create_plot: false
-  dfs_to_use: []
-  levels: []
-
 plot_r_volcano_settings:
   create_plot: false
   dfs_to_use: []
