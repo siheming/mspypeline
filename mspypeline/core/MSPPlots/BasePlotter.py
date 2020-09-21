@@ -166,7 +166,7 @@ class BasePlotter:
         # path for venn diagrams
         self.file_dir_venn = os.path.join(self.start_dir, "venn")
         # path for descriptive plots
-        self.file_dir_descriptive = os.path.join(self.start_dir, "outliers_detection_&_comparison")
+        self.file_dir_descriptive = os.path.join(self.start_dir, "outliers_detection_and_comparison")
         # path for normalization plots (heatmap and normalization overview)
         self.file_dir_normalization = os.path.join(self.start_dir, "normalization")
         # path for pathway analysis
