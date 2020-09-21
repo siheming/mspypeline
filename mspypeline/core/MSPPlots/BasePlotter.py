@@ -963,7 +963,10 @@ class BasePlotter:
         pca: PCA = PCA(n_components=n_components).fit(data_transform)
         df = pd.DataFrame(pca.transform(data_transform).T, columns=data_input.columns,
                           index=[f"PC_{i}" for i in range(1, n_components + 1)])
-        return {"pca_data": df, "pca_fit": pca}
+
+        per_var = np.round(pca.explained_variance_ratio_ * 100, decimals=1)
+
+        return {"pca_data": df, "pca_fit": pca, "pca_var": per_var}
 
     @add_end_docstrings(plot_para_return_docstring.format(
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_pca_results`"

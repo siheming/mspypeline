@@ -425,7 +425,7 @@ def save_volcano_results(
 @save_plot("pca_overview")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_pca_results(
-        pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, intensity_label: str = "Intensity",
+        pca_data: pd.DataFrame, pca_fit: PCA = None, pca_var: list = [], normalize: bool = True, intensity_label: str = "Intensity",
         color_map: Optional[dict] = None, show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
@@ -460,16 +460,16 @@ def save_pca_results(
     elif normalize and pca_fit is not None:
         singular_values = pca_fit.singular_values_
     if n_components == 2:
-        fig, axarr = plt.subplots(1, 1, figsize=(14, 14))
-        ax = axarr#[0]
+        fig, axarr = plt.subplots(1, 1, figsize=(5, 5))
+        ax = axarr
         ax.scatter(
             pca_data.loc["PC_1"] / singular_values[0],
             pca_data.loc["PC_2"] / singular_values[1],
             c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-        ax.set_xlabel("PC_1")
-        ax.set_ylabel("PC_2")
+        ax.set_xlabel('PC 1 - {0}%'.format(pca_var[0]))
+        ax.set_ylabel('PC 2 - {0}%'.format(pca_var[1]))
     else:
-        fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
+        fig, axarr = plt.subplots(n_components, n_components, figsize=(5, 5))
         for row in range(n_components):
             row_pc = row + 1
             for col in range(n_components):
@@ -484,9 +484,9 @@ def save_pca_results(
                     ax.set_ylabel(f"PC_{col_pc}")
 
     if show_suptitle:
-        fig.suptitle(intensity_label, fontsize="xx-large")
+        fig.suptitle(intensity_label, fontsize="x-large")
     legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=base_color_map)
-    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=20)
+    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=10)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, axarr
 
@@ -709,16 +709,21 @@ def save_detection_counts_results(
     if show_suptitle:
         fig.suptitle(f"Detection counts from {intensity_label}")
 
+    global_max = counts.max().max()
+
+
     for (pos, ax), col in zip(np.ndenumerate(axarr), counts.columns):
         col_data = counts.loc[:, col]
         col_data = col_data[~pd.isna(col_data)]
+        col_name  = col.replace("_", " ")
 
-        ax.set_title(f"{col},\ntotal detected: {int(col_data.sum())}")
+        ax.set_title(f"{col_name} \n total detected: {int(col_data.sum())}")
         ax.barh(col_data.index, col_data, color="skyblue")
 
-        if max(col_data.index) in range(1, 9):
+        fsize = 0
+        if len(col_data) in range(1,9):
             fsize = 11
-        elif max(col_data.index) in range(9, 13):
+        elif len(col_data) in range(9,13):
             fsize = 7
         else:
             fsize = 5
@@ -729,6 +734,7 @@ def save_detection_counts_results(
 
         ax.set_yticks(col_data.index)
         ax.set_yticklabels([f"detected in {i} replicates" for i in col_data.index], fontsize=fsize)
+        ax.set_xlim(0, global_max + global_max*0.05)
         ax.set_xlabel("Counts")
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -1021,27 +1027,40 @@ def save_detected_proteins_per_replicate_results(
     if show_suptitle:
         fig.suptitle(f"Number of detected proteins from {intensity_label}")
 
+    global_max = 0
+    for key, df in all_heights.items():
+        local_max = df.max()
+        if local_max > global_max:
+            global_max = local_max
+
     for experiment, (pos, ax) in zip(all_heights.keys(), np.ndenumerate(axarr)):
         experiment_heights = all_heights[experiment]
         mean_height = experiment_heights[1:].mean()
         y_pos = [x for x in range(len(experiment_heights))]
         ax.barh(y_pos, experiment_heights, color="skyblue")
 
-        if max(experiment_heights.index) in range(1, 9):
+        fsize = 0
+        if len(experiment_heights) in range(1,10):
             fsize = 11
-        if max(experiment_heights.index) in range(10, 19):
+
+        elif len(experiment_heights) in range(10,16):
             fsize = 7
         else:
-            fsize = 4
+            fsize = 5
+
+
 
         for y, value in zip(y_pos, experiment_heights):
             ax.text(experiment_heights[0] / 2, y, value,
                     verticalalignment='center', horizontalalignment='center', fontsize = fsize)
+        labels = experiment_heights.index.values
+        labels = [label.replace((experiment + "_"), "").replace("_", " ") for label in labels]
 
-        ax.set_title(experiment)
+        ax.set_title(experiment.replace("_", " "))
         ax.axvline(mean_height, linestyle="--", color="black", alpha=0.6)
         ax.set_yticks([i for i in range(len(experiment_heights.index))])
-        ax.set_yticklabels(experiment_heights.index, fontsize = fsize)
+        ax.set_yticklabels(labels, fontsize = fsize)
+        ax.set_xlim(0, global_max + global_max*0.02)
         ax.set_xlabel("Counts")
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, axarr
@@ -1468,7 +1487,7 @@ def save_bar_venn(
     # initial figure setup
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
     if show_suptitle:
-        fig.suptitle(ex, fontsize=20)
+        fig.suptitle(ex.replace("_", " "), fontsize=20, weight="bold")
     # create the bar plot
     ax1.bar(x, heights, color="skyblue")
     # add text to the bar plot
@@ -1476,13 +1495,21 @@ def save_bar_venn(
         ax1.text(x_level, max(heights) / 2, height, verticalalignment='center', horizontalalignment='center')
     ax1.set_ylabel("Number of proteins")
 
+    split_names = False
+    for name in y_mappings:
+        if "_" in name:
+            split_names = True
+    if split_names:
+        y_mappings = [name.split("_", 1)[1] for name in y_mappings]
+    labels = [sample.replace("_", " ") for sample in y_mappings]
+
     # create the line plots
     for x_level, y in zip(x, ys):
         # we just want to draw a straight line every time so we repeat x as often as needed
         ax2.plot([x_level] * len(y), y, linestyle="-", color="gray", marker=".")
     # replace the yticks with the names of the samples
-    ax2.set_yticks([i for i in range(len(y_mappings))])
-    ax2.set_yticklabels(y_mappings)
+    ax2.set_yticks([i for i in range(len(labels))])
+    ax2.set_yticklabels(labels)
     ax2.set_ylabel("Sample name")
     ax2.set_xlabel("Number of comparison")
 
@@ -1520,11 +1547,19 @@ def save_venn(
     plt.close("all")
     fig, ax = plt.subplots(1, 1, figsize=(14, 7))
     if show_suptitle:
-        plt.title(ex, fontsize=title_font_size)
+        plt.title(ex.replace("_", " "), fontsize=title_font_size, weight="bold")
 
     # create venn diagram based on size of set
     sets = named_sets.values()
     set_names = named_sets.keys()
+    split_names = False
+    for name in set_names:
+        if "_" in name:
+            split_names = True
+    if split_names:
+        set_names = [sample.split("_", 1)[1] for sample in set_names]
+    set_names = [name.replace("_", " ") for name in set_names]
+
     if len(sets) < 2:
         warnings.warn(f"Could not create venn diagram for {ex} because it has less than 2 replicates")
         return
