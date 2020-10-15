@@ -317,6 +317,15 @@ def save_volcano_results(
         else:
             raise ValueError(f"heisenbug: fold change: {fchange}, p value: {pval}")
 
+    g1_name = ""
+    g2_name = ""
+    if "_" in g1:
+        g1_name = g1.replace("_", " ")
+        g2_name = g2.replace("_", " ")
+    else:
+        g1_name = g1
+        g2_name = g2
+
     # add the measured regulation to the data based on the given thresholds
     volcano_data["regulation"] = [get_volcano_significances(log_fold_change, p_val, pval_threshold, fchange_threshold)
                                   for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
@@ -330,7 +339,7 @@ def save_volcano_results(
     save_csv_fn(save_path, csv_name, volcano_data[volcano_data[col] < 0.05])
 
     significance_to_color = {"ns": "gray", "up": "red", "down": "blue"}
-    significance_to_label = {"ns": "non-significant", "up": f"upregulated in {g2}", "down": f"upregulated in {g1}"}
+    significance_to_label = {"ns": "non-significant", "up": f"higher in  {g2_name}", "down": f"higher in  {g1_name}"}
 
     # plot
     fig = plt.figure(figsize=(7, 7))
@@ -377,9 +386,9 @@ def save_volcano_results(
         ax.axvline(np.log2(fchange_threshold), **axline_kwargs, ymin=y_percentage, ymax=1)
     # plot unique values with mean intensity at over maximum
     ax_unique_down.scatter([0] * len(unique_g1), unique_g1, s=scatter_size, color="dodgerblue",
-                           label=f"{len(unique_g1)} unique in {g1}")
+                           label=f"{len(unique_g1)} unique in  {g1_name}")
     ax_unique_up.scatter([0] * len(unique_g2), unique_g2, s=scatter_size, color="coral",
-                         label=f"{len(unique_g2)} unique in {g2}")
+                         label=f"{len(unique_g2)} unique in  {g2_name}")
     # adjust bounds for unique axis
     ymin_down, ymax_down = ax_unique_down.get_ybound()
     ymin_up, ymax_up = ax_unique_up.get_ybound()
@@ -539,6 +548,10 @@ def save_pathway_analysis_results(
         ax.set_title(protein)
         ax.set_ylim((-1, len(level_keys)))
         ax.set_yticks([i for i in range(len(level_keys))])
+        level_keys_labels = [key.replace("_", " ") for key in level_keys if "_" in key]
+        if len(level_keys_labels) == 0:
+            level_keys_labels = level_keys
+        ax.set_yticklabels(level_keys_labels)
         ax.set_yticklabels(level_keys)
         ax.set_xlabel(intensity_label)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -617,7 +630,7 @@ def save_boxplot_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_relative_std_results(
         intensities: pd.DataFrame, experiment_name: str, intensity_label: str = "Intensity",
-        show_suptitle: bool = False, bins=(10, 20, 30), cmap: dict = None, **kwargs
+        show_suptitle: bool = True, bins=(10, 20, 30), cmap: dict = None, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Relative standard deviations of passed intensities with color marking based on the specified bins and color map.
@@ -661,9 +674,12 @@ def save_relative_std_results(
     plot_colors = pd.Series([default_cm.get(x, "black") for x in inds], index=relative_std_percent.index)
     color_counts = {color: (plot_colors == color).sum() for color in plot_colors.unique()}
 
-    fig, ax = plt.subplots(1, 1, figsize=(14, 7))
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
     ax.scatter(intensities.mean(axis=1), relative_std_percent, c=plot_colors, marker="o", s=(2 * 72. / fig.dpi) ** 2,
                alpha=0.8)
+
+    if "_" in experiment_name:
+        experiment_name = experiment_name.replace("_", " ")
     if show_suptitle:
         fig.suptitle(experiment_name)
     ax.set_xlabel(f"Mean {intensity_label}")
@@ -992,7 +1008,8 @@ def save_intensities_heatmap_result(
 
     y_lim = ax.get_ylim()
     ax.set_yticks(np.linspace(0, len(intensities.columns) - 1, len(intensities.columns)))
-    ax.set_yticklabels(intensities.columns)
+    labels = [sample.replace("_", " ") for sample in intensities.columns.values]
+    ax.set_yticklabels(labels= labels)
     ax.set_ylim(*y_lim)
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -1120,7 +1137,14 @@ def save_intensity_histogram_results(
         else:
             bins = np.logspace(np.log2(np.nanmin(intensities.values)), np.log2(np.nanmax(intensities.values)), n_bins, base=2)
 
-        ax.set_title(col)
+        col_name = ""
+        if "_" in col:
+            col_name = col.replace("_", " ")
+            labels = [label.replace("_", " ") for label in labels]
+        else:
+            col_name = col
+
+        ax.set_title(col_name)
         ax.hist(intensities.T, bins=bins, histtype=histtype, label=labels, color=color)
 
         if compare_to_remaining:
@@ -1158,7 +1182,7 @@ def save_scatter_replicates_results(
 
     """
     plt.close("all")
-    fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 
     if show_suptitle:
         fig.suptitle()
@@ -1169,14 +1193,17 @@ def save_scatter_replicates_results(
         corr_mask = np.logical_and(x1.notna(), x2.notna())
         plot_mask = np.logical_or(x1.notna(), x2.notna())
         exp = r"$r^{2}$"
+        if "_" in rep1:
+            rep1 = rep1.replace("_", " ")
+            rep2 = rep2.replace("_", " ")
         ax.scatter(x1.fillna(x2.min() * 0.95)[plot_mask], x2.fillna(x2.min() * 0.95)[plot_mask],
-                   label=f"{rep1} vs {rep2}, "
-                         fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
-                   alpha=0.5, marker=".")
+                       label=f"{rep1}  vs  {rep2},  "
+                        fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
+                        alpha=0.5, marker=".")
         ax.set_xlabel(intensity_label)
         ax.set_ylabel(intensity_label)
 
-    fig.legend(frameon=False)
+    fig.legend(frameon=False,  bbox_to_anchor=(1.02, 0.5), loc="center left")
     if "Log_2" not in intensity_label:
         ax.set_xscale("log")
         ax.set_yscale("log")
@@ -1311,19 +1338,24 @@ def save_experiment_comparison_results(
         fig, ax = plot
     else:
         plt.close("all")
-        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 
     exp = r"$r^{2}$"
-    ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=8, alpha=0.6, marker=".",
-               label=f"{sample1} vs {sample2}, {exp}: {r[0] ** 2:.4f}")
-    ax.scatter(exclusive_sample1, [np.min(protein_intensities_sample2) * 0.95] * exclusive_sample1.shape[0],
-               s=8, alpha=0.6, marker=".", label=f"exclusive for {sample1}")
-    ax.scatter([np.min(protein_intensities_sample1) * 0.95] * exclusive_sample2.shape[0], exclusive_sample2,
-               s=8, alpha=0.6, marker=".", label=f"exclusive for {sample2}")
+    if "_" in sample1:
+        sample1 = sample1.replace("_", " ")
+        sample2 = sample2.replace("_", " ")
 
-    ax.set_xlabel(sample1)
-    ax.set_ylabel(sample2)
-    fig.legend(frameon=False)
+    ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=8, alpha=0.6, marker=".",
+               label=f"{sample1}  vs  {sample2}, {exp}: {r[0] ** 2:.4f}")
+    ax.scatter(exclusive_sample1, [np.min(protein_intensities_sample2) * 0.95] * exclusive_sample1.shape[0],
+               s=8, alpha=0.6, marker=".", label=f"exclusive for  {sample1}")
+    ax.scatter([np.min(protein_intensities_sample1) * 0.95] * exclusive_sample2.shape[0], exclusive_sample2,
+               s=8, alpha=0.6, marker=".", label=f"exclusive for  {sample2}")
+
+    ax.set_xlabel(sample1, weight = "bold", labelpad= 10)
+    ax.set_ylabel(sample2, weight = "bold", labelpad = 10)
+    fig.legend(frameon=False, bbox_to_anchor=(1.02, 0.5), loc="center left")
+
     if "Log_2" not in intensity_label:
         ax.set_xscale("log")
         ax.set_yscale("log")
@@ -1362,6 +1394,8 @@ def save_go_analysis_results(
     """
 
     plt.close("all")
+
+    go_analysis_gene_names = [go_term.replace("_", " ") for go_term in go_analysis_gene_names]
 
     go_analysis_protein_counts_df = pd.DataFrame(data = heights, index = go_analysis_gene_names)
     p_values_df = pd.DataFrame(data = test_results, index=go_analysis_gene_names)
