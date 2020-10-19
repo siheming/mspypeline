@@ -175,7 +175,7 @@ def get_legend_elements(labels: list, color_map: Optional[dict] = None):
     """
     if color_map is None:
         color_map = {name: f"C{i}" for i, name in enumerate(labels)}
-    legend_elements = [Line2D([0], [0], marker='o', color='w', label=name,
+    legend_elements = [Line2D([0], [0], marker='o', color='w', label=name.replace("_", " "),
                               markerfacecolor=color_map.get(name, "blue"), markersize=10)
                        for name in labels]
     return legend_elements

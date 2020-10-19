@@ -317,14 +317,9 @@ def save_volcano_results(
         else:
             raise ValueError(f"heisenbug: fold change: {fchange}, p value: {pval}")
 
-    g1_name = ""
-    g2_name = ""
-    if "_" in g1:
-        g1_name = g1.replace("_", " ")
-        g2_name = g2.replace("_", " ")
-    else:
-        g1_name = g1
-        g2_name = g2
+
+    g1_name = g1.replace("_", " ")
+    g2_name = g2.replace("_", " ")
 
     # add the measured regulation to the data based on the given thresholds
     volcano_data["regulation"] = [get_volcano_significances(log_fold_change, p_val, pval_threshold, fchange_threshold)
@@ -678,8 +673,7 @@ def save_relative_std_results(
     ax.scatter(intensities.mean(axis=1), relative_std_percent, c=plot_colors, marker="o", s=(2 * 72. / fig.dpi) ** 2,
                alpha=0.8)
 
-    if "_" in experiment_name:
-        experiment_name = experiment_name.replace("_", " ")
+    experiment_name = experiment_name.replace("_", "  ")
     if show_suptitle:
         fig.suptitle(experiment_name)
     ax.set_xlabel(f"Mean {intensity_label}")
@@ -1073,7 +1067,7 @@ def save_detected_proteins_per_replicate_results(
         labels = experiment_heights.index.values
         labels = [label.replace((experiment + "_"), "").replace("_", " ") for label in labels]
 
-        ax.set_title(experiment.replace("_", " "))
+        ax.set_title(experiment.replace("_", "  "))
         ax.axvline(mean_height, linestyle="--", color="black", alpha=0.6)
         ax.set_yticks([i for i in range(len(experiment_heights.index))])
         ax.set_yticklabels(labels, fontsize = fsize)
@@ -1137,12 +1131,8 @@ def save_intensity_histogram_results(
         else:
             bins = np.logspace(np.log2(np.nanmin(intensities.values)), np.log2(np.nanmax(intensities.values)), n_bins, base=2)
 
-        col_name = ""
-        if "_" in col:
-            col_name = col.replace("_", " ")
-            labels = [label.replace("_", " ") for label in labels]
-        else:
-            col_name = col
+        col_name = col.replace("_", "  ")
+        labels = [label.replace("_", " ") for label in labels]
 
         ax.set_title(col_name)
         ax.hist(intensities.T, bins=bins, histtype=histtype, label=labels, color=color)
@@ -1193,9 +1183,8 @@ def save_scatter_replicates_results(
         corr_mask = np.logical_and(x1.notna(), x2.notna())
         plot_mask = np.logical_or(x1.notna(), x2.notna())
         exp = r"$r^{2}$"
-        if "_" in rep1:
-            rep1 = rep1.replace("_", " ")
-            rep2 = rep2.replace("_", " ")
+        rep1 = rep1.replace("_", "  ")
+        rep2 = rep2.replace("_", "  ")
         ax.scatter(x1.fillna(x2.min() * 0.95)[plot_mask], x2.fillna(x2.min() * 0.95)[plot_mask],
                        label=f"{rep1}  vs  {rep2},  "
                         fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
@@ -1341,9 +1330,8 @@ def save_experiment_comparison_results(
         fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 
     exp = r"$r^{2}$"
-    if "_" in sample1:
-        sample1 = sample1.replace("_", " ")
-        sample2 = sample2.replace("_", " ")
+    sample1 = sample1.replace("_", " ")
+    sample2 = sample2.replace("_", " ")
 
     ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=8, alpha=0.6, marker=".",
                label=f"{sample1}  vs  {sample2}, {exp}: {r[0] ** 2:.4f}")
@@ -1521,7 +1509,7 @@ def save_bar_venn(
     # initial figure setup
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
     if show_suptitle:
-        fig.suptitle(ex.replace("_", " "), fontsize=20, weight="bold")
+        fig.suptitle(ex.replace("_", " "), fontsize=17, weight="bold")
     # create the bar plot
     ax1.bar(x, heights, color="skyblue")
     # add text to the bar plot
