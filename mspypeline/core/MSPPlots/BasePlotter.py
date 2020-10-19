@@ -903,7 +903,7 @@ class BasePlotter:
         # TODO replace this function with one that handles special characters
         c_matrix = limma.makeContrasts(f"{g2}-{g1}", levels=r_design)
         contrast_fit = limma.contrasts_fit(fit, c_matrix)
-        fit_bayes = limma.eBayes(contrast_fit)
+        fit_bayes = limma.eBayes(contrast_fit, trend = True)
         res = limma.topTable(fit_bayes, adjust="BH", number=df.shape[0])
         # transform back to python
         with warnings.catch_warnings():
