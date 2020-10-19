@@ -17,7 +17,7 @@ from mspypeline.file_reader import BaseReader
 from mspypeline.plotting_backend import matplotlib_plots
 from mspypeline.modules import default_normalizers, Normalization, DataTree
 from mspypeline.helpers import get_number_rows_cols_for_fig, get_number_of_non_na_values, \
-    get_intersection_and_unique, get_logger, dict_depth, add_end_docstrings
+    get_intersection_and_unique, get_logger, dict_depth, add_end_docstrings, make_contrasts
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
@@ -900,8 +900,7 @@ class BasePlotter:
         r_df.rownames = r_rownames
         # run the r code
         fit = limma.lmFit(r_df, r_design)
-        # TODO replace this function with one that handles special characters
-        c_matrix = limma.makeContrasts(f"{g2}-{g1}", levels=r_design)
+        c_matrix = make_contrasts(g1, g2)
         contrast_fit = limma.contrasts_fit(fit, c_matrix)
         fit_bayes = limma.eBayes(contrast_fit, trend = True)
         res = limma.topTable(fit_bayes, adjust="BH", number=df.shape[0])

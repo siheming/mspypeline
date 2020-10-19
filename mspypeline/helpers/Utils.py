@@ -247,3 +247,9 @@ def add_end_docstrings(*docstr):
         fn.__doc__ = fn.__doc__ + "".join(docstr)
         return fn
     return docstring_decorator
+
+
+def make_contrasts(exp1, exp2):
+    contrast_matrix = pd.DataFrame(data=(1, -1), columns=[f"{exp2}-{exp1}"], index=[exp2, exp1])
+    contrast_matrix.name = "Contrasts"
+    return contrast_matrix
