@@ -951,14 +951,19 @@ class BasePlotter:
                         plots.append(plot)
         return plots
 
-    def get_pca_data(self, df_to_use: str, level: int, n_components: int = 2, fill_value: float = 0, fill_na_before_norm: bool = False, **kwargs):
+    def get_pca_data(self, df_to_use: str, level: int, n_components: int = 2, fill_value: float = 0,
+                     no_missing_values: bool = True, fill_na_before_norm: bool = False, **kwargs):
         data_input = self.all_tree_dict[df_to_use].groupby(level, method=None)
-        if fill_na_before_norm:
-            data_input.fillna(fill_value, inplace=True)
+        if no_missing_values:
+            data_input = data_input.dropna(axis=0)
+        else:
+            if fill_na_before_norm:
+                data_input.fillna(fill_value, inplace=True)
         data_norm = data_input.subtract(data_input.mean(axis=1), axis=0).divide(data_input.std(axis=1), axis=0)
         if not fill_na_before_norm:
             data_norm.fillna(fill_value, inplace=True)
         data_transform = data_norm.T
+
         pca: PCA = PCA(n_components=n_components).fit(data_transform)
         df = pd.DataFrame(pca.transform(data_transform).T, columns=data_input.columns,
                           index=[f"PC_{i}" for i in range(1, n_components + 1)])

@@ -464,7 +464,7 @@ def save_pca_results(
     elif normalize and pca_fit is not None:
         singular_values = pca_fit.singular_values_
     if n_components == 2:
-        fig, axarr = plt.subplots(1, 1, figsize=(5, 5))
+        fig, axarr = plt.subplots(1, 1, figsize=(7, 7))
         ax = axarr
         ax.scatter(
             pca_data.loc["PC_1"] / singular_values[0],
@@ -490,7 +490,7 @@ def save_pca_results(
     if show_suptitle:
         fig.suptitle(intensity_label, fontsize="x-large")
     legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=base_color_map)
-    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=10)
+    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, axarr
 
