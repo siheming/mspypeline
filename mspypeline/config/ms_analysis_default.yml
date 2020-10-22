@@ -80,6 +80,7 @@ plot_r_volcano_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
+  adj_pval: false
 
 plot_venn_groups_settings:
   create_plot: false
@@ -90,6 +91,10 @@ plot_pca_overview_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
+  no_missing_values: true
+  fill_na_before_norm: false
+  fill_value:  0
+
 
 use_protein_id: false
 # should the protein id be used, or TODO
