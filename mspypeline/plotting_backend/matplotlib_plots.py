@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import matplotlib.cm as cm
+import matplotlib.lines as mlines
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.collections import LineCollection
 from adjustText import adjust_text
@@ -1255,43 +1256,55 @@ def save_rank_results(
     # get all proteins that are not part of any pathway
     non_pathway_proteins = found_proteins - all_pathway_proteins
     # get all proteins that are part of any pathway
-    pathway_proteins = found_proteins & all_pathway_proteins
-    rank_identified_proteins = [dic[protein][0] for protein in pathway_proteins]
-    # plot the non pathway proteins
-    x = [dic[protein][0] for protein in non_pathway_proteins]
-    y = [dic[protein][1] for protein in non_pathway_proteins]
 
-    fig, ax = plt.subplots(1, 1, figsize=(14, 7))
-    ax.scatter(x, y, c=f"darkgray", s=10, alpha=0.3, marker=".", label="no pathway")
+    # plot the non pathway proteins
+    x = [dic[protein][0] for protein in non_pathway_proteins]  # rank
+    y = [dic[protein][1] for protein in non_pathway_proteins]  # intensity
+
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.scatter(x, y, c="darkgray", s=12, alpha=0.3, marker=".", label="no pathway")
+
     # plot all proteins of a specific pathway
+    legend_text = []
+    handles = []
     for i, (pathway, proteins) in enumerate(interesting_proteins.items()):
         proteins = set(proteins) & found_proteins
-        x = [dic[protein][0] for protein in proteins]
-        y = [dic[protein][1] for protein in proteins]
-        ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.6, marker=".", label=pathway)
+        if proteins:
+            x = [dic[protein][0] for protein in proteins]  # the rank of each protein
+            y = [dic[protein][1] for protein in proteins]  # the intensity of each protein
+            ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.8, marker=".", label=pathway.replace("_", " "))
 
-    # only if more than 0 proteins are identified
-    if rank_identified_proteins:
-        median_pathway_rank = int(np.median(rank_identified_proteins))
-        median_intensity = rank_data.iloc[median_pathway_rank]
-        xmin, xmax = ax.get_xbound()
-        xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
-        ymin, ymax = ax.get_ybound()
-        ym = (median_intensity - ymin) / (ymax - ymin)
-        # plot the median rank and intensity at that rank
-        ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color="black", alpha=0.6)
-        ax.axhline(median_intensity, xmax=xm, linestyle="--", color="black", alpha=0.6)
-        ax.text(xmin * 0.9, median_intensity * 0.9,
-                f"median rank: {median_pathway_rank} ({median_pathway_rank / len(rank_data) * 100 :.1f}%) "
-                f"with intensity: {median_intensity:.2E}",  # TODO case for log and non log
-                verticalalignment="top", horizontalalignment="left")
+            median_pathway_rank = int(np.median(x))
+            median_intensity = rank_data.iloc[median_pathway_rank]
+            xmin, xmax = ax.get_xbound()
+            xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
+            ymin, ymax = ax.get_ybound()
+            ym = (median_intensity - ymin) / (ymax - ymin)
+            # plot the median rank and intensity at that rank
+            ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color=f"C{i}", alpha=0.6)
+            ax.axhline(median_intensity, xmax=xm, linestyle="--", color=f"C{i}", alpha=0.6)
+            text = f"{pathway} : median rank: {median_pathway_rank / len(rank_data) * 100 :.1f}% "
+            legend_text.append(text)
+            handle = mlines.Line2D([], [], color=f"C{i}", marker='.', markersize=10, label=text, linewidth=0)
+            handles.append(handle)
+            # ax.text(xmin * 0.9, median_intensity * 0.9, text, verticalalignment="top", horizontalalignment="left")
+            # f"median rank: {median_pathway_rank} ({median_pathway_rank / len(rank_data) * 100 :.1f}%) "
+            # f"with intensity: {median_intensity:.2E}",  # TODO case for log and non log
 
+
+    legend_text.append("no pathway assigned")
+    handle = mlines.Line2D([], [], color="lightgray", marker='.', markersize=10, label=text, linewidth=0)
+    handles.append(handle)
+
+    exp_name = full_name.replace("_", " ")
     if "Log_2" not in intensity_label:
         ax.set_yscale("log")
-    ax.set_xlabel("Protein rank")
-    ax.set_ylabel(f"{full_name} mean")
-
-    fig.legend(bbox_to_anchor=(1.02, 0.5), loc="center left")
+    ax.set_xlabel("Protein rank", size=10)
+    # ax.set_ylabel(f"{exp_name} mean Log_2 intensity")
+    ax.set_ylabel(intensity_label, size=10)
+    ax.set_title(f"{exp_name} mean", weight="bold", size="14")
+    # legend_text = [pathway for pathway in interesting_proteins.keys()]
+    fig.legend(labels=legend_text, handles=handles, bbox_to_anchor=(1.02, 0.5), loc="center left")
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, ax
 
