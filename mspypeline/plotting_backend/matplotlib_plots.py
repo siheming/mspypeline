@@ -260,8 +260,8 @@ def split_plot(n_rows, n_cols, figsize=(7, 7), plot_name="", data=None, plot_fn=
 @save_csvs({"unique_g1": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g1}",
             "unique_g2": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g2}"})
 def save_volcano_results(
-        volcano_data: pd.DataFrame, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", adj_pval: bool = True, intensity_label: str = "Intensity",
+        volcano_data: pd.DataFrame, interesting_proteins, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
+        g2: str = "group2", adj_pval: bool = False, intensity_label: str = "Intensity",
         show_suptitle: bool = True, pval_threshold: float = 0.05, fchange_threshold: float = 2,
         scatter_size: float = 10, n_labelled_proteins: int = 10, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
@@ -306,6 +306,12 @@ def save_volcano_results(
         col = "adjpval"
     else:
         col = "pval"
+
+    # given pathway mapping(s)/proteins of interest create a list later used to be annotated in the volcano plot
+    POI_vals = []
+    if interesting_proteins.values():
+        all_pathway_proteins = set.union(*(set(x) for x in interesting_proteins.values()))
+        POI_vals = volcano_data[volcano_data.index.isin(list(all_pathway_proteins))]
 
     def get_volcano_significances(fchange, pval, pval_threshold, fchange_threshold):
         if pval > pval_threshold or abs(fchange) < np.log2(fchange_threshold):
@@ -413,9 +419,18 @@ def save_volcano_results(
         (volcano_data["logFC"] < -np.log2(fchange_threshold)) & (volcano_data[col] < 0.05)
     ].sort_values(by=[col], ascending=True).head(n_labelled_proteins)
     significant = pd.concat([significant_upregulated, significant_downregulated])
+
     texts = []
-    for log_fold_change, p_val, gene_name in zip(significant["logFC"], significant[col], significant.index):
-        texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center", fontsize=8))
+    # if list for proteins of interest (pathway list chosen) is given, annotate those proteins,
+    # otherwise annotate most significant proteins
+    if len(POI_vals) > 0:
+        for log_fold_change, p_val, gene_name in zip(POI_vals["logFC"], POI_vals[col], POI_vals.index):
+            texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center", fontsize=8,
+                                 color="black"))
+    else:
+        for log_fold_change, p_val, gene_name in zip(significant["logFC"], significant[col], significant.index):
+            texts.append(ax.text(log_fold_change, -np.log10(p_val), gene_name, ha="center", va="center", fontsize=8,
+                                 color="black"))
     adjust_text(texts, arrowprops=dict(width=0.15, headwidth=0, color='gray', alpha=0.6), ax=ax)
 
     # save the final result
