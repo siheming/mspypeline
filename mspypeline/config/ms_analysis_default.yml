@@ -13,6 +13,9 @@ go_terms: []
 has_techrep: true
 # does the file have technical replicates
 # can be "true" or "false"
+adj_pval: false
+# should by corrected for multiple testing when calculating the pval for the volcano plot
+# can be "true" or "false"
 
 # ###### PLOT CREATION SETTINGS #######
 
@@ -80,7 +83,7 @@ plot_r_volcano_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
-  adj_pval: false
+
 
 plot_venn_groups_settings:
   create_plot: false

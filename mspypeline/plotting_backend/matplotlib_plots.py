@@ -261,8 +261,8 @@ def split_plot(n_rows, n_cols, figsize=(7, 7), plot_name="", data=None, plot_fn=
 @save_csvs({"unique_g1": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g1}",
             "unique_g2": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g2}"})
 def save_volcano_results(
-        volcano_data: pd.DataFrame, interesting_proteins, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", adj_pval: bool = False, intensity_label: str = "Intensity",
+        volcano_data: pd.DataFrame, adj_pval, interesting_proteins, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
+        g2: str = "group2", intensity_label: str = "Intensity",
         show_suptitle: bool = True, pval_threshold: float = 0.05, fchange_threshold: float = 2,
         scatter_size: float = 10, n_labelled_proteins: int = 10, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:

@@ -150,6 +150,13 @@ class MSPGUI(tk.Tk):
         #self.plot_row("Pathway Timecourse", "pathway_timecourse")
         self.plot_row("Go analysis", "go_analysis")
         self.plot_row("Volcano plot (R)", "r_volcano")
+        self.p_val_var = tk.IntVar(value=0)
+        pval_button = tk.Radiobutton(self, text="Not adjusted p value",
+                                     variable=self.p_val_var, value=0).grid(
+            row=self.heading_length + self.number_of_plots, column=0)
+        adj_pval_button = tk.Radiobutton(self, text="adjusted p value",
+                                         variable=self.p_val_var, value=1).grid(
+            row=self.heading_length + self.number_of_plots + 1, column=0)
 
         total_length = self.heading_length + self.number_of_plots
 
@@ -274,6 +281,10 @@ class MSPGUI(tk.Tk):
         gos = [MSPInitializer.possible_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()
         pathways = [MSPInitializer.possible_pathways[int(pathway)] for pathway in pathways]
+        if self.p_val_var.get() == 0:
+            self.mspinit.configs["adj_pval"] = False
+        elif self.p_val_var.get() ==1:
+            self.mspinit.configs["adj_pval"] = True
         self.mspinit.configs["go_terms"] = gos
         self.mspinit.configs["pathways"] = pathways
         self.mspinit.init_config()

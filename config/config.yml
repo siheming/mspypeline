@@ -14,6 +14,11 @@ has_techrep: false
 # does the file have technical replicates
 # can be "true" or "false"
 
+adj_pval: false
+# should by corrected for multiple testing when calculating the pval for the volcano plot
+# can be "true" or "false"
+
+
 # ###### PLOT CREATION SETTINGS #######
 
 plot_normalization_overview_all_normalizers_settings:

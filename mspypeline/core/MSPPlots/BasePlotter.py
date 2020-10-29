@@ -94,6 +94,7 @@ class BasePlotter:
             start_dir: str,
             reader_data: Optional[Dict[str, Dict[str, pd.DataFrame]]] = None,
             intensity_df_name: str = "",
+            adj_pval: bool = False,
             interesting_proteins: Optional[Dict[str, pd.Series]] = None,
             go_analysis_gene_names: Optional[Dict[str, pd.Series]] = None,
             configs: Optional[dict] = None,
@@ -136,7 +137,7 @@ class BasePlotter:
         self.normalizers = deepcopy(default_normalizers)
         self.selected_normalizer_name = self.configs.get("selected_normalizer", "None")
         self.selected_normalizer = self.normalizers.get(self.selected_normalizer_name, None)
-
+        self.adj_pval = self.configs.get("adj_pval", False)
         self.intensity_df = None
         if required_reader is not None:
             try:
@@ -198,6 +199,7 @@ class BasePlotter:
             start_dir=mspinit_instance.start_dir,
             reader_data=mspinit_instance.reader_data,
             intensity_df_name="",
+            adj_pval=mspinit_instance.adj_pval,
             interesting_proteins=mspinit_instance.interesting_proteins,
             go_analysis_gene_names=mspinit_instance.go_analysis_gene_names,
             configs=mspinit_instance.configs,
@@ -231,6 +233,7 @@ class BasePlotter:
             start_dir=reader_instance.start_dir,
             reader_data={reader_instance.name: reader_instance.full_data},
             intensity_df_name="",
+            adj_pval=False,
             interesting_proteins=None,
             go_analysis_gene_names=None,
             configs=reader_instance.reader_config,
@@ -946,7 +949,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use, level=level,
                                            intensity_label=self.intensity_label_names[df_to_use],
-                                           interesting_proteins=self.interesting_proteins, split_files=True)
+                                           interesting_proteins=self.interesting_proteins, adj_pval = self.adj_pval,
+                                           split_files=True)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
                         plots.append(plot)
