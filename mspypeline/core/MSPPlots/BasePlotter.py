@@ -83,7 +83,7 @@ See Also
 class BasePlotter:
     possible_plots = [
         "plot_detection_counts", "plot_detected_proteins_per_replicate", "plot_intensity_histograms",
-        "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timecourse",
+        "plot_relative_std", "plot_rank", "plot_pathway_analysis",
         "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
         "plot_venn_groups", "plot_r_volcano", "plot_pca_overview",
         "plot_normalization_overview_all_normalizers", "plot_heatmap_overview_all_normalizers"
@@ -166,7 +166,9 @@ class BasePlotter:
         # path for venn diagrams
         self.file_dir_venn = os.path.join(self.start_dir, "venn")
         # path for descriptive plots
-        self.file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
+        self.file_dir_descriptive = os.path.join(self.start_dir, "outliers_detection_&_comparison")
+        # path for normalization plots (heatmap and normalization overview)
+        self.file_dir_normalization = os.path.join(self.start_dir, "normalization")
         # path for pathway analysis
         self.file_dir_pathway = os.path.join(self.start_dir, "pathway_analysis")
         # path for go analysis
@@ -251,6 +253,10 @@ class BasePlotter:
             plot_settings.update({k: v for k, v in global_settings.items() if k not in plot_settings})
             if plot_settings.pop("create_plot", False):
                 self.logger.debug(f"creating plot {plot_name}")
+                if self.selected_normalizer is not None:
+                    dfs_to_use = plot_settings.get("dfs_to_use", [])
+                    dfs_to_use = [x.replace("_", "_normalized_") for x in dfs_to_use]
+                    plot_settings.update({"dfs_to_use": dfs_to_use})
                 getattr(self, plot_name)(**plot_settings)
         self.logger.info("Done creating plots")
 
@@ -709,6 +715,10 @@ class BasePlotter:
         pass
 
     def plot_pathway_timecourse(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (2,), **kwargs):
+        """
+        not yet implemented - will advance code later
+        """
+        """
         group_colors = {
             "SD": "#808080",
             "4W": "#0b8040",
@@ -736,40 +746,7 @@ class BasePlotter:
                 if len(found_proteins) < 1:
                     self.logger.warning("Skipping pathway %s in pathway timeline because no proteins were found", pathway)
                     continue
-                n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
-                fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * int(max_time / 5), 4 * n_rows))
-                if show_suptitle:
-                    fig.suptitle(pathway)
-                try:
-                    axiterator = axarr.flat
-                except AttributeError:
-                    axiterator = [axarr]
-                protein_minimum = self.all_intensities_dict[df_to_use].max().max()
-                protein_maximum = self.all_intensities_dict[df_to_use].min().min()
-                for protein, ax in zip(found_proteins, axiterator):
-                    ax.set_title(protein)
-                    ax.set_xlabel(f"Age [weeks]")
-                    ax.set_ylabel(f"{self.intensity_label_names[df_to_use]}")
-                    for idx, experiment in enumerate(level_keys):
-                        protein_intensities = self.all_tree_dict[df_to_use][experiment].aggregate(None, index=protein)
-                        mask = protein_intensities > 0
-                        protein_minimum = min(protein_minimum, protein_intensities[mask].min())
-                        protein_maximum = max(protein_maximum, protein_intensities[mask].max())
-                        ax.scatter([x_values[experiment]] * sum(mask), protein_intensities[mask],
-                                   label=f"{groups[experiment]}", color=group_colors[groups[experiment]])
-                # adjust labels based on overall min and max of the pathway
-                try:
-                    axiterator = axarr.flat
-                except AttributeError:
-                    axiterator = [axarr]
-                for protein, ax in zip(found_proteins, axiterator):
-                    ax.set_ylim(bottom=protein_minimum * 0.99, top=protein_maximum * 1.01)
-                    ax.set_xlim(left=0, right=max_time + 1)
-                handles, labels = axiterator[0].get_legend_handles_labels()
-                fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
-                fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-                res_path = os.path.join(self.file_dir_pathway, f"pathway_timeline_{pathway}" + FIG_FORMAT)
-                fig.savefig(res_path, dpi=200, bbox_inches="tight")
+        """
 
     def get_experiment_comparison_data(self, df_to_use: str, full_name1: str, full_name2: str):
         protein_intensities_sample1 = self.all_tree_dict[df_to_use][full_name1].aggregate(None)
@@ -1172,7 +1149,7 @@ class BasePlotter:
                 data = self.get_intensity_heatmap_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_normalization)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1213,7 +1190,7 @@ class BasePlotter:
             df_plots = plot_function(dfs, max_depth - 1, **plot_kwargs)
             plots += df_plots
             save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(file_name, **plot_kwargs, df_to_use=df_to_use)
-            matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_descriptive, result_name), *df_plots)
+            matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_normalization, result_name), *df_plots)
         return plots
 
     @validate_input

@@ -52,9 +52,8 @@ class MSPGUI(tk.Tk):
         self.number_of_plots = 0
 
         self.plot_settings = {}
-        self.intensity_options = ["lfq", "raw", "ibaq", "lfq_log2", "raw_log2", "ibaq_log2",
-                                  "lfq_normalized", "raw_normalized", "ibaq_normalized", "lfq_normalized_log2",
-                                  "raw_normalized_log2", "ibaq_normalized_log2"]
+        self.intensity_options = ["lfq_log2", "raw_log2", "ibaq_log2"]
+        #,"lfq_normalized_log2", "raw_normalized_log2", "ibaq_normalized_log2]
 
         self.title("mspypeline")
 
@@ -80,14 +79,7 @@ class MSPGUI(tk.Tk):
 
         self.replicate_var = tk.IntVar(value=1)
         replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?",
-                                          variable=self.replicate_var).grid(
-            row=2, column=0)
-
-        normalizer_label = tk.Label(self, text="Normalizer:").grid(row=2, column=1)
-
-        self.normalizer_text = tk.StringVar(value="None")
-        self.normalizer_button = tk.OptionMenu(self, self.normalizer_text, *self.normalize_options)
-        self.normalizer_button.grid(row=2, column=2)
+                                          variable=self.replicate_var).grid(row=2, column=0)
 
         go_proteins_label = tk.Label(self, text="Go analysis proteins").grid(row=3, column=0)
 
@@ -131,6 +123,11 @@ class MSPGUI(tk.Tk):
         self.number_of_plots += 1
         self.plot_row("Normalization overview", "normalization_overview_all_normalizers")
         self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers")
+
+        tk.Label(self, text="Choose a Normalization Method:", font="Helvetica 10 bold").grid(
+            row=self.heading_length + self.number_of_plots, column=1)
+        self.number_of_plots += 1
+        self.plot_intermediate_row("Choose a Normalization Method")
 
         tk.Label(self, text="Outlier detection / Comparisons", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
@@ -299,6 +296,15 @@ class MSPGUI(tk.Tk):
         mspplots = self.selected_reader.plotter.from_MSPInitializer(self.mspinit)
         mspplots.create_report()
         self.running_text.set("Please press Start")
+
+    def plot_intermediate_row(self, text: str):
+        row = self.heading_length + self.number_of_plots
+        int_var = tk.IntVar(value=1)
+        self.normalizer_text = tk.StringVar(value="None")
+        self.normalizer_button = tk.OptionMenu(self, self.normalizer_text, *self.normalize_options)
+        self.normalizer_button.grid(row=row, column=1)
+
+        self.number_of_plots += 1
 
     def plot_row(self, text: str, plot_name: str):
         row = self.heading_length + self.number_of_plots
