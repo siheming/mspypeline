@@ -1419,51 +1419,45 @@ def save_go_analysis_results(
 
     go_analysis_gene_names = [go_term.replace("_", " ") for go_term in go_analysis_gene_names]
 
-    go_analysis_protein_counts_df = pd.DataFrame(data = heights, index = go_analysis_gene_names)
-    p_values_df = pd.DataFrame(data = test_results, index=go_analysis_gene_names)
-    p_values_df.insert(0, "background", [1]*len(go_analysis_gene_names), True)
-
+    heights_df = pd.DataFrame(data=heights, index=go_analysis_gene_names)
+    test_results_df = pd.DataFrame(data=test_results, index=go_analysis_gene_names)
+    # save go analysis data
     save_path, csv_name = get_path_and_name_from_kwargs(name = "tables/go_analysis_data", **kwargs)
-    save_csv_fn(save_path, csv_name, go_analysis_protein_counts_df)
+    save_csv_fn(save_path, csv_name, heights_df)
     save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_pvals", **kwargs)
-    save_csv_fn(save_path, csv_name, p_values_df)
-    save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_pvals_sign", **kwargs)
-    save_csv_fn(save_path, csv_name, p_values_df[p_values_df <= 0.05])
+    save_csv_fn(save_path, csv_name, test_results_df)
+    #add extra col "background" to data frame - easier data handeling later
+    test_results_df.insert(0, "background", [1] * len(go_analysis_gene_names), True)
 
-    list_p_values = p_values_df.T.to_numpy().tolist()
-    list_p_values_together = sum(list_p_values, [])
+    barwidth = 1 / (len(heights_df.columns) + 1)
+    max_prot_count = heights_df.max().max()
+    tick_y_pos = set()
+    fig, ax = plt.subplots(1, 1, figsize=(6, int(len(heights_df.columns) * len(go_analysis_gene_names)/1.5)))
+    #for every sample plot a single bar per go term selected in one subplot
+    for i, sample in enumerate(heights_df.columns):
+        width = 1 / (len(heights_df.columns) + 1) * i
+        y_pos = np.arange(len(heights_df)) + width
+        tick_y_pos.update(set(y_pos))
+        ax.barh(y=y_pos, width=heights_df[sample], height=barwidth, align="center", edgecolor='white')
+        #annotate each sample bar with the corresponding p valueis the p value is significant
+        for pval, x, y in zip(test_results_df[sample], heights_df[sample], y_pos):
+            if pval > 0.05:
+                continue
+            text = f"{pval:.4f}" if pval > 0.0005 else "< 0.0005"
+            ax.annotate(f" p: {text}", xy=(x, y))
+    #annotate each set of bars for a go term with the corresponding go term label = second layer of y axis labeling
+    for i, go in enumerate(go_analysis_gene_names):
+        text = go.split(".txt")[0].replace("_", " ")
+        ax.annotate(text, xy=(-max_prot_count*0.4, i + 0.5-(1/(2*(len(heights_df.columns)+1)))),
+                    rotation=90, verticalalignment="center", annotation_clip=False)
 
-    bar_width = 0.8
-    #fig, ax = plt.subplots(1,1, figsize = (7, int(len(heights) * len(go_analysis_gene_names) / 2)))
-    ax = go_analysis_protein_counts_df.plot(kind="barh", width = bar_width, edgecolor = "white",
-                 figsize = (7, int(len(heights) * len(go_analysis_gene_names) / 1.5)))
+    ax.set_yticks(sorted(list(tick_y_pos)))
+    ax.set_yticklabels(list(heights_df.columns.values) * len(heights_df))
+    ax.set_xlim(0, max_prot_count + max_prot_count * 0.2)
+    ax.set_xlabel('Number of detected proteins from GO list')
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-    for patch, text in zip(ax.patches, list_p_values_together):
-        if text > 0.05:
-            continue
-        text = f"{text:.4f}" if text > 0.0005 else "< 0.0005"
-        ax.annotate(f" p: {text}" , xy = (patch.get_width(), (patch.get_y() + patch.get_height() / 2)))
-
-    lab_pos = []
-    for p in ax.patches:
-        lab_pos.append(p.get_y()+ (p.get_height() / 2) + 0.0001)
-
-    lab=[]
-    for i in range(len(lab_pos)):
-        l = go_analysis_protein_counts_df.columns.values[i//len(go_analysis_protein_counts_df.index.values)]
-        lab.append(l)
-
-
-    ax.set_yticks(lab_pos, minor=True)
-    ax.set_yticklabels(lab, minor=True)
-    ax.tick_params(axis="y", which="major", pad=150, size = 0)
-    ax.set_ylabel('compartiment')
-    max_prot_count = go_analysis_protein_counts_df.max().max()
-    ax.set_xlim(0, max_prot_count + max_prot_count*0.2)
-    ax.set_xlabel('number of proteins')
-    ax.get_legend().remove()
-
-    return plt, ax
+    return fig, ax
 
 
 
