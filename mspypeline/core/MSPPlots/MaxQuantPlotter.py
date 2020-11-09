@@ -20,7 +20,6 @@ class MaxQuantPlotter(BasePlotter):
             start_dir: str,
             reader_data: dict,
             intensity_df_name: str = "proteinGroups",
-            adj_pval: bool = False,
             interesting_proteins: dict = None,
             go_analysis_gene_names: dict = None,
             configs: dict = None,
@@ -32,7 +31,6 @@ class MaxQuantPlotter(BasePlotter):
             start_dir,
             reader_data,
             intensity_df_name,
-            adj_pval,
             interesting_proteins,
             go_analysis_gene_names,
             configs,
@@ -356,8 +354,8 @@ class MaxQuantPlotter(BasePlotter):
             # page with stuff
             if contaminants is not None:
                 self.logger.debug("Creating overview of share of contamination intensity from total")
-                df_contaminants_int = contaminants[[col for col in contaminants.columns if "Intensity" in col]]
-                df_no_contaminants_int = prot_groups[[col for col in prot_groups.columns if "Intensity" in col]]
+                df_contaminants_int = contaminants[prot_groups_prefix_columns]
+                df_no_contaminants_int = prot_groups[prot_groups_prefix_columns]
                 sum_int = pd.DataFrame({
                     "contaminants": df_contaminants_int.sum(axis=0),
                     "no_contaminants": df_no_contaminants_int.sum(axis=0)})

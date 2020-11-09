@@ -38,7 +38,6 @@ class MSPInitializer:
         self.configs = {}
         self.reader_data = {}
 
-        self.adj_pval = False
         self.interesting_proteins, self.go_analysis_gene_names = None, None
 
         # properties

@@ -94,7 +94,6 @@ class BasePlotter:
             start_dir: str,
             reader_data: Optional[Dict[str, Dict[str, pd.DataFrame]]] = None,
             intensity_df_name: str = "",
-            adj_pval: bool = False,
             interesting_proteins: Optional[Dict[str, pd.Series]] = None,
             go_analysis_gene_names: Optional[Dict[str, pd.Series]] = None,
             configs: Optional[dict] = None,
@@ -199,7 +198,6 @@ class BasePlotter:
             start_dir=mspinit_instance.start_dir,
             reader_data=mspinit_instance.reader_data,
             intensity_df_name="",
-            adj_pval=mspinit_instance.adj_pval,
             interesting_proteins=mspinit_instance.interesting_proteins,
             go_analysis_gene_names=mspinit_instance.go_analysis_gene_names,
             configs=mspinit_instance.configs,
@@ -233,7 +231,6 @@ class BasePlotter:
             start_dir=reader_instance.start_dir,
             reader_data={reader_instance.name: reader_instance.full_data},
             intensity_df_name="",
-            adj_pval=False,
             interesting_proteins=None,
             go_analysis_gene_names=None,
             configs=reader_instance.reader_config,
@@ -905,7 +902,7 @@ class BasePlotter:
         fit = limma.lmFit(r_df, r_design)
         c_matrix = make_contrasts(g1, g2)
         contrast_fit = limma.contrasts_fit(fit, c_matrix)
-        fit_bayes = limma.eBayes(contrast_fit, trend = True)
+        fit_bayes = limma.eBayes(contrast_fit, trend=True)
         res = limma.topTable(fit_bayes, adjust="BH", number=df.shape[0])
         # transform back to python
         with warnings.catch_warnings():
@@ -949,8 +946,7 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use, level=level,
                                            intensity_label=self.intensity_label_names[df_to_use],
-                                           interesting_proteins=self.interesting_proteins, adj_pval = self.adj_pval,
-                                           split_files=True)
+                                           interesting_proteins=self.interesting_proteins, split_files=True)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -973,9 +969,7 @@ class BasePlotter:
         df = pd.DataFrame(pca.transform(data_transform).T, columns=data_input.columns,
                           index=[f"PC_{i}" for i in range(1, n_components + 1)])
 
-        per_var = np.round(pca.explained_variance_ratio_ * 100, decimals=1)
-
-        return {"pca_data": df, "pca_fit": pca, "pca_var": per_var}
+        return {"pca_data": df, "pca_fit": pca}
 
     @add_end_docstrings(plot_para_return_docstring.format(
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_pca_results`"

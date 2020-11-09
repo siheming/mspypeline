@@ -261,8 +261,8 @@ def split_plot(n_rows, n_cols, figsize=(7, 7), plot_name="", data=None, plot_fn=
 @save_csvs({"unique_g1": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g1}",
             "unique_g2": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g2}"})
 def save_volcano_results(
-        volcano_data: pd.DataFrame, adj_pval, interesting_proteins, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", intensity_label: str = "Intensity",
+        volcano_data: pd.DataFrame, interesting_proteins, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
+        g2: str = "group2", adj_pval: bool = False, intensity_label: str = "Intensity",
         show_suptitle: bool = True, pval_threshold: float = 0.05, fchange_threshold: float = 2,
         scatter_size: float = 10, n_labelled_proteins: int = 10, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
@@ -445,7 +445,7 @@ def save_volcano_results(
 @save_plot("pca_overview")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_pca_results(
-        pca_data: pd.DataFrame, pca_fit: PCA = None, pca_var: list = [], normalize: bool = True, intensity_label: str = "Intensity",
+        pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, intensity_label: str = "Intensity",
         color_map: Optional[dict] = None, show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
@@ -479,17 +479,26 @@ def save_pca_results(
         warnings.warn("Normalizing not possible when pca_fit is None")
     elif normalize and pca_fit is not None:
         singular_values = pca_fit.singular_values_
+
+    if pca_fit is not None:
+        pca_var = np.round(pca_fit.explained_variance_ratio_ * 100, decimals=1)
+        pca_var = [f"{var} %" for var in pca_var]
+    else:
+        pca_var = ["nan" for _ in range(len(pca_fit.n_components_))]
+
     if n_components == 2:
-        fig, axarr = plt.subplots(1, 1, figsize=(7, 7))
+        fig, axarr = plt.subplots(1, 1, figsize=(14, 14))
         ax = axarr
         ax.scatter(
             pca_data.loc["PC_1"] / singular_values[0],
             pca_data.loc["PC_2"] / singular_values[1],
+            s = 100,
             c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-        ax.set_xlabel('PC 1 - {0}%'.format(pca_var[0]))
-        ax.set_ylabel('PC 2 - {0}%'.format(pca_var[1]))
+        ax.set_xlabel("PC 1 - {0}".format(pca_var[0]), fontsize = 22)
+        ax.set_ylabel("PC 2 - {0}".format(pca_var[1]), fontsize = 22)
+        ax.tick_params(axis = "both", labelsize = 18)
     else:
-        fig, axarr = plt.subplots(n_components, n_components, figsize=(5, 5))
+        fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
         for row in range(n_components):
             row_pc = row + 1
             for col in range(n_components):
@@ -499,14 +508,16 @@ def save_pca_results(
                     ax.scatter(
                         pca_data.loc[f"PC_{row_pc}"] / singular_values[row],
                         pca_data.loc[f"PC_{col_pc}"] / singular_values[col],
+                        s = 100,
                         c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-                    ax.set_xlabel(f"PC_{row_pc}")
-                    ax.set_ylabel(f"PC_{col_pc}")
+                    ax.set_xlabel(f"PC {row_pc} - {0}".format(pca_var[0]), fontsize = 22)
+                    ax.set_ylabel(f"PC {col_pc} - {0}".format(pca_var[1]), fontsize = 22)
+                    ax.tick_params(axis = "both", labelsize = 18)
 
     if show_suptitle:
-        fig.suptitle(intensity_label, fontsize="x-large")
+        fig.suptitle(intensity_label, fontsize=30)
     legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=base_color_map)
-    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False)
+    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize = 20)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, axarr
 
@@ -559,7 +570,7 @@ def save_pathway_analysis_results(
         ax.set_title(protein)
         ax.set_ylim((-1, len(level_keys)))
         ax.set_yticks([i for i in range(len(level_keys))])
-        level_keys_labels = [key.replace("_", " ") for key in level_keys if "_" in key]
+        level_keys_labels = [key.replace("_", " ") for key in level_keys]
         if len(level_keys_labels) == 0:
             level_keys_labels = level_keys
         ax.set_yticklabels(level_keys_labels)
@@ -746,7 +757,6 @@ def save_detection_counts_results(
         ax.set_title(f"{col_name} \n total detected: {int(col_data.sum())}")
         ax.barh(col_data.index, col_data, color="skyblue")
 
-        fsize = 0
         if len(col_data) in range(1,9):
             fsize = 11
         elif len(col_data) in range(9,13):
@@ -1066,16 +1076,12 @@ def save_detected_proteins_per_replicate_results(
         y_pos = [x for x in range(len(experiment_heights))]
         ax.barh(y_pos, experiment_heights, color="skyblue")
 
-        fsize = 0
         if len(experiment_heights) in range(1,10):
             fsize = 11
-
         elif len(experiment_heights) in range(10,16):
             fsize = 7
         else:
             fsize = 5
-
-
 
         for y, value in zip(y_pos, experiment_heights):
             ax.text(experiment_heights[0] / 2, y, value,
@@ -1545,13 +1551,8 @@ def save_bar_venn(
         ax1.text(x_level, max(heights) / 2, height, verticalalignment='center', horizontalalignment='center')
     ax1.set_ylabel("Number of proteins")
 
-    split_names = False
-    for name in y_mappings:
-        if "_" in name:
-            split_names = True
-    if split_names:
-        y_mappings = [name.split("_", 1)[1] for name in y_mappings]
-    labels = [sample.replace("_", " ") for sample in y_mappings]
+    labels = [sample.split("_", 1)[1] if "_" in sample else sample for sample in y_mappings]
+    labels = [sample.replace("_", " ") for sample in labels]
 
     # create the line plots
     for x_level, y in zip(x, ys):

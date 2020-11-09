@@ -150,13 +150,10 @@ class MSPGUI(tk.Tk):
         #self.plot_row("Pathway Timecourse", "pathway_timecourse")
         self.plot_row("Go analysis", "go_analysis")
         self.plot_row("Volcano plot (R)", "r_volcano")
-        self.p_val_var = tk.IntVar(value=0)
-        pval_button = tk.Radiobutton(self, text="Not adjusted p value",
-                                     variable=self.p_val_var, value=0).grid(
-            row=self.heading_length + self.number_of_plots, column=0)
-        adj_pval_button = tk.Radiobutton(self, text="adjusted p value",
-                                         variable=self.p_val_var, value=1).grid(
-            row=self.heading_length + self.number_of_plots + 1, column=0)
+        self.p_val_var = tk.IntVar(value=1)
+        pval_button = tk.Checkbutton(self, text="Use adjusted p value", variable=self.p_val_var).grid(
+            row=self.heading_length + self.number_of_plots, column=1)
+
 
         total_length = self.heading_length + self.number_of_plots
 
@@ -249,6 +246,7 @@ class MSPGUI(tk.Tk):
             selected_levels.update_options([level_names.get(l, l) for l in range(levels)])
             selected_levels.update_selection([level_names.get(pl, pl) for pl in plot_levels])
         self.replicate_var.set(self.mspinit.configs.get("has_techrep", True))
+        self.p_val_var.set(self.mspinit.configs.get("plot_r_volcano_settings", {}).get("adj_pval", False))
         self.normalizer_text.set(self.mspinit.configs.get("selected_normalizer", "None"))
         self.update_listboxes()
 
@@ -281,10 +279,7 @@ class MSPGUI(tk.Tk):
         gos = [MSPInitializer.possible_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()
         pathways = [MSPInitializer.possible_pathways[int(pathway)] for pathway in pathways]
-        if self.p_val_var.get() == 0:
-            self.mspinit.configs["adj_pval"] = False
-        elif self.p_val_var.get() ==1:
-            self.mspinit.configs["adj_pval"] = True
+        self.mspinit.configs["plot_r_volcano_settings"]["adj_pval"] = bool(self.p_val_var.get())
         self.mspinit.configs["go_terms"] = gos
         self.mspinit.configs["pathways"] = pathways
         self.mspinit.init_config()
