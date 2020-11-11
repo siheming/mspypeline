@@ -72,7 +72,7 @@ def plot_annotate_line(ax, row1, row2, x, data,  fs: int = None, maxasterix: int
             p /= 10.
 
             if maxasterix and len(text) == maxasterix:
-                text = ">" + text
+                #text = ">" + text
                 break
 
         if len(text) == 0:

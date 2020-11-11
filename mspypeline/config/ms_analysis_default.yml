@@ -81,6 +81,7 @@ plot_r_volcano_settings:
   dfs_to_use: []
   levels: []
   adj_pval: false
+  fchange_threshold: 2
 
 
 plot_venn_groups_settings:

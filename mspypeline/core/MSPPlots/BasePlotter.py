@@ -936,7 +936,6 @@ class BasePlotter:
            should be used with log2 intensities
 
         """
-        # TODO both adj and un adj should be available
         plots = []
         for level in levels:
             for df_to_use in dfs_to_use:
