@@ -590,7 +590,7 @@ def save_pathway_analysis_results(
             ax.set_xlim(right=xmax * (1 + to_annotate.shape[0] * 0.015))
             for i, (index, pval) in enumerate(to_annotate.items()):
                 plot_annotate_line(ax, level_keys.index(index[0]), level_keys.index(index[1]),
-                                   xmax * (1 + i * 0.015) - 0.005, pval, , maxasterix = 3)
+                                   xmax * (1 + i * 0.015) - 0.005, pval, maxasterix = 3)
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
