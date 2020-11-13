@@ -335,7 +335,7 @@ class MQReader(BaseReader):
 
     def preprocess_summary(self):
         file_dir = os.path.join(self.data_dir, MQReader.summary_txt)
-        df_summary = pd.read_csv(file_dir, sep="\t")
+        df_summary = pd.read_csv(file_dir, sep="\t", encoding="unicode-escape")
         df_summary.columns = self.rename_df_columns(df_summary.columns)
         df_summary = df_summary[df_summary["Enzyme"].notna()]
         df_summary["Experiment"] = self.rename_df_columns(df_summary["Experiment"])
