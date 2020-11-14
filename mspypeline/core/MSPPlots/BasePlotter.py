@@ -136,7 +136,6 @@ class BasePlotter:
         self.normalizers = deepcopy(default_normalizers)
         self.selected_normalizer_name = self.configs.get("selected_normalizer", "None")
         self.selected_normalizer = self.normalizers.get(self.selected_normalizer_name, None)
-        self.adj_pval = self.configs.get("adj_pval", False)
         self.intensity_df = None
         if required_reader is not None:
             try:
