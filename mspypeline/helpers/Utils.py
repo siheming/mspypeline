@@ -72,7 +72,7 @@ def plot_annotate_line(ax, row1, row2, x, data,  fs: int = None, maxasterix: int
             p /= 10.
 
             if maxasterix and len(text) == maxasterix:
-                text = ">" + text
+                #text = ">" + text
                 break
 
         if len(text) == 0:
@@ -175,7 +175,7 @@ def get_legend_elements(labels: list, color_map: Optional[dict] = None):
     """
     if color_map is None:
         color_map = {name: f"C{i}" for i, name in enumerate(labels)}
-    legend_elements = [Line2D([0], [0], marker='o', color='w', label=name,
+    legend_elements = [Line2D([0], [0], marker='o', color='w', label=name.replace("_", " "),
                               markerfacecolor=color_map.get(name, "blue"), markersize=10)
                        for name in labels]
     return legend_elements
@@ -247,3 +247,9 @@ def add_end_docstrings(*docstr):
         fn.__doc__ = fn.__doc__ + "".join(docstr)
         return fn
     return docstring_decorator
+
+
+def make_contrasts(exp1, exp2):
+    contrast_matrix = pd.DataFrame(data=(1, -1), columns=[f"{exp2}-{exp1}"], index=[exp2, exp1])
+    contrast_matrix.name = "Contrasts"
+    return contrast_matrix

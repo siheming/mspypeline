@@ -17,7 +17,7 @@ from mspypeline.file_reader import BaseReader
 from mspypeline.plotting_backend import matplotlib_plots
 from mspypeline.modules import default_normalizers, Normalization, DataTree
 from mspypeline.helpers import get_number_rows_cols_for_fig, get_number_of_non_na_values, \
-    get_intersection_and_unique, get_logger, dict_depth, add_end_docstrings
+    get_intersection_and_unique, get_logger, dict_depth, add_end_docstrings, make_contrasts
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
@@ -83,7 +83,7 @@ See Also
 class BasePlotter:
     possible_plots = [
         "plot_detection_counts", "plot_detected_proteins_per_replicate", "plot_intensity_histograms",
-        "plot_relative_std", "plot_rank", "plot_pathway_analysis", "plot_pathway_timecourse",
+        "plot_relative_std", "plot_rank", "plot_pathway_analysis",
         "plot_scatter_replicates", "plot_experiment_comparison", "plot_go_analysis", "plot_venn_results",
         "plot_venn_groups", "plot_r_volcano", "plot_pca_overview",
         "plot_normalization_overview_all_normalizers", "plot_heatmap_overview_all_normalizers"
@@ -136,7 +136,6 @@ class BasePlotter:
         self.normalizers = deepcopy(default_normalizers)
         self.selected_normalizer_name = self.configs.get("selected_normalizer", "None")
         self.selected_normalizer = self.normalizers.get(self.selected_normalizer_name, None)
-
         self.intensity_df = None
         if required_reader is not None:
             try:
@@ -166,7 +165,9 @@ class BasePlotter:
         # path for venn diagrams
         self.file_dir_venn = os.path.join(self.start_dir, "venn")
         # path for descriptive plots
-        self.file_dir_descriptive = os.path.join(self.start_dir, "descriptive")
+        self.file_dir_descriptive = os.path.join(self.start_dir, "outliers_detection_and_comparison")
+        # path for normalization plots (heatmap and normalization overview)
+        self.file_dir_normalization = os.path.join(self.start_dir, "normalization")
         # path for pathway analysis
         self.file_dir_pathway = os.path.join(self.start_dir, "pathway_analysis")
         # path for go analysis
@@ -251,6 +252,10 @@ class BasePlotter:
             plot_settings.update({k: v for k, v in global_settings.items() if k not in plot_settings})
             if plot_settings.pop("create_plot", False):
                 self.logger.debug(f"creating plot {plot_name}")
+                if self.selected_normalizer is not None:
+                    dfs_to_use = plot_settings.get("dfs_to_use", [])
+                    dfs_to_use = [x.replace("_", "_normalized_") for x in dfs_to_use]
+                    plot_settings.update({"dfs_to_use": dfs_to_use})
                 getattr(self, plot_name)(**plot_settings)
         self.logger.info("Done creating plots")
 
@@ -709,6 +714,10 @@ class BasePlotter:
         pass
 
     def plot_pathway_timecourse(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (2,), **kwargs):
+        """
+        not yet implemented - will advance code later
+        """
+        """
         group_colors = {
             "SD": "#808080",
             "4W": "#0b8040",
@@ -736,40 +745,7 @@ class BasePlotter:
                 if len(found_proteins) < 1:
                     self.logger.warning("Skipping pathway %s in pathway timeline because no proteins were found", pathway)
                     continue
-                n_rows, n_cols = get_number_rows_cols_for_fig(found_proteins)
-                fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * int(max_time / 5), 4 * n_rows))
-                if show_suptitle:
-                    fig.suptitle(pathway)
-                try:
-                    axiterator = axarr.flat
-                except AttributeError:
-                    axiterator = [axarr]
-                protein_minimum = self.all_intensities_dict[df_to_use].max().max()
-                protein_maximum = self.all_intensities_dict[df_to_use].min().min()
-                for protein, ax in zip(found_proteins, axiterator):
-                    ax.set_title(protein)
-                    ax.set_xlabel(f"Age [weeks]")
-                    ax.set_ylabel(f"{self.intensity_label_names[df_to_use]}")
-                    for idx, experiment in enumerate(level_keys):
-                        protein_intensities = self.all_tree_dict[df_to_use][experiment].aggregate(None, index=protein)
-                        mask = protein_intensities > 0
-                        protein_minimum = min(protein_minimum, protein_intensities[mask].min())
-                        protein_maximum = max(protein_maximum, protein_intensities[mask].max())
-                        ax.scatter([x_values[experiment]] * sum(mask), protein_intensities[mask],
-                                   label=f"{groups[experiment]}", color=group_colors[groups[experiment]])
-                # adjust labels based on overall min and max of the pathway
-                try:
-                    axiterator = axarr.flat
-                except AttributeError:
-                    axiterator = [axarr]
-                for protein, ax in zip(found_proteins, axiterator):
-                    ax.set_ylim(bottom=protein_minimum * 0.99, top=protein_maximum * 1.01)
-                    ax.set_xlim(left=0, right=max_time + 1)
-                handles, labels = axiterator[0].get_legend_handles_labels()
-                fig.legend(handles, labels, bbox_to_anchor=(1.04, 0.5), loc="center left")
-                fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-                res_path = os.path.join(self.file_dir_pathway, f"pathway_timeline_{pathway}" + FIG_FORMAT)
-                fig.savefig(res_path, dpi=200, bbox_inches="tight")
+        """
 
     def get_experiment_comparison_data(self, df_to_use: str, full_name1: str, full_name2: str):
         protein_intensities_sample1 = self.all_tree_dict[df_to_use][full_name1].aggregate(None)
@@ -923,10 +899,9 @@ class BasePlotter:
         r_df.rownames = r_rownames
         # run the r code
         fit = limma.lmFit(r_df, r_design)
-        # TODO replace this function with one that handles special characters
-        c_matrix = limma.makeContrasts(f"{g2}-{g1}", levels=r_design)
+        c_matrix = make_contrasts(g1, g2)
         contrast_fit = limma.contrasts_fit(fit, c_matrix)
-        fit_bayes = limma.eBayes(contrast_fit)
+        fit_bayes = limma.eBayes(contrast_fit, trend=True)
         res = limma.topTable(fit_bayes, adjust="BH", number=df.shape[0])
         # transform back to python
         with warnings.catch_warnings():
@@ -960,7 +935,6 @@ class BasePlotter:
            should be used with log2 intensities
 
         """
-        # TODO both adj and un adj should be available
         plots = []
         for level in levels:
             for df_to_use in dfs_to_use:
@@ -969,23 +943,30 @@ class BasePlotter:
                     data = self.get_r_volcano_data(g1, g2, df_to_use, level)
                     if data:
                         plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use, level=level,
-                                           intensity_label=self.intensity_label_names[df_to_use], split_files=True)
+                                           intensity_label=self.intensity_label_names[df_to_use],
+                                           interesting_proteins=self.interesting_proteins, split_files=True)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
                         plots.append(plot)
         return plots
 
-    def get_pca_data(self, df_to_use: str, level: int, n_components: int = 2, fill_value: float = 0, fill_na_before_norm: bool = False, **kwargs):
+    def get_pca_data(self, df_to_use: str, level: int, n_components: int = 2, fill_value: float = 0,
+                     no_missing_values: bool = True, fill_na_before_norm: bool = False, **kwargs):
         data_input = self.all_tree_dict[df_to_use].groupby(level, method=None)
-        if fill_na_before_norm:
-            data_input.fillna(fill_value, inplace=True)
+        if no_missing_values:
+            data_input = data_input.dropna(axis=0)
+        else:
+            if fill_na_before_norm:
+                data_input.fillna(fill_value, inplace=True)
         data_norm = data_input.subtract(data_input.mean(axis=1), axis=0).divide(data_input.std(axis=1), axis=0)
         if not fill_na_before_norm:
             data_norm.fillna(fill_value, inplace=True)
         data_transform = data_norm.T
+
         pca: PCA = PCA(n_components=n_components).fit(data_transform)
         df = pd.DataFrame(pca.transform(data_transform).T, columns=data_input.columns,
                           index=[f"PC_{i}" for i in range(1, n_components + 1)])
+
         return {"pca_data": df, "pca_fit": pca}
 
     @add_end_docstrings(plot_para_return_docstring.format(
@@ -1172,7 +1153,7 @@ class BasePlotter:
                 data = self.get_intensity_heatmap_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_normalization)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1213,7 +1194,7 @@ class BasePlotter:
             df_plots = plot_function(dfs, max_depth - 1, **plot_kwargs)
             plots += df_plots
             save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(file_name, **plot_kwargs, df_to_use=df_to_use)
-            matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_descriptive, result_name), *df_plots)
+            matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_normalization, result_name), *df_plots)
         return plots
 
     @validate_input

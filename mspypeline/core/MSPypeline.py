@@ -52,9 +52,8 @@ class MSPGUI(tk.Tk):
         self.number_of_plots = 0
 
         self.plot_settings = {}
-        self.intensity_options = ["lfq", "raw", "ibaq", "lfq_log2", "raw_log2", "ibaq_log2",
-                                  "lfq_normalized", "raw_normalized", "ibaq_normalized", "lfq_normalized_log2",
-                                  "raw_normalized_log2", "ibaq_normalized_log2"]
+        self.intensity_options = ["lfq_log2", "raw_log2", "ibaq_log2"]
+        #,"lfq_normalized_log2", "raw_normalized_log2", "ibaq_normalized_log2]
 
         self.title("mspypeline")
 
@@ -80,14 +79,7 @@ class MSPGUI(tk.Tk):
 
         self.replicate_var = tk.IntVar(value=1)
         replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?",
-                                          variable=self.replicate_var).grid(
-            row=2, column=0)
-
-        normalizer_label = tk.Label(self, text="Normalizer:").grid(row=2, column=1)
-
-        self.normalizer_text = tk.StringVar(value="None")
-        self.normalizer_button = tk.OptionMenu(self, self.normalizer_text, *self.normalize_options)
-        self.normalizer_button.grid(row=2, column=2)
+                                          variable=self.replicate_var).grid(row=2, column=0)
 
         go_proteins_label = tk.Label(self, text="Go analysis proteins").grid(row=3, column=0)
 
@@ -132,6 +124,11 @@ class MSPGUI(tk.Tk):
         self.plot_row("Normalization overview", "normalization_overview_all_normalizers")
         self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers")
 
+        tk.Label(self, text="Choose a Normalization Method:", font="Helvetica 10 bold").grid(
+            row=self.heading_length + self.number_of_plots, column=1)
+        self.number_of_plots += 1
+        self.plot_intermediate_row("Choose a Normalization Method")
+
         tk.Label(self, text="Outlier detection / Comparisons", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
@@ -150,9 +147,13 @@ class MSPGUI(tk.Tk):
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
         self.plot_row("Pathway Analysis", "pathway_analysis")
-        self.plot_row("Pathway Timecourse", "pathway_timecourse")
+        #self.plot_row("Pathway Timecourse", "pathway_timecourse")
         self.plot_row("Go analysis", "go_analysis")
         self.plot_row("Volcano plot (R)", "r_volcano")
+        self.p_val_var = tk.IntVar(value=1)
+        pval_button = tk.Checkbutton(self, text="Use adjusted p value", variable=self.p_val_var).grid(
+            row=self.heading_length + self.number_of_plots, column=1)
+
 
         total_length = self.heading_length + self.number_of_plots
 
@@ -245,6 +246,7 @@ class MSPGUI(tk.Tk):
             selected_levels.update_options([level_names.get(l, l) for l in range(levels)])
             selected_levels.update_selection([level_names.get(pl, pl) for pl in plot_levels])
         self.replicate_var.set(self.mspinit.configs.get("has_techrep", True))
+        self.p_val_var.set(self.mspinit.configs.get("plot_r_volcano_settings", {}).get("adj_pval", False))
         self.normalizer_text.set(self.mspinit.configs.get("selected_normalizer", "None"))
         self.update_listboxes()
 
@@ -277,6 +279,7 @@ class MSPGUI(tk.Tk):
         gos = [MSPInitializer.possible_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()
         pathways = [MSPInitializer.possible_pathways[int(pathway)] for pathway in pathways]
+        self.mspinit.configs["plot_r_volcano_settings"]["adj_pval"] = bool(self.p_val_var.get())
         self.mspinit.configs["go_terms"] = gos
         self.mspinit.configs["pathways"] = pathways
         self.mspinit.init_config()
@@ -299,6 +302,15 @@ class MSPGUI(tk.Tk):
         mspplots = self.selected_reader.plotter.from_MSPInitializer(self.mspinit)
         mspplots.create_report()
         self.running_text.set("Please press Start")
+
+    def plot_intermediate_row(self, text: str):
+        row = self.heading_length + self.number_of_plots
+        int_var = tk.IntVar(value=1)
+        self.normalizer_text = tk.StringVar(value="None")
+        self.normalizer_button = tk.OptionMenu(self, self.normalizer_text, *self.normalize_options)
+        self.normalizer_button.grid(row=row, column=1)
+
+        self.number_of_plots += 1
 
     def plot_row(self, text: str, plot_name: str):
         row = self.heading_length + self.number_of_plots

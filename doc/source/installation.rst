@@ -19,7 +19,7 @@ Either create a new environment and install mspyeline e.g. by running:
 
 .. code-block:: bash
 
-    conda create --name mspypeline python=3.7 mspypeline -c conda-forge -c sschaum
+    conda create --name mspypeline python=3.7 mspypeline -c conda-forge -c siheming
 
 This will create a new virtual environment called mspypeline with python 3.7 and install the mspypeline package.
 
@@ -27,7 +27,7 @@ Or install mspypeline in the base installation:
 
 .. code-block:: bash
 
-    conda install -c conda-forge -c sschaum mspypeline
+    conda install -c conda-forge -c siheming mspypeline
 
 
 pip(PyPI) installation
@@ -83,7 +83,7 @@ Get the source code by cloning the github project:
 
 Download Sources from `PyPI <https://pypi.org/project/mspypeline/>`__.
 
-Download Sources from `conda <https://anaconda.org/sschaum/mspypeline>`__.
+Download Sources from `conda <https://anaconda.org/siheming/mspypeline>`__.
 
 
 Dependencies
