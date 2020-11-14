@@ -182,6 +182,7 @@ class MaxQuantPlotter(BasePlotter):
         try:
             self.logger.debug("Reading proteinGroups")
             prot_groups = self.required_reader_data["proteinGroups"]
+            contaminants = self.required_reader_data["contaminants"]
             prot_groups_prefix_columns = [x for x in prot_groups.columns if x.startswith(prefix)]
             prot_groups_colors = [x.replace(prefix, "") for x in prot_groups_prefix_columns]
             plot_colors.update({col: cmap(i/len(prot_groups_colors)) for i, col in enumerate(prot_groups_colors)})
@@ -195,6 +196,7 @@ class MaxQuantPlotter(BasePlotter):
         except KeyError:
             self.logger.warning("Did not find proteinGroups")
             prot_groups = None
+            contaminants = None
             has_lfq = "File is missing"
             has_ibaq = "File is missing"
         try:
@@ -348,6 +350,35 @@ class MaxQuantPlotter(BasePlotter):
                 pdf.savefig()
                 plt.close(fig)
             # ##################
+
+            # page with stuff
+            if contaminants is not None:
+                self.logger.debug("Creating overview of share of contamination intensity from total")
+                df_contaminants_int = contaminants[prot_groups_prefix_columns]
+                df_no_contaminants_int = prot_groups[prot_groups_prefix_columns]
+                sum_int = pd.DataFrame({
+                    "contaminants": df_contaminants_int.sum(axis=0),
+                    "no_contaminants": df_no_contaminants_int.sum(axis=0)})
+                sum_int["total"] = sum_int["contaminants"] + sum_int["no_contaminants"]
+                sum_int["percent_cont"] = sum_int["contaminants"] / sum_int["total"]
+                sum_int["percent_no_cont"] = sum_int["no_contaminants"] / sum_int["total"]
+                fig, ax = plt.subplots(1, 1, sharex=True, figsize=(15, 6))
+
+                labels = [label.replace("Intensity ", "").replace("_", " ") for label in sum_int.index.values]
+                labels[0] = "Total samples"
+
+                ax.bar(x=labels, height=sum_int["percent_cont"], width=0.8)
+                ax.set_title("Intensity of contaminants from total intensity", size=14, pad=20)
+                ax.set_ylabel("percent", size=13)
+                ax.set_xticks(range(len(labels)))
+                ax.set_xticklabels(labels, rotation=90)
+                ax.axhline(0.05, linestyle="-", linewidth=2, color="red", alpha=0.6)
+
+                fig.tight_layout()
+
+                pdf.savefig(figure=fig)
+                plt.close(fig)
+            # ############
 
             # page with stuff
             if prot_groups is not None:
