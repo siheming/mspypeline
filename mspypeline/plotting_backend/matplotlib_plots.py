@@ -1158,7 +1158,7 @@ def save_intensity_histogram_results(
         labels = [label.replace("_", " ") for label in labels]
 
         ax.set_title(col_name)
-        ax.hist(intensities.T, bins=bins, histtype=histtype, label=labels, color=color)
+        ax.hist(intensities, bins=bins, histtype=histtype, label=labels, color=color)
 
         if compare_to_remaining:
             remaining = hist_data.drop(col, axis=1)
@@ -1166,7 +1166,7 @@ def save_intensity_histogram_results(
             # remaining = remaining[intensities.notna()]
             ax.hist(remaining, bins=bins, histtype="step", alpha=0.5)
         if "Log_2" not in intensity_label:
-            ax.set_xscale("log", basex=2)
+            ax.set_xscale("log", base=2)
         ax.set_xlabel(intensity_label)
         ax.set_ylabel("Counts")
 
