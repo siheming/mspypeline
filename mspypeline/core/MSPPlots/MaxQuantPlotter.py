@@ -131,7 +131,20 @@ class MaxQuantPlotter(BasePlotter):
             d_min, d_max = np.nanmin(data.values), np.nanmax(data.values)
             bins = np.linspace(d_min, d_max, n_bins)
 
-            y, x = np.histogram(data.values.flatten(), bins=bins, density=density)
+            if data.shape[0] * data.shape[1] > 1e7:
+                y = np.zeros(bins.shape[0] - 1)
+                for i in range(0, data.shape[0] // 5000 + 1):
+                    for j in range(0, data.shape[1] // 50 + 1):
+                        y_del, x = np.histogram(data.iloc[
+                                                i * 5000: (i + 1) * 5000, j * 50: (j + 1) * 50].values.flatten(),
+                                                bins=bins)
+                        y += y_del
+                if density:
+                    db = np.array(np.diff(bins), float)
+                    y = y / db / y.sum()
+
+            else:
+                y, x = np.histogram(data.values.flatten(), bins=bins, density=density)
             y = np.concatenate(([0], np.repeat(y, 2), [0]))
             x = np.repeat(x, 2)
             return x, y, bins
