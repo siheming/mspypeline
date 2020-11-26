@@ -8,6 +8,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import matplotlib.cm as cm
 import matplotlib.lines as mlines
+from matplotlib import rcParams
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.collections import LineCollection
 from adjustText import adjust_text
@@ -24,7 +25,8 @@ from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line,
     get_plot_name_suffix, get_intersection_and_unique, venn_names, format_docstrings
 
 FIG_FORMAT = ".pdf"
-
+rcParams["pdf.fonttype"] = 42
+rcParams["ps.fonttype"] = 42
 
 def linear(x, m, b):
     return m * x + b
