@@ -11,6 +11,7 @@ import warnings
 from typing import Dict, Type, Iterable, Optional, Union, Any, List, Tuple
 from sklearn.decomposition import PCA
 from copy import deepcopy
+from matplotlib import rcParams
 
 from mspypeline.core import MSPInitializer
 from mspypeline.file_reader import BaseReader
@@ -22,7 +23,8 @@ from mspypeline.helpers import get_number_rows_cols_for_fig, get_number_of_non_n
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
 FIG_FORMAT = ".pdf"
-
+rcParams["pdf.fonttype"] = 42
+rcParams["ps.fonttype"] = 42
 
 def validate_input(f):
     """

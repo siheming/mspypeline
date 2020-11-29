@@ -4,11 +4,14 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib import rcParams
 
 from mspypeline.core import MSPInitializer
 from mspypeline.core.MSPPlots import BasePlotter
 from mspypeline.plotting_backend import matplotlib_plots
 
+rcParams["pdf.fonttype"] = 42
+rcParams["ps.fonttype"] = 42
 
 class MQReader:  # TODO currently circular dependency
     pass
