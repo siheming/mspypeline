@@ -1269,6 +1269,8 @@ def save_rank_results(
     # plot the non pathway proteins
     x = [dic[protein][0] for protein in non_pathway_proteins]  # rank
     y = [dic[protein][1] for protein in non_pathway_proteins]  # intensity
+    median_rank = int(np.median(x))
+    median_int = rank_data.iloc[median_rank]
 
     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
     ax.scatter(x, y, c="darkgray", s=12, alpha=0.3, marker=".", label="no pathway")
@@ -1296,13 +1298,10 @@ def save_rank_results(
             legend_text.append(text)
             handle = mlines.Line2D([], [], color=f"C{i}", marker='.', markersize=10, label=text, linewidth=0)
             handles.append(handle)
-            # ax.text(xmin * 0.9, median_intensity * 0.9, text, verticalalignment="top", horizontalalignment="left")
-            # f"median rank: {median_pathway_rank} ({median_pathway_rank / len(rank_data) * 100 :.1f}%) "
-            # f"with intensity: {median_intensity:.2E}",  # TODO case for log and non log
 
-
-    legend_text.append("no pathway assigned")
-    handle = mlines.Line2D([], [], color="lightgray", marker='.', markersize=10, label=text, linewidth=0)
+    no_pathway_text = f"no pathway assigned : median intensity : {median_int:.2E}"
+    legend_text.append(no_pathway_text)
+    handle = mlines.Line2D([], [], color="lightgray", marker='.', markersize=10, label=no_pathway_text, linewidth=0)
     handles.append(handle)
 
     exp_name = full_name.replace("_", " ")

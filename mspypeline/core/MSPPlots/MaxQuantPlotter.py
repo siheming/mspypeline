@@ -378,7 +378,6 @@ class MaxQuantPlotter(BasePlotter):
                 fig, ax = plt.subplots(1, 1, sharex=True, figsize=(15, 6))
 
                 labels = [label.replace("Intensity ", "").replace("_", " ") for label in sum_int.index.values]
-                labels[0] = "Total samples"
 
                 ax.bar(x=labels, height=sum_int["percent_cont"], width=0.8)
                 ax.set_title("Intensity of contaminants from total intensity", size=14, pad=20)
