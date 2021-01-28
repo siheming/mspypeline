@@ -520,19 +520,19 @@ class MaxQuantPlotter(BasePlotter):
 
                     if n_figure == (n_figures - 1):
                         if n_exp < 4:
-                            for i in reversed(range(n_exp)):
-                                axarr[2, i].remove()
+                            for i in range(n_exp):
+                                axarr[2, 2 - i].remove()
                         elif n_exp < 7:
                             for i in range(3):
                                 axarr[2, i].remove()
-                            for j in reversed(range(n_exp - 3)):
-                                axarr[1, j]
+                            for j in range(n_exp - 3):
+                                axarr[1, 2 -  j]
                         else:
                             for i in range(3):
                                 axarr[2, i].remove()
                                 axarr[1, i].remove()
-                            for j in reversed(range(n_exp - 6)):
-                                axarr[0, j]
+                            for j in range(n_exp - 6):
+                                axarr[0, 2 - j]
 
                     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -596,19 +596,19 @@ class MaxQuantPlotter(BasePlotter):
 
                     if n_figure == (n_figures - 1):
                         if n_exp < 4:
-                            for i in reversed(range(n_exp)):
-                                axarr[2, i].remove()
+                            for i in range(n_exp):
+                                axarr[2,2 - i].remove()
                         elif n_exp < 7:
                             for i in range(3):
                                 axarr[2, i].remove()
-                            for j in reversed(range(n_exp - 3)):
-                                axarr[1, j]
+                            for j in range(n_exp - 3):
+                                axarr[1,2 - j]
                         else:
                             for i in range(3):
                                 axarr[2, i].remove()
                                 axarr[1, i].remove()
-                            for j in reversed(range(n_exp - 6)):
-                                axarr[0, j]
+                            for j in range(n_exp - 6):
+                                axarr[0, 2 - j]
 
                     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
