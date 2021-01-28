@@ -501,7 +501,7 @@ class MaxQuantPlotter(BasePlotter):
                 b, h, bins = get_plot_data_from_hist(log2_intensities, density=True, n_bins=16)
 
                 n_figures = int(np.ceil(len(log2_intensities.columns) / 9))
-                n_exp = (len(log2_intensities.columns) - (n_figures - 1) * 9) - 9
+                n_exp = 9 - (len(log2_intensities.columns) - (n_figures - 1) * 9)
 
                 for n_figure in range(n_figures):
                     fig, axarr = plt.subplots(3, 3, figsize=(15, 15))
@@ -577,7 +577,7 @@ class MaxQuantPlotter(BasePlotter):
 
                 n_figures = int(np.ceil(len(retention_time.columns) / 9))
                 n_figures = int(np.ceil(len(log2_intensities.columns) / 9))
-                n_exp = (len(log2_intensities.columns) - (n_figures - 1) * 9) - 9
+                n_exp = 9 - (len(log2_intensities.columns) - (n_figures - 1) * 9)
 
                 for n_figure in range(n_figures):
                     fig, axarr = plt.subplots(3, 3, figsize=(15, 15))
