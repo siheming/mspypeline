@@ -43,7 +43,7 @@ def get_analysis_design(names: Iterable[str]) -> dict:
     return default_to_regular(analysis_design)
 
 
-def plot_annotate_line(ax, row1, row2, x, data,  fs: int = None, maxasterix: int = 5):
+def plot_annotate_line(ax, row1, row2, x, data,  fs: int = None, maxasterix: int = 3):
     """
     adjusted function
     from: https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph
@@ -160,7 +160,7 @@ def dict_depth(d: dict) -> int:
     return level
 
 
-def get_legend_elements(labels: list, color_map: Optional[dict] = None):
+def get_legend_elements(labels: list, color_map: Optional[dict] = None, marker_size:Optional[int] = None):
     """
         Returns custom legend elements based on a list of labels and an optional color map.
         These elements can be passed to a legend via the 'handles' parameter
@@ -175,8 +175,10 @@ def get_legend_elements(labels: list, color_map: Optional[dict] = None):
     """
     if color_map is None:
         color_map = {name: f"C{i}" for i, name in enumerate(labels)}
+    if marker_size is None:
+        marker_size=10
     legend_elements = [Line2D([0], [0], marker='o', color='w', label=name.replace("_", " "),
-                              markerfacecolor=color_map.get(name, "blue"), markersize=10)
+                              markerfacecolor=color_map.get(name, "blue"), markersize=marker_size)
                        for name in labels]
     return legend_elements
 

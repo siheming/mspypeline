@@ -448,7 +448,8 @@ def save_volcano_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_pca_results(
         pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, intensity_label: str = "Intensity",
-        color_map: Optional[dict] = None, show_suptitle: bool = True, **kwargs
+        color_map: Optional[dict] = None, show_suptitle: bool = True, marker_size: int = 100,
+        legend_marker_size: int = 10, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Saves image containing the pca results with prefix: {{name}}
@@ -494,10 +495,10 @@ def save_pca_results(
         ax.scatter(
             pca_data.loc["PC_1"] / singular_values[0],
             pca_data.loc["PC_2"] / singular_values[1],
-            s = 100,
+            s = marker_size,
             c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-        ax.set_xlabel("PC 1 - {0}".format(pca_var[0]), fontsize = 22)
-        ax.set_ylabel("PC 2 - {0}".format(pca_var[1]), fontsize = 22)
+        ax.set_xlabel("PC 1 - {0}".format(pca_var[0]), fontsize = 22, labelpad=20)
+        ax.set_ylabel("PC 2 - {0}".format(pca_var[1]), fontsize = 22, labelpad=20)
         ax.tick_params(axis = "both", labelsize = 18)
     else:
         fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
@@ -510,17 +511,18 @@ def save_pca_results(
                     ax.scatter(
                         pca_data.loc[f"PC_{row_pc}"] / singular_values[row],
                         pca_data.loc[f"PC_{col_pc}"] / singular_values[col],
-                        s = 100,
+                        s = marker_size,
                         c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-                    ax.set_xlabel(f"PC {row_pc} - {0}".format(pca_var[0]), fontsize = 22)
-                    ax.set_ylabel(f"PC {col_pc} - {0}".format(pca_var[1]), fontsize = 22)
+                    ax.set_xlabel(f"PC {row_pc} - {0}".format(pca_var[0]), fontsize = 22, labelpad=20)
+                    ax.set_ylabel(f"PC {col_pc} - {0}".format(pca_var[1]), fontsize = 22, labelpad=20)
                     ax.tick_params(axis = "both", labelsize = 18)
 
     if show_suptitle:
         fig.suptitle(intensity_label, fontsize=30)
-    legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=base_color_map)
+    legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=base_color_map,
+                                          marker_size= legend_marker_size)
     fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize = 20)
-    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    fig.tight_layout(rect=[0.03, 0.03, 1, 0.95])
     return fig, axarr
 
 
@@ -642,7 +644,8 @@ def save_boxplot_results(
         protein_intensities.loc[~pd.isna(protein_intensities.loc[:, c]), c].tolist()
         for c in protein_intensities.columns
     ]
-    ax.boxplot(data, vert=vertical, labels=protein_intensities.columns)
+    labels = [label.replace("_", " ") for label in protein_intensities.columns]
+    ax.boxplot(data, vert=vertical, labels=labels)
     if vertical:
         ax.set_ylabel(intensity_label)
     else:
@@ -769,12 +772,13 @@ def save_detection_counts_results(
 
         for y, value in zip(col_data.index, col_data):
             ax.text(col_data.max() / 2, y, value,
-                    verticalalignment='center', horizontalalignment='center', fontsize = fsize)
+                    verticalalignment='center', horizontalalignment='center', fontsize=fsize)
 
         ax.set_yticks(col_data.index)
         ax.set_yticklabels([f"detected in {i} replicates" for i in col_data.index], fontsize=fsize)
         ax.set_xlim(0, global_max + global_max*0.05)
-        ax.set_xlabel("Counts")
+        ax.set_xlabel("Counts", fontsize=fsize)
+        ax.tick_params(axis="both", labelsize=fsize)
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, axarr
@@ -1088,16 +1092,17 @@ def save_detected_proteins_per_replicate_results(
 
         for y, value in zip(y_pos, experiment_heights):
             ax.text(experiment_heights[0] / 2, y, value,
-                    verticalalignment='center', horizontalalignment='center', fontsize = fsize)
+                    verticalalignment='center', horizontalalignment='center', fontsize=fsize)
         labels = experiment_heights.index.values
         labels = [label.replace((experiment + "_"), "").replace("_", " ") for label in labels]
 
         ax.set_title(experiment.replace("_", "  "))
         ax.axvline(mean_height, linestyle="--", color="black", alpha=0.6)
         ax.set_yticks([i for i in range(len(experiment_heights.index))])
-        ax.set_yticklabels(labels, fontsize = fsize)
+        ax.set_yticklabels(labels, fontsize=fsize)
         ax.set_xlim(0, global_max + global_max*0.02)
-        ax.set_xlabel("Counts")
+        ax.set_xlabel("Counts", fontsize=fsize)
+
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, axarr
 
@@ -1106,7 +1111,7 @@ def save_detected_proteins_per_replicate_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_intensity_histogram_results(
         hist_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False,
-        compare_to_remaining: bool = False, n_bins: int = 25, histtype="bar", color=None,
+        compare_to_remaining: bool = False, legend: bool = False, n_bins: int = 25, histtype="bar", color=None,
         plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, **kwargs
 ):
     """
@@ -1144,6 +1149,11 @@ def save_intensity_histogram_results(
     if show_suptitle:
         fig.suptitle(f"{intensity_label} histograms")
 
+    counts = []
+    for col in hist_data.columns:
+        col_count = hist_data[col].value_counts(bins=n_bins)
+        counts.append(max(col_count))
+
     for col, (pos, ax) in zip(hist_data.columns.get_level_values(0).unique(), np.ndenumerate(axarr)):
         intensities = hist_data[col]
         try:
@@ -1157,10 +1167,12 @@ def save_intensity_histogram_results(
             bins = np.logspace(np.log2(np.nanmin(intensities.values)), np.log2(np.nanmax(intensities.values)), n_bins, base=2)
 
         col_name = col.replace("_", "  ")
-        labels = [label.replace("_", " ") for label in labels]
-
         ax.set_title(col_name)
-        ax.hist(intensities, bins=bins, histtype=histtype, label=labels, color=color)
+
+        if not legend:
+            ax.hist(intensities, bins=bins, histtype=histtype, color=color)
+        else:
+            ax.hist(intensities, bins=bins, histtype=histtype, color=color, label=labels)
 
         if compare_to_remaining:
             remaining = hist_data.drop(col, axis=1)
@@ -1171,6 +1183,15 @@ def save_intensity_histogram_results(
             ax.set_xscale("log", base=2)
         ax.set_xlabel(intensity_label)
         ax.set_ylabel("Counts")
+        ax.set_xlim(hist_data.min().min(), hist_data.max().max())
+        ax.set_ylim(0, (max(counts) + max(counts) * 0.2))
+
+        means = []
+        for col in intensities.columns:
+            means.append(float(intensities[col].mean()))
+        mean = float(sum(means)) / float(len(means))
+        ax.axvline(mean, linestyle="-", color="red", alpha=0.6, linewidth=2.5, label='mean: {:5.2f}'.format(mean))
+        ax.legend(handlelength=1, handletextpad=0.8, loc='upper right', bbox_to_anchor=(0.98, 0.98), frameon=False)
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, axarr
