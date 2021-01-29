@@ -749,6 +749,9 @@ def save_detection_counts_results(
     n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(counts.columns)
     fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, squeeze=True,
                               figsize=(5 * n_cols_experiment, 3 * n_rows_experiment))
+    for i in range(n_rows_experiment * n_cols_experiment - len(counts.columns)):
+        axarr[n_rows_experiment - 1, n_cols_experiment - 1 - i].remove()
+
     if show_suptitle:
         fig.suptitle(f"Detection counts from {intensity_label}")
 
@@ -1068,6 +1071,9 @@ def save_detected_proteins_per_replicate_results(
     n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(all_heights.keys())
     fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment,
                               figsize=(5 * n_cols_experiment, 3 * n_rows_experiment))
+    for i in range(n_rows_experiment * n_cols_experiment - len(all_heights.keys())):
+        axarr[n_rows_experiment - 1, n_cols_experiment - 1 - i].remove()
+
     if show_suptitle:
         fig.suptitle(f"Number of detected proteins from {intensity_label}")
 
@@ -1145,13 +1151,15 @@ def save_intensity_histogram_results(
         plt.close("all")
         n_rows, n_cols = get_number_rows_cols_for_fig(hist_data.columns.get_level_values(0).unique())
         fig, axarr = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 5 * n_rows))
+        for i in range(n_rows * n_cols - len(hist_data.columns.get_level_values(0).unique())):
+            axarr[n_rows - 1, n_cols - 1 - i].remove()
 
     if show_suptitle:
         fig.suptitle(f"{intensity_label} histograms")
 
     counts = []
     for col in hist_data.columns:
-        col_count = hist_data[col].value_counts(bins=n_bins)
+        col_count = pd.cut(hist_data[col], bins=int(np.ceil(n_bins*0.9))).value_counts()
         counts.append(max(col_count))
 
     for col, (pos, ax) in zip(hist_data.columns.get_level_values(0).unique(), np.ndenumerate(axarr)):
@@ -1184,7 +1192,7 @@ def save_intensity_histogram_results(
         ax.set_xlabel(intensity_label)
         ax.set_ylabel("Counts")
         ax.set_xlim(hist_data.min().min(), hist_data.max().max())
-        ax.set_ylim(0, (max(counts) + max(counts) * 0.2))
+        ax.set_ylim(0, max(counts))
 
         means = []
         for col in intensities.columns:
