@@ -17,7 +17,7 @@ from mspypeline.file_reader import BaseReader
 from mspypeline.plotting_backend import matplotlib_plots
 from mspypeline.modules import default_normalizers, Normalization, DataTree
 from mspypeline.helpers import get_number_rows_cols_for_fig, get_number_of_non_na_values, \
-    get_intersection_and_unique, get_logger, dict_depth, add_end_docstrings
+    get_intersection_and_unique, get_logger, dict_depth, add_end_docstrings, make_contrasts
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
@@ -136,7 +136,6 @@ class BasePlotter:
         self.normalizers = deepcopy(default_normalizers)
         self.selected_normalizer_name = self.configs.get("selected_normalizer", "None")
         self.selected_normalizer = self.normalizers.get(self.selected_normalizer_name, None)
-
         self.intensity_df = None
         if required_reader is not None:
             try:
@@ -166,7 +165,7 @@ class BasePlotter:
         # path for venn diagrams
         self.file_dir_venn = os.path.join(self.start_dir, "venn")
         # path for descriptive plots
-        self.file_dir_descriptive = os.path.join(self.start_dir, "outliers_detection_&_comparison")
+        self.file_dir_descriptive = os.path.join(self.start_dir, "outliers_detection_and_comparison")
         # path for normalization plots (heatmap and normalization overview)
         self.file_dir_normalization = os.path.join(self.start_dir, "normalization")
         # path for pathway analysis
@@ -900,10 +899,9 @@ class BasePlotter:
         r_df.rownames = r_rownames
         # run the r code
         fit = limma.lmFit(r_df, r_design)
-        # TODO replace this function with one that handles special characters
-        c_matrix = limma.makeContrasts(f"{g2}-{g1}", levels=r_design)
+        c_matrix = make_contrasts(g1, g2)
         contrast_fit = limma.contrasts_fit(fit, c_matrix)
-        fit_bayes = limma.eBayes(contrast_fit)
+        fit_bayes = limma.eBayes(contrast_fit, trend=True)
         res = limma.topTable(fit_bayes, adjust="BH", number=df.shape[0])
         # transform back to python
         with warnings.catch_warnings():
@@ -937,7 +935,6 @@ class BasePlotter:
            should be used with log2 intensities
 
         """
-        # TODO both adj and un adj should be available
         plots = []
         for level in levels:
             for df_to_use in dfs_to_use:
@@ -946,23 +943,30 @@ class BasePlotter:
                     data = self.get_r_volcano_data(g1, g2, df_to_use, level)
                     if data:
                         plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use, level=level,
-                                           intensity_label=self.intensity_label_names[df_to_use], split_files=True)
+                                           intensity_label=self.intensity_label_names[df_to_use],
+                                           interesting_proteins=self.interesting_proteins, split_files=True)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
                         plots.append(plot)
         return plots
 
-    def get_pca_data(self, df_to_use: str, level: int, n_components: int = 2, fill_value: float = 0, fill_na_before_norm: bool = False, **kwargs):
+    def get_pca_data(self, df_to_use: str, level: int, n_components: int = 2, fill_value: float = 0,
+                     no_missing_values: bool = True, fill_na_before_norm: bool = False, **kwargs):
         data_input = self.all_tree_dict[df_to_use].groupby(level, method=None)
-        if fill_na_before_norm:
-            data_input.fillna(fill_value, inplace=True)
+        if no_missing_values:
+            data_input = data_input.dropna(axis=0)
+        else:
+            if fill_na_before_norm:
+                data_input.fillna(fill_value, inplace=True)
         data_norm = data_input.subtract(data_input.mean(axis=1), axis=0).divide(data_input.std(axis=1), axis=0)
         if not fill_na_before_norm:
             data_norm.fillna(fill_value, inplace=True)
         data_transform = data_norm.T
+
         pca: PCA = PCA(n_components=n_components).fit(data_transform)
         df = pd.DataFrame(pca.transform(data_transform).T, columns=data_input.columns,
                           index=[f"PC_{i}" for i in range(1, n_components + 1)])
+
         return {"pca_data": df, "pca_fit": pca}
 
     @add_end_docstrings(plot_para_return_docstring.format(
