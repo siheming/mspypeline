@@ -9,6 +9,7 @@ from matplotlib import rcParams
 from mspypeline.core import MSPInitializer
 from mspypeline.core.MSPPlots import BasePlotter
 from mspypeline.plotting_backend import matplotlib_plots
+from mspypeline.helpers import remove_spare_axes
 
 rcParams["pdf.fonttype"] = 42
 rcParams["ps.fonttype"] = 42
@@ -105,7 +106,7 @@ class MaxQuantPlotter(BasePlotter):
                     ax.set_yscale(**yscale)
             return bar_container
 
-        def hist2d_with_hist(xdata, ydata, title=None, xlabel=None, ylabel=None):
+        def hist2d_with_hist(xdata, ydata, title=None, xlabel=None, ylabel=None, max_x=145):
             fig = plt.figure(figsize=(14, 7))
             if title is not None:
                 fig.suptitle(title)
@@ -116,7 +117,7 @@ class MaxQuantPlotter(BasePlotter):
             ax1dhisthor = fig.add_subplot(spec[1, 1])
 
             h, xedges, yedges, image = ax2dhist.hist2d(xdata, ydata,
-                                                       bins=100, range=((0, 145), (0, 2)))  # TODO find ranges/bins
+                                                       bins=100, range=((0, max_x), (0, 2)))  # TODO find bins
             ax2dhist.set_xlabel(xlabel)
             ax2dhist.set_ylabel(ylabel)
 
@@ -382,8 +383,8 @@ class MaxQuantPlotter(BasePlotter):
                     "contaminants": df_contaminants_int.sum(axis=0),
                     "no_contaminants": df_no_contaminants_int.sum(axis=0)})
                 sum_int["total"] = sum_int["contaminants"] + sum_int["no_contaminants"]
-                sum_int["percent_cont"] = sum_int["contaminants"] / sum_int["total"]
-                sum_int["percent_no_cont"] = sum_int["no_contaminants"] / sum_int["total"]
+                sum_int["percent_cont"] = (sum_int["contaminants"] / sum_int["total"])*100
+                sum_int["percent_no_cont"] = (sum_int["no_contaminants"] / sum_int["total"])*100
                 fig, ax = plt.subplots(1, 1, sharex=True, figsize=(14, 7))
 
                 labels = [label.replace("Intensity ", "").replace("_", " ") for label in sum_int.index.values]
@@ -393,7 +394,7 @@ class MaxQuantPlotter(BasePlotter):
                 ax.set_ylabel("Percent", size=13)
                 ax.set_xticks(range(len(labels)))
                 ax.set_xticklabels(labels, rotation=90)
-                ax.axhline(0.05, linestyle="-", linewidth=2, color="red", alpha=0.6)
+                ax.axhline(5, linestyle="-", linewidth=2, color="red", alpha=0.6)
 
                 fig.tight_layout()
 
@@ -410,10 +411,12 @@ class MaxQuantPlotter(BasePlotter):
                 colors = prot_groups_intensities["Grouped Intensity"].rename(lambda x: x.replace("Intensity ", ""), axis=1).columns
                 colors = [plot_colors[c] for c in colors]
                 matplotlib_plots.save_intensity_histogram_results(prot_groups_intensities, n_bins=11, histtype="barstacked",
-                                                                  plot=(fig, axarr[0]), color=colors)
+                                                                  plot=(fig, axarr[0]), color=colors, show_mean=False,
+                                                                  legend=False)
                 # overlayed histogram of log2 intensities
                 matplotlib_plots.save_intensity_histogram_results(prot_groups_intensities, n_bins=11, histtype="step",
-                                                                  plot=(fig, axarr[1]), color=colors)
+                                                                  plot=(fig, axarr[1]), color=colors, show_mean=False,
+                                                                  legend=False)
                 fig.legend(bbox_to_anchor=(1.02, 0.5), loc="center left")
 
                 fig.tight_layout()
@@ -431,7 +434,8 @@ class MaxQuantPlotter(BasePlotter):
 
                 fig, ax = hist2d_with_hist(title="Overall Retention time vs Retention length",
                                            xdata=evidence["Retention time"], ydata=evidence["Retention length"],
-                                           xlabel="Retention time [min]", ylabel="Retention length [min]")
+                                           xlabel="Retention time [min]", ylabel="Retention length [min]",
+                                           max_x=evidence["Retention time"].max())
 
                 pdf.savefig(figure=fig)
                 plt.close(fig)
@@ -501,8 +505,6 @@ class MaxQuantPlotter(BasePlotter):
                 b, h, bins = get_plot_data_from_hist(log2_intensities, density=True, n_bins=16)
 
                 n_figures = int(np.ceil(len(log2_intensities.columns) / 9))
-                n_exp = 9 - (len(log2_intensities.columns) - (n_figures - 1) * 9)
-
                 for n_figure in range(n_figures):
                     fig, axarr = plt.subplots(3, 3, figsize=(15, 15))
                     for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
@@ -519,21 +521,9 @@ class MaxQuantPlotter(BasePlotter):
                         ax.set_ylabel("Density")
 
                     if n_figure == (n_figures - 1):
-                        if n_exp < 4:
-                            for i in range(n_exp):
-                                axarr[2, 2 - i].remove()
-                        elif n_exp < 7:
-                            for i in range(3):
-                                axarr[2, i].remove()
-                            for j in range(n_exp - 3):
-                                axarr[1, 2 -  j]
-                        else:
-                            for i in range(3):
-                                axarr[2, i].remove()
-                                axarr[1, i].remove()
-                            for j in range(n_exp - 6):
-                                axarr[0, 2 - j]
-
+                        to_remove = remove_spare_axes(len(log2_intensities.columns))
+                        for i in to_remove:
+                            axarr[i[0], i[1]].remove()
                     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
                     pdf.savefig(fig)
@@ -576,9 +566,6 @@ class MaxQuantPlotter(BasePlotter):
                 b, h, bins = get_plot_data_from_hist(retention_time, density=True, n_bins=25)
 
                 n_figures = int(np.ceil(len(retention_time.columns) / 9))
-                n_figures = int(np.ceil(len(log2_intensities.columns) / 9))
-                n_exp = 9 - (len(log2_intensities.columns) - (n_figures - 1) * 9)
-
                 for n_figure in range(n_figures):
                     fig, axarr = plt.subplots(3, 3, figsize=(15, 15))
                     for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
@@ -595,20 +582,9 @@ class MaxQuantPlotter(BasePlotter):
                         ax.set_ylabel("Density")
 
                     if n_figure == (n_figures - 1):
-                        if n_exp < 4:
-                            for i in range(n_exp):
-                                axarr[2,2 - i].remove()
-                        elif n_exp < 7:
-                            for i in range(3):
-                                axarr[2, i].remove()
-                            for j in range(n_exp - 3):
-                                axarr[1,2 - j]
-                        else:
-                            for i in range(3):
-                                axarr[2, i].remove()
-                                axarr[1, i].remove()
-                            for j in range(n_exp - 6):
-                                axarr[0, 2 - j]
+                        to_remove = remove_spare_axes(len(retention_time.columns))
+                        for i in to_remove:
+                            axarr[i[0], i[1]].remove()
 
                     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -621,7 +597,7 @@ class MaxQuantPlotter(BasePlotter):
                 for experiment in retention_length.columns:
                     fig, ax = hist2d_with_hist(title=experiment.replace("_", " "), xdata=retention_time[experiment],
                                                ydata=retention_length[experiment], xlabel="Retention time [min]",
-                                               ylabel="Retention length [min]")
+                                               ylabel="Retention length [min]", max_x=retention_time.max().max())
 
                     pdf.savefig(figure=fig)
                     plt.close(fig)

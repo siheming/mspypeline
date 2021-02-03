@@ -796,6 +796,7 @@ class BasePlotter:
         background = set(self.all_intensities_dict[df_to_use].index)
         heights = ddict(list)
         test_results = ddict(list)
+        go_length = []
         for compartiment, all_pathway_genes in self.go_analysis_gene_names.items():
             all_pathway_genes = set(all_pathway_genes)
             # get all pathway genes that were detected throughout all experiments
@@ -804,7 +805,8 @@ class BasePlotter:
             not_pathway_genes = background - pathway_genes
             # sanity check
             assert pathway_genes | not_pathway_genes == background
-            heights["background"].append(len(pathway_genes))
+            heights["Total"].append(len(pathway_genes))
+            go_length.append(len(all_pathway_genes))
             for experiment in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
                 # create df with intensity means for specific experiment over all replicates
                 mean_intensity = self.all_tree_dict[df_to_use][experiment].aggregate()
@@ -825,7 +827,7 @@ class BasePlotter:
                 # self.logger.debug(f"{chi2}, {dof}, {ex}")
                 # self.logger.debug(f"{compartiment} {experiment}: table: {table} fisher: {pvalue:.4f}, chi2: {p:.4f}")
                 test_results[experiment].append(pvalue)
-        return {"heights": heights, "test_results": test_results}
+        return {"heights": heights, "test_results": test_results, "go_length": go_length}
 
     @add_end_docstrings(plot_para_return_docstring.format(
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_go_analysis_results`"
@@ -1218,7 +1220,7 @@ class BasePlotter:
         Will create the :meth:`plot_intensity_heatmap` for all normalization methods.
 
         """
-        plot_kwargs = dict(sort_index=True, sort_index_by_missing=False, sort_columns_by_missing=False)
+        plot_kwargs = dict(sort_index=False, sort_index_by_missing=True, sort_columns_by_missing=False)
         plot_kwargs.update(kwargs)
         return self.plot_all_normalizer_overview(
             dfs_to_use=dfs_to_use, levels=levels, plot_function=self.plot_intensity_heatmap,

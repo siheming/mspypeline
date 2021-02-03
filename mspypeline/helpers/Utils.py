@@ -255,3 +255,26 @@ def make_contrasts(exp1, exp2):
     contrast_matrix = pd.DataFrame(data=(1, -1), columns=[f"{exp2}-{exp1}"], index=[exp2, exp1])
     contrast_matrix.name = "Contrasts"
     return contrast_matrix
+
+
+def remove_spare_axes(samples):
+    n_figures = int(np.ceil(samples / 9))
+    n_exp = 9 - (samples - (n_figures - 1) * 9)
+
+    to_be_removed = []
+    #if n_figure == (n_figures - 1):
+    if n_exp < 4:
+        for i in range(n_exp):
+            to_be_removed.append([2, 2 - i])
+    elif n_exp < 7:
+        for i in range(3):
+            to_be_removed.append([2, i])
+        for j in range(n_exp - 3):
+            to_be_removed.append([1, 2 - j])
+    else:
+        for i in range(3):
+            to_be_removed.append([2, i])
+            to_be_removed.append([1, i])
+            for j in range(n_exp - 6):
+                to_be_removed.append([0, 2 - j])
+    return to_be_removed

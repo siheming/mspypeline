@@ -8,6 +8,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import matplotlib.cm as cm
 import matplotlib.lines as mlines
+import seaborn as sns
 from matplotlib import rcParams
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.collections import LineCollection
@@ -311,10 +312,12 @@ def save_volcano_results(
         col = "pval"
 
     # given pathway mapping(s)/proteins of interest create a list later used to be annotated in the volcano plot
+    pathway_label = ""
     POI_vals = []
     if interesting_proteins.values():
         all_pathway_proteins = set.union(*(set(x) for x in interesting_proteins.values()))
         POI_vals = volcano_data[volcano_data.index.isin(list(all_pathway_proteins))]
+        pathway_label = "_".join(interesting_proteins.keys())
 
     def get_volcano_significances(fchange, pval, pval_threshold, fchange_threshold):
         if pval > pval_threshold or abs(fchange) < np.log2(fchange_threshold):
@@ -335,11 +338,13 @@ def save_volcano_results(
                                   for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
 
     # save the volcano data csv in full and only the significant part
-    save_path, csv_name = get_path_and_name_from_kwargs("csv_full/volcano_plot_data_{g1}_vs_{g2}_full_{p}",
-                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
+    save_path, csv_name = get_path_and_name_from_kwargs("csv_full/volcano_plot_data_{g1}_vs_{g2}_full_{p}_{pathway_label}",
+                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'),
+                                                        pathway_label=pathway_label, **kwargs)
     save_csv_fn(save_path, csv_name, volcano_data)
-    save_path, csv_name = get_path_and_name_from_kwargs("csv_significant/volcano_plot_data_{g1}_vs_{g2}_significant_{p}",
-                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'), **kwargs)
+    save_path, csv_name = get_path_and_name_from_kwargs("csv_significant/volcano_plot_data_{g1}_vs_{g2}_significant_{p}_{pathway_label}",
+                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'),
+                                                        pathway_label=pathway_label, **kwargs)
     save_csv_fn(save_path, csv_name, volcano_data[volcano_data[col] < 0.05])
 
     significance_to_color = {"ns": "gray", "up": "red", "down": "blue"}
@@ -366,8 +371,9 @@ def save_volcano_results(
     # non sign gray, left side significant blue, right side red
     for regulation in significance_to_color:
         mask = [x == regulation for x in volcano_data["regulation"]]
-        ax.scatter(volcano_data["logFC"][mask], -np.log10(volcano_data[col])[mask], s=scatter_size,
-                   color=significance_to_color[regulation], label=f"{sum(mask)} {significance_to_label[regulation]}")
+        ax.scatter(volcano_data["logFC"][mask], -np.log10(volcano_data[col])[mask], s=scatter_size, edgecolors=None,
+                   color=significance_to_color[regulation], alpha=0.6,
+                   label=f"{sum(mask)} {significance_to_label[regulation]}")
     # get axis bounds for vertical and horizontal lines
     ymin, ymax = ax.get_ybound()
     xmin, xmax = ax.get_xbound()
@@ -389,10 +395,10 @@ def save_volcano_results(
         ax.axvline(-np.log2(fchange_threshold), **axline_kwargs, ymin=y_percentage, ymax=1)
         ax.axvline(np.log2(fchange_threshold), **axline_kwargs, ymin=y_percentage, ymax=1)
     # plot unique values with mean intensity at over maximum
-    ax_unique_down.scatter([0] * len(unique_g1), unique_g1, s=scatter_size, color="dodgerblue",
-                           label=f"{len(unique_g1)} unique in  {g1_name}")
-    ax_unique_up.scatter([0] * len(unique_g2), unique_g2, s=scatter_size, color="coral",
-                         label=f"{len(unique_g2)} unique in  {g2_name}")
+    ax_unique_down.scatter([0] * len(unique_g1), unique_g1, s=scatter_size, color="dodgerblue", edgecolors=None,
+                           alpha=0.6, label=f"{len(unique_g1)} unique in  {g1_name}")
+    ax_unique_up.scatter([0] * len(unique_g2), unique_g2, s=scatter_size, color="coral", edgecolors=None,
+                         alpha=0.6, label=f"{len(unique_g2)} unique in  {g2_name}")
     # adjust bounds for unique axis
     ymin_down, ymax_down = ax_unique_down.get_ybound()
     ymin_up, ymax_up = ax_unique_up.get_ybound()
@@ -401,7 +407,7 @@ def save_volcano_results(
 
     # figure stuff
     if show_suptitle:
-        fig.suptitle(f"{g1} vs {g2}")
+        fig.suptitle(f"{g1_name} vs {g2_name}")
     ax.set_xlabel(f"{intensity_label} Fold Change")
     ax.set_ylabel(r"-$Log_{10}$" + f" {col_mapping[col]}")
     ax_unique_down.set_ylabel(intensity_label)
@@ -410,8 +416,9 @@ def save_volcano_results(
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     # save intermediate results
-    path, plot_name = get_path_and_name_from_kwargs(name="plots/volcano_{g1}_{g2}_no_annotation_{p}", g1=g1, g2=g2,
-                                                         p=col_mapping[col].replace(' ', '_'), **kwargs)
+    path, plot_name = get_path_and_name_from_kwargs(name="plots/volcano_{g1}_{g2}_no_annotation_{p}_{pathway_label}",
+                                                    g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'),
+                                                    pathway_label=pathway_label, **kwargs)
     save_plot_func(fig, path, plot_name, save_volcano_results, **kwargs)
 
     # add text labels to the most significantly regulated genes
@@ -437,8 +444,9 @@ def save_volcano_results(
     adjust_text(texts, arrowprops=dict(width=0.15, headwidth=0, color='gray', alpha=0.6), ax=ax)
 
     # save the final result
-    path, plot_name = get_path_and_name_from_kwargs(name="plots/volcano_{g1}_{g2}_annotation_{p}", g1=g1, g2=g2,
-                                                         p=col_mapping[col].replace(' ', '_'), **kwargs)
+    path, plot_name = get_path_and_name_from_kwargs(name="plots/volcano_{g1}_{g2}_annotation_{p}_{pathway_label}",
+                                                    g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'),
+                                                    pathway_label=pathway_label, **kwargs)
     save_plot_func(fig, path, plot_name, save_volcano_results, **kwargs)
     # TODO scatter plot of significant genes
     return fig, (ax, ax_unique_down, ax_unique_up)
@@ -495,7 +503,7 @@ def save_pca_results(
         ax.scatter(
             pca_data.loc["PC_1"] / singular_values[0],
             pca_data.loc["PC_2"] / singular_values[1],
-            s = marker_size,
+            s = marker_size, edgecolors=None,
             c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
         ax.set_xlabel("PC 1 - {0}".format(pca_var[0]), fontsize = 22, labelpad=20)
         ax.set_ylabel("PC 2 - {0}".format(pca_var[1]), fontsize = 22, labelpad=20)
@@ -511,7 +519,7 @@ def save_pca_results(
                     ax.scatter(
                         pca_data.loc[f"PC_{row_pc}"] / singular_values[row],
                         pca_data.loc[f"PC_{col_pc}"] / singular_values[col],
-                        s = marker_size,
+                        s = marker_size, edgecolors=None,
                         c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
                     ax.set_xlabel(f"PC {row_pc} - {0}".format(pca_var[0]), fontsize = 22, labelpad=20)
                     ax.set_ylabel(f"PC {col_pc} - {0}".format(pca_var[1]), fontsize = 22, labelpad=20)
@@ -531,7 +539,7 @@ def save_pca_results(
             "significances": "csv_pval/{pathway}_pvalues"})
 def save_pathway_analysis_results(
         protein_intensities: pd.DataFrame, significances: pd.DataFrame = None, pathway: str = "",
-        show_suptitle: bool = False, threshold: float = 0.05, intensity_label: str = "Intensity",
+        show_suptitle: bool = True, threshold: float = 0.05, intensity_label: str = "Intensity",
         color_map: Optional[dict] = None, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
@@ -563,14 +571,17 @@ def save_pathway_analysis_results(
     plt.close("all")
     level_keys = list(protein_intensities.columns.get_level_values(0).unique())
     n_rows, n_cols = get_number_rows_cols_for_fig(protein_intensities.index)
-    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 5, int(n_rows * len(level_keys) / 1.2)))
+    fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 5, int(n_rows * len(level_keys) / 1.1)))
+    for i in range(n_rows * n_cols - len(protein_intensities.index)):
+        axarr[n_rows - 1, n_cols - 1 - i].remove()
     result_color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
     result_color_map.update(color_map if color_map is not None else {})
     if show_suptitle:
-        fig.suptitle(pathway, size=28)
+        fig.suptitle(pathway.replace("_", " "), size=28)
     for protein, (pos, ax) in zip(protein_intensities.index, np.ndenumerate(axarr)):
         ax.scatter(protein_intensities.loc[protein], [level_keys.index(c) for c in protein_intensities.columns.get_level_values(0)],
-                   c=[result_color_map[c] for c in protein_intensities.columns.get_level_values(0)])
+                   c=[result_color_map[c] for c in protein_intensities.columns.get_level_values(0)], edgecolors=None,
+                   alpha=0.6)
         ax.set_title(protein)
         ax.set_ylim((-1, len(level_keys)))
         ax.set_yticks([i for i in range(len(level_keys))])
@@ -578,7 +589,6 @@ def save_pathway_analysis_results(
         if len(level_keys_labels) == 0:
             level_keys_labels = level_keys
         ax.set_yticklabels(level_keys_labels)
-        ax.set_yticklabels(level_keys)
         ax.set_xlabel(intensity_label)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -594,7 +604,7 @@ def save_pathway_analysis_results(
             ax.set_xlim(right=xmax * (1 + to_annotate.shape[0] * 0.015))
             for i, (index, pval) in enumerate(to_annotate.items()):
                 plot_annotate_line(ax, level_keys.index(index[0]), level_keys.index(index[1]),
-                                   xmax * (1 + i * 0.015) - 0.005, pval, maxasterix = 3)
+                                   xmax * (1 + i * 0.015) - 0.005, pval, maxasterix=3)
 
         fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -647,9 +657,10 @@ def save_boxplot_results(
     labels = [label.replace("_", " ") for label in protein_intensities.columns]
     ax.boxplot(data, vert=vertical, labels=labels)
     if vertical:
-        ax.set_ylabel(intensity_label)
+        ax.set_ylabel(intensity_label, fontsize=15)
     else:
-        ax.set_xlabel(intensity_label)
+        ax.set_xlabel(intensity_label, fontsize=15)
+    ax.tick_params(labelsize=15)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, ax
 
@@ -704,7 +715,7 @@ def save_relative_std_results(
 
     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
     ax.scatter(intensities.mean(axis=1), relative_std_percent, c=plot_colors, marker="o", s=(2 * 72. / fig.dpi) ** 2,
-               alpha=0.8)
+               alpha=0.8, edgecolors=None)
 
     experiment_name = experiment_name.replace("_", "  ")
     if show_suptitle:
@@ -766,9 +777,9 @@ def save_detection_counts_results(
         ax.set_title(f"{col_name} \n total detected: {int(col_data.sum())}")
         ax.barh(col_data.index, col_data, color="skyblue")
 
-        if len(col_data) in range(1,9):
+        if len(col_data) in range(1, 9):
             fsize = 11
-        elif len(col_data) in range(9,13):
+        elif len(col_data) in range(9, 13):
             fsize = 7
         else:
             fsize = 5
@@ -848,8 +859,9 @@ def save_kde_results(
         lc.set_linewidth(1)
         line = ax.add_collection(lc)
 
-    ax.set_ylabel("Density")
-    ax.set_xlabel(intensity_label)
+    ax.set_ylabel("Density", fontsize=15)
+    ax.set_xlabel(intensity_label, fontsize=15)
+    ax.tick_params(axis="both", labelsize=15)
 
     ax.autoscale_view()
 
@@ -903,7 +915,7 @@ def save_n_proteins_vs_quantile_results(
 
     m = n_proteins.sort_values()
     for quant in quantiles.index:
-        ax.scatter(quantiles.loc[quant, :], n_proteins, c=[cmap(quant)] * len(n_proteins), alpha=0.5)
+        ax.scatter(quantiles.loc[quant, :], n_proteins, c=[cmap(quant)] * len(n_proteins), alpha=0.5, edgecolors=None)
         popt, pcov = curve_fit(linear, n_proteins, quantiles.loc[quant, :])
         fit = linear(m, *popt)
 
@@ -920,10 +932,11 @@ def save_n_proteins_vs_quantile_results(
     if cbar_ax is None:
         cbar_ax = fig.add_axes([0.2, 0.00, 0.6, 0.02])  # [left, bottom, width, height]
     cb = ColorbarBase(cbar_ax, cmap=cmap, orientation="horizontal")
-    cb.set_label("quantile")
+    cb.set_label("Quantile", fontsize=15)
 
-    ax.set_ylabel("# detected proteins")
-    ax.set_xlabel(intensity_label)
+    ax.set_ylabel("# detected proteins", fontsize=15)
+    ax.set_xlabel(intensity_label, fontsize=15)
+    ax.tick_params(axis="both", labelsize=15)
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, (ax, cbar_ax)
@@ -963,7 +976,7 @@ def save_normalization_overview_results(
     ax_colorbar = fig.add_subplot(gs[height - 1, 0])
     ax_boxplot = fig.add_subplot(gs[0:height, 1])
 
-    fig.suptitle(f"Normalization overview for {intensity_label}", size=28)
+    fig.suptitle(f"{intensity_label} overview", size=28)
     # order the boxplot data after the number of identified peptides
     boxplot_data = protein_intensities.loc[:, n_proteins.sort_values(ascending=False).index[::-1]]
 
@@ -1019,31 +1032,31 @@ def save_intensities_heatmap_result(
         fig, ax = plot
     else:
         plt.close("all")
-        fig, ax = plt.subplots(figsize=(14, 16))  # TODO scale with intensities.shape
+        if len(intensities.columns)*0.5 < 4:
+            height = 4
+        else:
+            height = len(intensities.columns)*0.5
+        fig, ax = plt.subplots(figsize=(17, height))
 
     if not isinstance(cmap, colors.Colormap):
         cmap = cm.get_cmap(cmap)
     if cmap_bad is not None:
         cmap.set_bad(color='dimgray')
 
-    im = ax.imshow(intensities.values.T, aspect="auto", cmap=cmap, vmin=vmin, vmax=vmax)
-    if cax is None:
-        cbar = ax.figure.colorbar(im, ax=ax)
-    else:
-        cbar = ax.figure.colorbar(im, cax=cax)
+    sns.heatmap(intensities.values.T, cmap=cmap, vmin=vmin, vmax=vmax, ax=ax, cbar_kws={'label': f"{intensity_label}"})
 
     if show_suptitle:
-        fig.suptitle(f"Present or absent in {intensity_label}")
-    ax.set_xlabel("Proteins")
+        fig.suptitle(f"Proteins detected or missing in {intensity_label}", fontsize=16)
+    ax.set_xlabel("Total proteins detected", fontsize=12)
 
-    y_lim = ax.get_ylim()
-    ax.set_yticks(np.linspace(0, len(intensities.columns) - 1, len(intensities.columns)))
     labels = [sample.replace("_", " ") for sample in intensities.columns.values]
-    ax.set_yticklabels(labels= labels)
-    ax.set_ylim(*y_lim)
+    ax.set_yticklabels(labels=labels)
+    ax.tick_params(axis="both", labelrotation=360, labelsize=10)
+    ax.set_xticks(np.arange(0, len(intensities), 500))
+    ax.set_xticklabels(np.arange(0, len(intensities), 500))
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    return fig, (ax, cbar.ax)
+    return fig, ax
 
 
 @save_plot("detection_per_replicate")
@@ -1089,9 +1102,9 @@ def save_detected_proteins_per_replicate_results(
         y_pos = [x for x in range(len(experiment_heights))]
         ax.barh(y_pos, experiment_heights, color="skyblue")
 
-        if len(experiment_heights) in range(1,10):
+        if len(experiment_heights) in range(1, 10):
             fsize = 11
-        elif len(experiment_heights) in range(10,16):
+        elif len(experiment_heights) in range(10, 16):
             fsize = 7
         else:
             fsize = 5
@@ -1117,8 +1130,8 @@ def save_detected_proteins_per_replicate_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_intensity_histogram_results(
         hist_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False,
-        compare_to_remaining: bool = False, legend: bool = False, n_bins: int = 25, histtype="bar", color=None,
-        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, **kwargs
+        compare_to_remaining: bool = False, legend: bool = True, n_bins: int = 25, show_mean: bool = True,
+        histtype="bar", color=None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, **kwargs
 ):
     """
     saves plot with prefix: {{name}}
@@ -1165,9 +1178,9 @@ def save_intensity_histogram_results(
     for col, (pos, ax) in zip(hist_data.columns.get_level_values(0).unique(), np.ndenumerate(axarr)):
         intensities = hist_data[col]
         try:
-            labels = intensities.columns
+            labels = intensities.columns.replace("_", " ")
         except AttributeError:
-            labels = col
+            labels = col.replace("_", " ")
 
         if "Log_2" in intensity_label:
             bins = np.linspace(np.nanmin(intensities.values), np.nanmax(intensities.values), n_bins)
@@ -1192,13 +1205,16 @@ def save_intensity_histogram_results(
         ax.set_xlabel(intensity_label)
         ax.set_ylabel("Counts")
         ax.set_xlim(hist_data.min().min(), hist_data.max().max())
-        ax.set_ylim(0, max(counts))
+        if histtype == ["bar"]:
+            ax.set_ylim(0, max(counts))
 
-        means = []
-        for col in intensities.columns:
-            means.append(float(intensities[col].mean()))
-        mean = float(sum(means)) / float(len(means))
-        ax.axvline(mean, linestyle="-", color="red", alpha=0.6, linewidth=2.5, label='mean: {:5.2f}'.format(mean))
+        if show_mean:
+            means = []
+            for col in intensities.columns:
+                means.append(float(intensities[col].mean()))
+            mean = float(sum(means)) / float(len(means))
+            ax.axvline(mean, linestyle="--", color="black", alpha=0.6, linewidth=2.5,
+                       label='mean: {:5.2f}'.format(mean))
         ax.legend(handlelength=1, handletextpad=0.8, loc='upper right', bbox_to_anchor=(0.98, 0.98), frameon=False)
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -1208,7 +1224,7 @@ def save_intensity_histogram_results(
 @save_plot("scatter_{full_name}")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_scatter_replicates_results(
-        scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False, **kwargs
+        scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1228,8 +1244,7 @@ def save_scatter_replicates_results(
     plt.close("all")
     fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 
-    if show_suptitle:
-        fig.suptitle()
+    min_counts = scatter_data.min().min()
 
     for rep1, rep2 in combinations(scatter_data.columns, 2):
         x1 = scatter_data.loc[:, rep1]
@@ -1239,14 +1254,16 @@ def save_scatter_replicates_results(
         exp = r"$r^{2}$"
         rep1 = rep1.replace("_", "  ")
         rep2 = rep2.replace("_", "  ")
-        ax.scatter(x1.fillna(x2.min() * 0.95)[plot_mask], x2.fillna(x2.min() * 0.95)[plot_mask],
-                       label=f"{rep1}  vs  {rep2},  "
-                        fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
-                        alpha=0.5, marker=".")
-        ax.set_xlabel(intensity_label)
-        ax.set_ylabel(intensity_label)
+        ax.scatter(x1.fillna(min_counts)[plot_mask], x2.fillna(min_counts)[plot_mask],
+                   label=f"{rep1}  vs  {rep2},  "
+                         fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
+                   alpha=0.5, marker=".", edgecolors=None)
+        ax.set_xlabel(f"{intensity_label} of x1")
+        ax.set_ylabel(f"{intensity_label} of x2")
+        if show_suptitle:
+            ax.set_title(f"Sactter comparison of replicates using {intensity_label}")
 
-    fig.legend(frameon=False,  bbox_to_anchor=(1.02, 0.5), loc="center left")
+    fig.legend(frameon=False, bbox_to_anchor=(1.02, 0.5), loc="center left", title=r"$\bf{Sample\ x1\ vs\ Sample\ x2}$")
     if "Log_2" not in intensity_label:
         ax.set_xscale("log")
         ax.set_yscale("log")
@@ -1298,11 +1315,9 @@ def save_rank_results(
     # plot the non pathway proteins
     x = [dic[protein][0] for protein in non_pathway_proteins]  # rank
     y = [dic[protein][1] for protein in non_pathway_proteins]  # intensity
-    median_rank = int(np.median(x))
-    median_int = rank_data.iloc[median_rank]
 
-    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-    ax.scatter(x, y, c="darkgray", s=12, alpha=0.3, marker=".", label="no pathway")
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    ax.scatter(x, y, c="darkgray", s=12, alpha=0.2, marker=".", label="no pathway")
 
     # plot all proteins of a specific pathway
     legend_text = []
@@ -1312,7 +1327,7 @@ def save_rank_results(
         if proteins:
             x = [dic[protein][0] for protein in proteins]  # the rank of each protein
             y = [dic[protein][1] for protein in proteins]  # the intensity of each protein
-            ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.8, marker=".", label=pathway.replace("_", " "))
+            ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.7, marker=".", edgecolors=None, label=pathway.replace("_", " "))
 
             median_pathway_rank = int(np.median(x))
             median_intensity = rank_data.iloc[median_pathway_rank]
@@ -1323,25 +1338,26 @@ def save_rank_results(
             # plot the median rank and intensity at that rank
             ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color=f"C{i}", alpha=0.6)
             ax.axhline(median_intensity, xmax=xm, linestyle="--", color=f"C{i}", alpha=0.6)
-            text = f"{pathway} : median rank: {median_pathway_rank / len(rank_data) * 100 :.1f}% "
+            pathway_label = pathway.replace("_", " ")
+            text = f"{pathway_label} : median rank: {median_pathway_rank / len(rank_data.dropna()) * 100 :.1f}% "
             legend_text.append(text)
             handle = mlines.Line2D([], [], color=f"C{i}", marker='.', markersize=10, label=text, linewidth=0)
             handles.append(handle)
 
-    no_pathway_text = f"no pathway assigned : median intensity : {median_int:.2E}"
-    legend_text.append(no_pathway_text)
-    handle = mlines.Line2D([], [], color="lightgray", marker='.', markersize=10, label=no_pathway_text, linewidth=0)
+    median_int_total = rank_data.dropna().median()
+    legend_text.append(f"Median intensity: {median_int_total :.1f} {intensity_label}")
+    handle = mlines.Line2D([], [], color="lightgray", marker='.', markersize=10, label=text, linewidth=0)
     handles.append(handle)
 
     exp_name = full_name.replace("_", " ")
     if "Log_2" not in intensity_label:
         ax.set_yscale("log")
-    ax.set_xlabel("Protein rank", size=10)
+    ax.set_xlabel("Protein rank", size=10, labelpad=10)
     # ax.set_ylabel(f"{exp_name} mean Log_2 intensity")
-    ax.set_ylabel(intensity_label, size=10)
-    ax.set_title(f"{exp_name} mean", weight="bold", size="14")
+    ax.set_ylabel(intensity_label, size=10, labelpad=10)
+    ax.set_title(f"{exp_name} mean", weight="bold", size="14", pad=10)
     # legend_text = [pathway for pathway in interesting_proteins.keys()]
-    fig.legend(labels=legend_text, handles=handles, bbox_to_anchor=(1.02, 0.5), loc="center left")
+    fig.legend(labels=legend_text, handles=handles, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, ax
 
@@ -1398,15 +1414,15 @@ def save_experiment_comparison_results(
     sample1 = sample1.replace("_", " ")
     sample2 = sample2.replace("_", " ")
 
-    ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=8, alpha=0.6, marker=".",
+    ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=8, alpha=0.6, marker=".", edgecolors=None,
                label=f"{sample1}  vs  {sample2}, {exp}: {r[0] ** 2:.4f}")
     ax.scatter(exclusive_sample1, [np.min(protein_intensities_sample2) * 0.95] * exclusive_sample1.shape[0],
-               s=8, alpha=0.6, marker=".", label=f"exclusive for  {sample1}")
+               s=8, alpha=0.6, marker=".", edgecolors=None, label=f"unique for  {sample1}")
     ax.scatter([np.min(protein_intensities_sample1) * 0.95] * exclusive_sample2.shape[0], exclusive_sample2,
-               s=8, alpha=0.6, marker=".", label=f"exclusive for  {sample2}")
+               s=8, alpha=0.6, marker=".", edgecolors=None, label=f"unique for  {sample2}")
 
-    ax.set_xlabel(sample1, weight = "bold", labelpad= 10)
-    ax.set_ylabel(sample2, weight = "bold", labelpad = 10)
+    ax.set_xlabel(f"{intensity_label} of {sample1}", labelpad=10)
+    ax.set_ylabel(f"{intensity_label} of {sample2}", labelpad=10)
     fig.legend(frameon=False, bbox_to_anchor=(1.02, 0.5), loc="center left")
 
     if "Log_2" not in intensity_label:
@@ -1425,8 +1441,8 @@ def save_experiment_comparison_results(
 @save_plot("go_analysis")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_go_analysis_results(
-        heights: Dict[str, list], test_results: Dict[str, list], go_analysis_gene_names: list,
-        intensity_label="Intensity", **kwargs
+        heights: Dict[str, list], test_results: Dict[str, list], go_length: Dict[str, list], go_analysis_gene_names: list,
+        show_suptitle: bool = True, intensity_label="Intensity", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1448,22 +1464,22 @@ def save_go_analysis_results(
 
     plt.close("all")
 
-    go_analysis_gene_names = [go_term.replace("_", " ") for go_term in go_analysis_gene_names]
+    go_analysis_gene_names = [go_term.replace("_", " \n").replace(" + ", " \n") for go_term in go_analysis_gene_names]
 
     heights_df = pd.DataFrame(data=heights, index=go_analysis_gene_names)
     test_results_df = pd.DataFrame(data=test_results, index=go_analysis_gene_names)
     # save go analysis data
-    save_path, csv_name = get_path_and_name_from_kwargs(name = "tables/go_analysis_data", **kwargs)
+    save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_data", **kwargs)
     save_csv_fn(save_path, csv_name, heights_df)
     save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_pvals", **kwargs)
     save_csv_fn(save_path, csv_name, test_results_df)
     #add extra col "background" to data frame - easier data handeling later
-    test_results_df.insert(0, "background", [1] * len(go_analysis_gene_names), True)
+    test_results_df.insert(0, "Total", [1] * len(go_analysis_gene_names), True)
 
     barwidth = 1 / (len(heights_df.columns) + 1)
     max_prot_count = heights_df.max().max()
     tick_y_pos = set()
-    fig, ax = plt.subplots(1, 1, figsize=(6, int(len(heights_df.columns) * len(go_analysis_gene_names)/1.5)))
+    fig, ax = plt.subplots(1, 1, figsize=(10, int(len(heights_df.columns) * len(go_analysis_gene_names)/1.5)))
     #for every sample plot a single bar per go term selected in one subplot
     for i, sample in enumerate(heights_df.columns):
         width = 1 / (len(heights_df.columns) + 1) * i
@@ -1476,14 +1492,20 @@ def save_go_analysis_results(
                 continue
             text = f"{pval:.4f}" if pval > 0.0005 else "< 0.0005"
             ax.annotate(f" p: {text}", xy=(x, y))
+
+    for i, total_count in enumerate(heights_df["Total"]):
+        ax.annotate(f"{total_count} / {go_length[i]}", xy=(total_count, list(tick_y_pos)[i]))
     #annotate each set of bars for a go term with the corresponding go term label = second layer of y axis labeling
     for i, go in enumerate(go_analysis_gene_names):
         text = go.split(".txt")[0].replace("_", " ")
-        ax.annotate(text, xy=(-max_prot_count*0.4, i + 0.5-(1/(2*(len(heights_df.columns)+1)))),
-                    rotation=90, verticalalignment="center", annotation_clip=False)
+        ax.annotate(text, xy=(-max_prot_count * 0.8, i + 0.5 - (1 / (2 * (len(heights_df.columns) + 1)))),
+                    verticalalignment="center", annotation_clip=False)
 
+    if show_suptitle:
+        ax.set_title(f"GO based analysis from {intensity_label}", pad=10)
     ax.set_yticks(sorted(list(tick_y_pos)))
-    ax.set_yticklabels(list(heights_df.columns.values) * len(heights_df))
+    labels = [label.replace("_", " ") for label in heights_df.columns]
+    ax.set_yticklabels(labels * len(heights_df))
     ax.set_xlim(0, max_prot_count + max_prot_count * 0.2)
     ax.set_xlabel('Number of detected proteins from GO list')
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
