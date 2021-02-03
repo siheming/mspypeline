@@ -39,13 +39,11 @@ def test_import():
     assert inspect.isfunction(get_analysis_design)
     assert inspect.isfunction(fill_dict)
     # test plotting backends
-    from mspypeline import matplotlib_plots, plotly_plots
+    from mspypeline import matplotlib_plots
     assert inspect.ismodule(matplotlib_plots)
-    assert inspect.ismodule(plotly_plots)
 
 
 def test_config_available():
     from mspypeline import path_package_config
     import os
     assert os.path.isdir(path_package_config)
-
