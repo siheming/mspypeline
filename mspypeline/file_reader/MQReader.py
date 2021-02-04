@@ -26,7 +26,7 @@ class MQReader(BaseReader):
                  reader_config: dict,
                  index_col: str = "Gene name",
                  duplicate_handling: str = "sum",
-                 drop_columns: Union[list, tuple, str] = None,
+                 drop_columns: Union[list, tuple, str] = [],
                  loglevel=logging.DEBUG):
         super().__init__(start_dir, reader_config, loglevel=loglevel)
 
@@ -36,7 +36,7 @@ class MQReader(BaseReader):
             self.data_dir = self.start_dir
         self.index_col = self.reader_config.get("index_col", index_col)
         self.duplicate_handling = self.reader_config.get("duplicate_handling", duplicate_handling)
-        to_drop = self.reader_config.get("drop_columns", drop_columns if drop_columns is not None else [])
+        self.to_drop = self.reader_config.get("drop_columns", drop_columns)
 
         # read a sample of all required files. If any required file is missing exit
         # but we need only one file from the max quant results
@@ -69,13 +69,13 @@ class MQReader(BaseReader):
             self.new_proteins_txt_columns = self.rename_df_columns(self.new_proteins_txt_columns)
 
         # get columns that should be dropped
-        if isinstance(to_drop, str):
-            to_drop = [to_drop]
+        if isinstance(self.to_drop, str):
+            self.to_drop = [self.to_drop]
 
         # subset on all columns that start with intensity
         self.intensity_column_names = sorted([x.replace("Intensity ", "") for x in self.new_proteins_txt_columns
                                               if x.startswith('Intensity ')], key=len, reverse=True)
-        self.intensity_column_names = [x for x in self.intensity_column_names if x not in to_drop]
+        self.intensity_column_names = [x for x in self.intensity_column_names if x not in self.to_drop]
         if not self.reader_config.get("all_replicates", False):
             self.reader_config["all_replicates"] = self.intensity_column_names
         # check the naming convention
@@ -154,6 +154,10 @@ class MQReader(BaseReader):
         file_dir = os.path.join(self.data_dir, MQReader.proteins_txt)
         df_protein_groups = pd.read_csv(file_dir, sep="\t")
         df_protein_groups.columns = self.rename_df_columns(df_protein_groups.columns)
+        if len(self.to_drop) > 0:
+            for i in self.to_drop: # funktioniert
+                cols = [c for c in df_protein_groups.columns if i in c]
+                df_protein_groups = df_protein_groups.drop(columns=cols)
 
 
         contaminants = (df_protein_groups[["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
@@ -243,6 +247,10 @@ class MQReader(BaseReader):
         file_dir = os.path.join(self.data_dir, MQReader.proteins_txt)
         df_protein_groups = pd.read_csv(file_dir, sep="\t")
         df_protein_groups.columns = self.rename_df_columns(df_protein_groups.columns)
+        if len(self.to_drop) > 0:
+            for i in self.to_drop: # funktioniert
+                cols = [c for c in df_protein_groups.columns if i in c]
+                df_protein_groups = df_protein_groups.drop(columns=cols)
         not_contaminants = (df_protein_groups[
                                 ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
@@ -324,6 +332,11 @@ class MQReader(BaseReader):
         file_dir = os.path.join(self.data_dir, MQReader.peptides_txt)
         df_peptides = pd.read_csv(file_dir, sep="\t")
         df_peptides.columns = self.rename_df_columns(df_peptides.columns)
+        if len(self.to_drop) > 0:
+            for i in self.to_drop: # funktioniert
+                cols = [c for c in df_peptides.columns if i in c]
+                df_peptides = df_peptides.drop(columns=cols)
+
         not_contaminants = (df_peptides[
                                 ["Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
@@ -339,6 +352,9 @@ class MQReader(BaseReader):
         df_summary.columns = self.rename_df_columns(df_summary.columns)
         df_summary = df_summary[df_summary["Enzyme"].notna()]
         df_summary["Experiment"] = self.rename_df_columns(df_summary["Experiment"])
+        if len(self.to_drop) > 0:
+            for drop_sample in self.to_drop:
+                df_summary = df_summary[df_summary["Experiment"] != drop_sample]
         return df_summary
 
     def preprocess_parameters(self):
@@ -349,6 +365,9 @@ class MQReader(BaseReader):
     def preprocess_evidence(self):
         file_dir = os.path.join(self.data_dir, MQReader.evidence_txt)
         df_evidence = pd.read_csv(file_dir, sep="\t")
+        if len(self.to_drop) > 0:
+            for i in self.to_drop:
+                df_evidence = df_evidence[df_evidence["Experiment"] != i]
         not_contaminants = (df_evidence[["Reverse", "Potential contaminant"]] == "+").sum(axis=1) == 0
         df_evidence = df_evidence[not_contaminants]
         df_evidence.columns = self.rename_df_columns(df_evidence.columns)
@@ -359,10 +378,16 @@ class MQReader(BaseReader):
         file_dir = os.path.join(self.data_dir, MQReader.ms_scans_txt)
         df_msscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
                                  usecols=["Raw file", "Total ion current", "Retention time"])
+        if len(self.to_drop) > 0:
+            for i in self.to_drop:
+                df_msscans = df_msscans[df_msscans.index.str.contains(i) == False]
         return df_msscans
 
     def preprocess_msmsScans(self):
         file_dir = os.path.join(self.data_dir, MQReader.msms_scans_txt)
         df_msmsscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
                                    usecols=["Raw file", "Total ion current", "Retention time"])
+        if len(self.to_drop) > 0:
+            for i in self.to_drop:
+                df_msmsscans = df_msmsscans[df_msmsscans.index.str.contains(i) == False]
         return df_msmsscans
