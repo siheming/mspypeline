@@ -264,10 +264,10 @@ def split_plot(n_rows, n_cols, figsize=(7, 7), plot_name="", data=None, plot_fn=
 @save_csvs({"unique_g1": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g1}",
             "unique_g2": "csv_significant/volcano_plot_data_{g1}_vs_{g2}_unique_{g2}"})
 def save_volcano_results(
-        volcano_data: pd.DataFrame, interesting_proteins, unique_g1: pd.Series = None, unique_g2: pd.Series = None, g1: str = "group1",
-        g2: str = "group2", adj_pval: bool = False, intensity_label: str = "Intensity",
-        show_suptitle: bool = True, pval_threshold: float = 0.05, fchange_threshold: float = 2,
-        scatter_size: float = 10, n_labelled_proteins: int = 10, **kwargs
+        volcano_data: pd.DataFrame, interesting_proteins, unique_g1: pd.Series = None,
+        unique_g2: pd.Series = None, g1: str = "group1", g2: str = "group2", adj_pval: bool = False,
+        intensity_label: str = "Intensity", show_suptitle: bool = True, pval_threshold: float = 0.05,
+        fchange_threshold: float = 2, scatter_size: float = 10, n_labelled_proteins: int = 10, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
     """
     Saves multiple csv files and images containing the information of the volcano plot
@@ -277,28 +277,30 @@ def save_volcano_results(
     volcano_data
         DataFrame containing data for the volcano plot with columns logFC and column specified under col. The index
         should be protein names or gene names
+    interesting_proteins
+        mapping of pathways that shoul be annotated in the volcano plot
     unique_g1
         Series containing intensities of proteins or genes unique to group one
     unique_g2
         Series containing intensities of proteins or genes unique to group two
     g1
-        Name of group one
+        name of first sample that should be analysed (downregulated)
     g2
-        Name of group two
+        name of second sample that should be analysed (upregulated)
     adj_pval
-        Should adjusted or unadjusted p values be used
+        should adjusted p values be used
     intensity_label
-        From which intensities were the fold changes calculated
+        from which intensities were the fold changes calculated
     show_suptitle
-        Should the figure title be shown
+        should the figure title be shown
     pval_threshold
-        Maximum p value to be considered significant
+        maximum p value to be considered significant
     fchange_threshold
-        Minimum fold change threshold (before log2 transformation) to be labelled significant
+        minimum fold change threshold (before log2 transformation) to be labelled significant
     scatter_size
         size of the points in the scatter plots
     n_labelled_proteins
-        number of points that will be marked in th plot
+        number of points that will be annotated in th plot
     kwargs
         {kwargs}
 
@@ -347,8 +349,8 @@ def save_volcano_results(
                                                         pathway_label=pathway_label, **kwargs)
     save_csv_fn(save_path, csv_name, volcano_data[volcano_data[col] < 0.05])
 
-    significance_to_color = {"ns": "gray", "up": "red", "down": "blue"}
-    significance_to_label = {"ns": "non-significant", "up": f"higher in  {g2_name}", "down": f"higher in  {g1_name}"}
+    significance_to_color = {"down": "blue", "ns": "gray", "up": "red"}
+    significance_to_label = {"down": f"higher in  {g1_name}", "ns": "non-significant", "up": f"higher in  {g2_name}"}
 
     # plot
     fig = plt.figure(figsize=(7, 7))
@@ -469,13 +471,17 @@ def save_pca_results(
     pca_fit
         PCA object that was fitted to normalized input data
     normalize
-        Boolean whether the transformed data should be normalized with the singular values before plotting
+        should the transformed data be normalized with the singular values before plotting
     intensity_label
         figure title
     color_map
         mapping from column name to color if custom colors are wanted
     show_suptitle:
-        Should the figure title be shown
+        should the figure title be shown
+    marker_size
+        size of the points in the scatter plots
+    legend_marker_size
+        size of the legend marker
     kwargs
         {kwargs}
 
@@ -554,7 +560,7 @@ def save_pathway_analysis_results(
     pathway
         name of the pathway
     show_suptitle
-        should the pathway name be shown as overall title
+        should the pathway name be shown as figure title
     threshold
         maximum p value indicating significance
     intensity_label
@@ -631,7 +637,7 @@ def save_boxplot_results(
     plot
         figure to put plot
     vertical
-        Should a vertical boxplot be created
+        should a vertical boxplot be created
     kwargs
         {kwargs}
 
@@ -684,7 +690,7 @@ def save_relative_std_results(
     intensity_label
         name of the intensities for the x label
     show_suptitle
-        should figure suptitle be shown
+        should the figure title be shown
     bins
         in which bins should the standard deviations be categorized
     cmap
@@ -998,8 +1004,7 @@ def save_normalization_overview_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_intensities_heatmap_result(
         intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad: str ="dimgray",
-        cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None,
-        vmin: Optional[float] = None,
+        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None, vmin: Optional[float] = None,
         intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
     """
@@ -1012,18 +1017,16 @@ def save_intensities_heatmap_result(
         color map to use for heatmap coloring
     cmap_bad
         color for missing values
-    cax
-        axis for the color bar
     plot
         figure to put plot
     vmax
-        passed to imshow
+        passed to seaborn heatmap
     vmin
-        passed to imshow
+        passed to seaborn heatmap
     intensity_label
         name of the experiment
     show_suptitle
-        should figure title be shown
+        should the figure title be shown
     kwargs
         {kwargs}
 
@@ -1074,7 +1077,7 @@ def save_detected_proteins_per_replicate_results(
     intensity_label
         name of the experiment
     show_suptitle
-        should a figure title be shown
+        should the figure title be shown
     kwargs
         {kwargs}
 
@@ -1143,9 +1146,13 @@ def save_intensity_histogram_results(
     intensity_label
         name of experiment
     show_suptitle
-        should a figure title be shown
+        should the figure title be shown
     compare_to_remaining
         should the sample be compared to the overall samples
+    legend
+        should the legend of the sample names be shown
+    show_mean
+        should the mean intensity be shown
     n_bins
         how many bins should the histograms have
     histtype
@@ -1236,7 +1243,7 @@ def save_scatter_replicates_results(
     intensity_label
         name of the experiment
     show_suptitle
-        should a figure title be shown
+        should the figure title be shown
     kwargs
         {kwargs}
 
@@ -1261,7 +1268,7 @@ def save_scatter_replicates_results(
         ax.set_xlabel(f"{intensity_label} of x1")
         ax.set_ylabel(f"{intensity_label} of x2")
         if show_suptitle:
-            ax.set_title(f"Sactter comparison of replicates using {intensity_label}")
+            ax.set_title(f"Scatter comparison of replicates using {intensity_label}")
 
     fig.legend(frameon=False, bbox_to_anchor=(1.02, 0.5), loc="center left", title=r"$\bf{Sample\ x1\ vs\ Sample\ x2}$")
     if "Log_2" not in intensity_label:
@@ -1276,7 +1283,7 @@ def save_scatter_replicates_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_rank_results(
         rank_data: pd.Series, interesting_proteins, intensity_label: str = "Intensity", full_name="Experiment",
-        show_suptitle: bool = False, **kwargs
+        **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1290,8 +1297,7 @@ def save_rank_results(
     intensity_label
         name of the experiment
     full_name
-    show_suptitle
-        should figure title be shown
+        name of the sample/group plotted
     kwargs
         {kwargs}
 
@@ -1390,7 +1396,7 @@ def save_experiment_comparison_results(
     intensity_label
         name of experiment
     show_suptitle
-        should figure title be shown
+        should the figure title be shown
     plot
         figure to put plot
     kwargs
@@ -1428,6 +1434,8 @@ def save_experiment_comparison_results(
     if "Log_2" not in intensity_label:
         ax.set_xscale("log")
         ax.set_yscale("log")
+    if show_suptitle:
+        ax.set_title(f"Scatter comparison of groups using {intensity_label}")
 
     xmin, xmax = ax.get_xbound()
     ymin, ymax = ax.get_ybound()
@@ -1453,8 +1461,12 @@ def save_go_analysis_results(
         mapping from samples to bar height
     test_results
         mapping from samples to p value
+    go_length
+        mapping of name to number of proteins of go terms
     go_analysis_gene_names
         names of the go term lists
+    show_suptitle
+        should the figure title be shown
     intensity_label
         name of the experiment
     kwargs
@@ -1566,7 +1578,7 @@ def save_bar_venn(
     ex
         figure title
     show_suptitle
-        should figure title be shown
+        should the figure title be shown
     kwargs
         {kwargs}
 
@@ -1631,7 +1643,7 @@ def save_venn(
     ex
         title for the plot
     show_suptitle
-        should the title be shown
+        should the figure title be shown
     title_font_size
         font size of the title
     set_label_font_size

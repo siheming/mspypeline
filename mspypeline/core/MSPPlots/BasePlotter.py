@@ -17,8 +17,8 @@ from mspypeline.core import MSPInitializer
 from mspypeline.file_reader import BaseReader
 from mspypeline.plotting_backend import matplotlib_plots
 from mspypeline.modules import default_normalizers, Normalization, DataTree
-from mspypeline.helpers import get_number_rows_cols_for_fig, get_number_of_non_na_values, \
-    get_intersection_and_unique, get_logger, dict_depth, add_end_docstrings, make_contrasts
+from mspypeline.helpers import get_number_of_non_na_values, get_intersection_and_unique, \
+    get_logger, dict_depth, add_end_docstrings, make_contrasts
 
 # TODO VALIDATE descriptive plots not changing between log2 and non log2
 
@@ -113,7 +113,7 @@ class BasePlotter:
         reader_data
             mapping to provide input data
         intensity_df_name
-            name of the key with input data
+            name/key with input data
         interesting_proteins
             mapping with pathway proteins to analyze
         go_analysis_gene_names
@@ -121,7 +121,7 @@ class BasePlotter:
         configs
             mapping of configuration
         required_reader
-            name of the reader
+            name of the file reader
         intensity_entries
             tuple of (key in all_tree_dict, prefix in data, name in plot). See :meth:`add_intensity_column`.
         loglevel
@@ -221,7 +221,6 @@ class BasePlotter:
         kwargs
             All kwargs, which are passed to the :func:`BasePlotter.__init__` can be overwritten by passing as kwargs.
 
-
         Returns
         -------
         BasePlotter
@@ -244,7 +243,7 @@ class BasePlotter:
 
     def create_results(self):
         """
-        Creates all plots that where the "create_plot" setting is set to True.
+        Creates all plots that where chosen/set to True in the settings "create plot"
         """
         global_settings = self.configs.get("global_settings", {})
         self.logger.debug(f"got global settings: %s", global_settings)
@@ -264,7 +263,7 @@ class BasePlotter:
     def add_intensity_column(self, option_name: str, name_in_file: str, name_in_plot: str,
                              scale: str = "normal", df: Optional[pd.DataFrame] = None):
         """
-        Adds a two options to all_intensities_dict and all_tree_dict, called option_name and option_name_log2.
+        Adds two options to all_intensities_dict and all_tree_dict, called option_name and option_name_log2.
 
         Parameters
         ----------
@@ -292,7 +291,8 @@ class BasePlotter:
         if scale == "log2":
             option_name.replace("_log2", "")
         self.int_mapping.update({option_name: name_in_file, f"{option_name}_log2": name_in_file})
-        self.intensity_label_names.update({option_name: name_in_plot, f"{option_name}_log2": rf"$Log_2$ {name_in_plot}"})
+        self.intensity_label_names.update({option_name: name_in_plot,
+                                           f"{option_name}_log2": rf"$Log_2$ {name_in_plot}"})
 
         # extract all raw intensities from the dataframe
         # replace all 0 with nan and remove the prefix from the columns
@@ -323,16 +323,17 @@ class BasePlotter:
             )
         })
 
-    def add_normalized_option(self, df_to_use: str, normalizer: Union[Type[Normalization.BaseNormalizer], Any], norm_option_name: str):
+    def add_normalized_option(self, df_to_use: str, normalizer: Union[Type[Normalization.BaseNormalizer], Any],
+                              norm_option_name: str):
         """
-        Adds new normalized keys to all_intensities_dict and all_tree_dict by getting the data from
-        all_intensities_dict[df_to_use] then applying the normalization and adding the new option with
+        Adds a new option/key of available data sets in all_intensities_dict and all_tree_dict by taking the data set
+        all_intensities_dict[df_to_use], performing the normalization on the data and then adding the new option with
         :meth:`add_intensity_column`.
 
         Parameters
         ----------
         df_to_use
-            which data should be normalized
+            data set that should be normalized
         normalizer
             normalizer either derived from :class:`~mspypeline.module.Normalization.BaseNormalizer` or a class with a
             :func:`fit_transform`
@@ -366,6 +367,20 @@ class BasePlotter:
         raise NotImplementedError
 
     def get_venn_group_data(self, df_to_use: str, level: int, non_na_function=get_number_of_non_na_values):
+        """
+
+        Parameters
+        ----------
+        df_to_use
+            which dataframe/intensity should be analysed
+        level
+            at which level of the data tree should the data be compared
+        non_na_function
+            threshold function to determine if proteins can be compared, default: :func:`get_number_of_non_na_values`
+        Returns
+        -------
+            Dictionary containing the proteins that can be compered per group
+        """
         n_children = {
             key: self.all_tree_dict[df_to_use][key].get_total_number_children()
             for key in self.all_tree_dict[df_to_use].level_keys_full_name[level]
@@ -378,6 +393,19 @@ class BasePlotter:
         return named_sets
 
     def get_venn_data_per_key(self, df_to_use: str, key: str):
+        """
+
+        Parameters
+        ----------
+        df_to_use
+            which dataframe/intensity should be analysed
+        key
+            which data node/group of samples should be compared
+
+        Returns
+        -------
+            Dictionary containing the proteins detected per sample
+        """
         df = self.all_tree_dict[df_to_use].aggregate(key, method=None) > 0
         per_group_dict = {column: set(df.index[df[column]]) for column in df}
         return per_group_dict
@@ -391,6 +419,17 @@ class BasePlotter:
         """
         Creates both a venn diagram and a bar-venn diagram comparing the similarity of groups on the selected level.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            a list of all created plots
         """
         plots = []
         for level in levels:
@@ -417,7 +456,17 @@ class BasePlotter:
     def plot_venn_results(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
         Creates both a venn diagram and a bar-venn diagram comparing the similarity of each group of the selected level.
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
 
+        Returns
+        -------
+            a list of all created plots
         """
         plots = []
         for level in levels:
@@ -437,21 +486,19 @@ class BasePlotter:
 
     def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """
-        Counts the number values greater than 0 per protein
+        Counts the number of intensity values greater than 0 per protein
 
         Parameters
         ----------
         df_to_use
-            DataFrame to use
+            which dataframes/intensities should be analysed
         level
-            level to use
+            at which level of the data tree should the data be compared
         kwargs
-            accepts kwargs
 
         Returns
         -------
-        dict
-            DataFrame containing the counts
+            Dictionary containing the counts of proteins detected in a sample per group
 
         """
         level_values = self.all_tree_dict[df_to_use].level_keys_full_name[level]
@@ -473,6 +520,17 @@ class BasePlotter:
         """
         Shows for each group of the selected level how often proteins were detected.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -486,7 +544,21 @@ class BasePlotter:
                     plots.append(plot)
         return plots
 
-    def get_detected_proteins_per_replicate_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, Dict[str, pd.Series]]:
+    def get_detected_proteins_per_replicate_data(self, df_to_use: str, level: int, **kwargs
+                                                 ) -> Dict[str, Dict[str, pd.Series]]:
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        level
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            Dictionary containing the protein counts per sample
+        """
         # determine number of rows and columns in the plot based on the number of experiments
         level_values = self.all_tree_dict[df_to_use].level_keys_full_name[level]
         all_heights = {}
@@ -498,17 +570,31 @@ class BasePlotter:
             for col in intensities:
                 h = len(intensities[col][intensities[col] > 0])
                 heights.append(h)
-            all_heights[experiment] = pd.Series(heights, index=["Total"] + intensities.columns.to_list(), name=experiment)
+            all_heights[experiment] = pd.Series(heights, index=["Total"] + intensities.columns.to_list(),
+                                                name=experiment)
         return {"all_heights": all_heights}
 
     @add_end_docstrings(plot_para_return_docstring.format(
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_detected_proteins_per_replicate_results`"
     ))
     @validate_input
-    def plot_detected_proteins_per_replicate(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+    def plot_detected_proteins_per_replicate(self, dfs_to_use: Union[str, Iterable[str]],
+                                             levels: Union[int, Iterable[int]], **kwargs):
         """
-        Shows for each group the number of detected proteins per sample, as well as the overall total of detected
-        proteins. The average number of detected proteins is indicated as gray dashed line.
+        Shows the number of detected proteins per sample as well as the total number of detected proteins for each
+        group. The average number of detected proteins is indicated as gray dashed line.
+
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
 
         """
         plots = []
@@ -524,15 +610,41 @@ class BasePlotter:
         return plots
 
     def get_intensity_histograms_data(self, df_to_use: str, level: int, **kwargs):
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        level
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            Dictionary containing the histogram data per group
+        """
         return {"hist_data": self.all_tree_dict[df_to_use].groupby(level, method=None)}
 
     @add_end_docstrings(plot_para_return_docstring.format(
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_intensity_histogram_results`"
     ))
     @validate_input
-    def plot_intensity_histograms(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+    def plot_intensity_histograms(self, dfs_to_use: Union[str, Iterable[str]],
+                                  levels: Union[int, Iterable[int]], **kwargs):
         """
         Shows for each group a histogram of all intensities.
+
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
 
         """
         plots = []
@@ -548,6 +660,17 @@ class BasePlotter:
         return plots
 
     def get_scatter_replicates_data(self, df_to_use: str, full_name: str) -> Dict[str, pd.DataFrame]:
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        full_name
+            which data node/group of samples should be compared
+        Returns
+        -------
+            Dictionary containing the scatter data
+        """
         data = self.all_tree_dict[df_to_use][full_name].aggregate(None)
         if data.empty:
             return {}
@@ -557,11 +680,25 @@ class BasePlotter:
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_scatter_replicates_results`"
     ))
     @validate_input
-    def plot_scatter_replicates(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+    def plot_scatter_replicates(self, dfs_to_use: Union[str, Iterable[str]],
+                                levels: Union[int, Iterable[int]], **kwargs):
         """
-        For each group, scatters all samples against each other. Also shows unique proteins in the bottom and right
-        section of the plot. The legend also shows the r² of each pair wise scatter.
+        For each group, pairwise scatter comparisons of all samples of a group are plotted above each other in one
+        graph. Unique proteins per sample are shown at the bottom and right side of the graph. Pearsons's Correlation
+        Coefficient r² is given in the legend and calculated based on proteins of diagonal scatter/proteins that have a non na value in both
+        samples compared.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -577,6 +714,17 @@ class BasePlotter:
         return plots
 
     def get_rank_data(self, df_to_use: str, full_name: str, **kwargs) -> Dict[str, pd.Series]:
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        full_name
+            which data node/group of samples should be compared
+        Returns
+        -------
+            Dictionary containing the rank data
+        """
         return {"rank_data": self.all_tree_dict[df_to_use][full_name].aggregate().sort_values(ascending=False)}
 
     @add_end_docstrings(plot_para_return_docstring.format(
@@ -585,11 +733,24 @@ class BasePlotter:
     @validate_input
     def plot_rank(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
-        Creates one plot per group, where all intensities are sorted and plotted against their rank.
-        The highest intensity is rank 0 the lowest intensity is the number of proteins - 1. Additionally, if a protein
-        is part of a selected pathway it will get colored and the median rank of all proteins, which are part of a
-        pathway is indicated.
+        Creates one plot per group (mean intensity of samples), where all proteins are sorted by intensity value and
+        plotted against their rank. The highest intensity accounts for rank 0 the lowest intensity for the number of
+        proteins - 1 whereby proteins with missing values are neglected. The median intensity of all proteins is given
+        in the legend. Additionally, if a protein is part of a selected pathway it will be presented in color and the
+        median rank of all proteins of a given pathway is indicated. Multiple pathways can be selected and will be
+        represented in the same graph as distinct groups.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -612,15 +773,13 @@ class BasePlotter:
         Parameters
         ----------
         df_to_use
-            which dataframe/intensity should be used
+            which dataframes/intensities should be analysed
         full_name
-            name of the experiment which should be accepted
-        kwargs
-            accepts kwargs
+            which data node/group of samples should be compared
 
         Returns
         -------
-        Dictionary with the intensity of the experiment and the relative standard deviations
+            Dictionary containing the intensity of the experiment and the relative standard deviations
 
         """
         intensities = self.all_tree_dict[df_to_use][full_name].aggregate(None)
@@ -638,10 +797,22 @@ class BasePlotter:
     @validate_input
     def plot_relative_std(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
-        Creates on plot per group with the relative standard deviation of each protein. Low deviation shows that
+        Creates one plot per group with the relative standard deviation of each protein. Low deviation shows that
         measured intensities are stable over multiple samples.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
+
         plots = []
         # TODO check with log2 thresholds
         for level in levels:
@@ -649,14 +820,32 @@ class BasePlotter:
                 for full_name in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
                     data = self.get_relative_std_data(df_to_use=df_to_use, full_name=full_name, **kwargs)
                     if data:
-                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], experiment_name=full_name,
-                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
+                                           experiment_name=full_name, df_to_use=df_to_use, level=level,
+                                           save_path=self.file_dir_descriptive)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_relative_std_results(**data, **plot_kwargs)
                         plots.append(plot)
         return plots
 
     def get_pathway_analysis_data(self, df_to_use: str, level: int, pathway: str, equal_var=True, **kwargs):
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        level
+            at which level of the data tree should the data be compared
+        pathway
+            which pathway should be analysed
+        equal_var
+            should equal variance be assumed
+        kwargs
+
+        Returns
+        -------
+            Dictionary containing the protein intensities and significances
+        """
         level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
         found_proteins = set(self.interesting_proteins[pathway])
         found_proteins &= set(self.all_intensities_dict[df_to_use].index)
@@ -694,10 +883,24 @@ class BasePlotter:
     @validate_input
     def plot_pathway_analysis(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
-        Creates one Plot per selected pathway. Then for each group one row is added and all pairwise comparisons
-        between groups are calculated with an independent
+        Creates two plots per selected pathway, one indicating significances and the other without. For each protein of
+        the pathway a subplot is created displaying the intensities of the protein for all groups and significances
+        are calculated for each pairwirse comparison between groups with an independent
         `t-test <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html>`__.
+        For a group of multiple samples, the protein intensity per sample is shown as a single scatter dot colored
+        per group.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -715,7 +918,8 @@ class BasePlotter:
     def get_pathway_timeline_data(self):
         pass
 
-    def plot_pathway_timecourse(self, df_to_use: str = "raw", show_suptitle: bool = False, levels: Iterable = (2,), **kwargs):
+    def plot_pathway_timecourse(self, df_to_use: str = "raw", show_suptitle: bool = False,
+                                levels: Iterable = (2,), **kwargs):
         """
         not yet implemented - will advance code later
         """
@@ -750,9 +954,24 @@ class BasePlotter:
         """
 
     def get_experiment_comparison_data(self, df_to_use: str, full_name1: str, full_name2: str):
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        full_name1
+            name of the first data node/group that should be compared to 'full_name2'
+        full_name2
+            name of the second data node/group that should be compared to 'full_name1'
+
+        Returns
+        -------
+            Dictionary containing the protein intensities for each group as well as the proteins unique for each group
+        """
         protein_intensities_sample1 = self.all_tree_dict[df_to_use][full_name1].aggregate(None)
         protein_intensities_sample2 = self.all_tree_dict[df_to_use][full_name2].aggregate(None)
-        mask, exclusive_1, exclusive_2 = get_intersection_and_unique(protein_intensities_sample1, protein_intensities_sample2)
+        mask, exclusive_1, exclusive_2 = get_intersection_and_unique(protein_intensities_sample1,
+                                                                     protein_intensities_sample2)
         # flatten all replicates
         exclusive_sample1 = protein_intensities_sample1[exclusive_1].mean(axis=1)
         exclusive_sample2 = protein_intensities_sample2[exclusive_2].mean(axis=1)
@@ -771,11 +990,23 @@ class BasePlotter:
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_experiment_comparison_results`"
     ))
     @validate_input
-    def plot_experiment_comparison(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
-        # TODO correlation of log2 and not log 2 data is different
+    def plot_experiment_comparison(self, dfs_to_use: Union[str, Iterable[str]],
+                                   levels: Union[int, Iterable[int]], **kwargs):
         """
-        Creates all pairwise comparisons between available groups and shows r² of the data.
+        Creates all pairwise comparisons between available groups and gives Pearson's Correlation Coefficient r²
+        of the data.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -783,14 +1014,27 @@ class BasePlotter:
                 for ex1, ex2 in combinations(self.all_tree_dict[df_to_use].level_keys_full_name[level], 2):
                     data = self.get_experiment_comparison_data(df_to_use=df_to_use, full_name1=ex1, full_name2=ex2)
                     if data:
-                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], sample1=ex1, sample2=ex2,
-                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], sample1=ex1,
+                                           sample2=ex2, df_to_use=df_to_use, level=level,
+                                           save_path=self.file_dir_descriptive)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_experiment_comparison_results(**data, **plot_kwargs)
                         plots.append(plot)
         return plots
 
     def get_go_analysis_data(self, df_to_use: str, level: int):
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        level
+            at which level of the data tree should the data be compared
+        Returns
+        -------
+            Dictionary containing the counts of proteins per sample of each given GO list, the corresponding
+            Fisher's exact test results and the the total number of proteins of each chosen GO list
+        """
         if not self.go_analysis_gene_names:
             return {}
         background = set(self.all_intensities_dict[df_to_use].index)
@@ -851,6 +1095,17 @@ class BasePlotter:
         | **not in experiment**  | not_experiment_genes & pathway_genes | not_experiment_genes & not_pathway_genes |
         +------------------------+--------------------------------------+------------------------------------------+
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -865,7 +1120,23 @@ class BasePlotter:
                     plots.append(plot)
         return plots
 
-    def get_r_volcano_data(self, g1: str, g2: str, df_to_use: str, level: int):
+    def get_r_volcano_data(self, g1: str, g2: str, df_to_use: str):
+        """
+        This function uses the R package limma to calculate the significances (might cause problems when used called)
+
+        Parameters
+        ----------
+        g1
+            first sample that should be analysed (downregulated)
+        g2
+            second sample that should be analysed (upregulated)
+        df_to_use
+            which dataframes/intensities should be analysed
+
+        Returns
+        -------
+            Dictionary containing the volcano data and the unique protein intensities per sample
+        """
         # import r interface package
         from rpy2.robjects.packages import importr
         from rpy2.robjects import pandas2ri
@@ -928,7 +1199,8 @@ class BasePlotter:
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_volcano_results`"
     ))
     @validate_input
-    def plot_r_volcano(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+    def plot_r_volcano(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]],
+                       sample1: str = None, sample2: str = None, **kwargs):
         """
         Creates a plot for each pairwise comparison of the available groups. The volcano plot shows the log fold change
         between the two different conditions against the p value. The p value is determined using the R limma package.
@@ -938,15 +1210,33 @@ class BasePlotter:
         .. note::
            should be used with log2 intensities
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        sample1
+            first sample that should be compared (downregulated)
+        sample2
+            second sample that should be compared (upregulated)
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
             for df_to_use in dfs_to_use:
-                level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
+                if sample1 and sample2:
+                    level_keys = [sample1, sample2]
+                else:
+                    level_keys = self.all_tree_dict[df_to_use].level_keys_full_name[level]
                 for g1, g2 in combinations(level_keys, 2):
-                    data = self.get_r_volcano_data(g1, g2, df_to_use, level)
+                    data = self.get_r_volcano_data(g1, g2, df_to_use)
                     if data:
-                        plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use, level=level,
+                        plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use,
                                            intensity_label=self.intensity_label_names[df_to_use],
                                            interesting_proteins=self.interesting_proteins, split_files=True)
                         plot_kwargs.update(**kwargs)
@@ -956,6 +1246,27 @@ class BasePlotter:
 
     def get_pca_data(self, df_to_use: str, level: int, n_components: int = 2, fill_value: float = 0,
                      no_missing_values: bool = True, fill_na_before_norm: bool = False, **kwargs):
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        level
+            at which level of the data tree should the data be compared
+        n_components
+            how many principal components should be calculated
+        fill_value
+            if data should be interpolated, which fill value should be used
+        no_missing_values
+            should missing values be neglected
+        fill_na_before_norm
+            if data should be interpolated, should this be done before z-score calculation
+        kwargs
+
+        Returns
+        -------
+            Dictionary containing the pca data and the pca fit for all components calculated
+        """
         data_input = self.all_tree_dict[df_to_use].groupby(level, method=None)
         if no_missing_values:
             data_input = data_input.dropna(axis=0)
@@ -982,6 +1293,17 @@ class BasePlotter:
         Creates a PCA plot comparing all components against each other. The default is 2 components and only compares
         PC 1 vs PC 2. Each group is colored differently.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -1002,16 +1324,14 @@ class BasePlotter:
         Parameters
         ----------
         df_to_use
-            which dataframe should be used
+            which dataframes/intensities should be analysed
         level
-            on which level should the data be grouped
+            at which level of the data tree should the data be compared
         kwargs
-            accepts kwargs
 
         Returns
         -------
-        dict
-            A dictionary with the the protein intensities
+            Dictionary containing the protein intensities
         """
         df = self.all_tree_dict[df_to_use].groupby(level)
         # sort columns by median intensity
@@ -1026,6 +1346,17 @@ class BasePlotter:
         """
         Creates one boxplot per group sorted by median intensity.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -1039,7 +1370,23 @@ class BasePlotter:
                     plots.append(plot)
         return plots
 
-    def get_n_protein_vs_quantile_data(self, df_to_use: str, level: int, quantile_range: Optional[np.array] = None, **kwargs):
+    def get_n_protein_vs_quantile_data(self, df_to_use: str, level: int, quantile_range: Optional[np.array] = None,
+                                       **kwargs):
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        level
+            at which level of the data tree should the data be compared
+        quantile_range
+            which quantile range should be used for analysis
+        kwargs
+
+        Returns
+        -------
+            Dictionary containing the quantiles of the data and number of proteins per sample
+        """
         if quantile_range is None:
             quantile_range = np.arange(0.05, 1, 0.05)
         df = self.all_tree_dict[df_to_use].groupby(level)
@@ -1051,12 +1398,24 @@ class BasePlotter:
         ":func:`~mspypeline.plotting_backend.matplotlib_plots.save_n_proteins_vs_quantile_results`"
     ))
     @validate_input
-    def plot_n_proteins_vs_quantile(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
+    def plot_n_proteins_vs_quantile(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]],
+                                    **kwargs):
         """
-        Plot the intensity from df_to_use against the number of identified proteins. There should be no correlation
-        (a perpendicular / vertical line) between the x and y axis. Otherwise this indicates that intensity values
-        are probably not missing at random but due to the detection limit.
+        Plots the intensity from df_to_use against the number of identified proteins. There should be no
+        correlation (a perpendicular / vertical line) between the x and y axis. Otherwise this indicates that intensity
+        values are probably not missing at random but due to the detection limit.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -1071,6 +1430,19 @@ class BasePlotter:
         return plots
 
     def get_kde_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        level
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            Dictionary containing the protein intensities per sample
+        """
         intensities = self.all_tree_dict[df_to_use].groupby(level)
         return {"intensities": intensities}
 
@@ -1082,6 +1454,17 @@ class BasePlotter:
         """
         Kernel density estimate plot.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -1107,6 +1490,17 @@ class BasePlotter:
         This can be useful to compare different normalization methods. The three different combined plots are:
         :meth:`plot_kde`, :meth:`plot_boxplot`, :meth:`plot_n_proteins_vs_quantile`.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for level in levels:
@@ -1127,6 +1521,25 @@ class BasePlotter:
 
     def get_intensity_heatmap_data(self, df_to_use: str, level: int, sort_index: bool = False,
                                    sort_index_by_missing: bool = True, sort_columns_by_missing: bool = True, **kwargs):
+        """
+        Parameters
+        ----------
+        df_to_use
+            which dataframes/intensities should be analysed
+        level
+            at which level of the data tree should the data be compared
+        sort_index
+            should proteins be sorted alphanumerically
+        sort_index_by_missing
+            should proteins be sorted by number of missing values across samples
+        sort_columns_by_missing
+            should samples be sorted by number of missing values
+        kwargs
+
+        Returns
+        -------
+            Dictionary containing protein intensities of samples
+        """
         intensities = self.all_tree_dict[df_to_use].groupby(level)
         if sort_index_by_missing:
             index = intensities.isna().sum(axis=1).sort_values().index
@@ -1150,6 +1563,17 @@ class BasePlotter:
         Heatmap for all protein intensities. Adds one row per group. Can be used to spot weird patterns in normalization
         methods.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
+        Returns
+        -------
+            list of all created plots
         """
         plots = []
         for df_to_use in dfs_to_use:
@@ -1170,15 +1594,21 @@ class BasePlotter:
         Parameters
         ----------
         dfs_to_use
+            which dataframes/intensities should be plotted
         levels
+            at which level of the data tree should the data be compared
         plot_function
+            which plot should be created
         file_name
+            name of the file that will be crated and saved
         normalizers
+            normalizers either derived from :class:`~mspypeline.module.Normalization.BaseNormalizer` or a class with a
+            :func:`fit_transform`
         kwargs
 
         Returns
         -------
-
+            list of all created plots
         """
         max_depth = dict_depth(self.analysis_design)
         if self.configs.get("has_techrep", False):
@@ -1206,6 +1636,14 @@ class BasePlotter:
         """
         Will create the :meth:`plot_normalization_overview` for all normalization methods.
 
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
+
         """
         plot_kwargs = dict()
         plot_kwargs.update(kwargs)
@@ -1218,6 +1656,14 @@ class BasePlotter:
     def plot_heatmap_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
         """
         Will create the :meth:`plot_intensity_heatmap` for all normalization methods.
+
+        Parameters
+        ----------
+        dfs_to_use
+            which dataframes/intensities should be plotted
+        levels
+            at which level of the data tree should the data be compared
+        kwargs
 
         """
         plot_kwargs = dict(sort_index=False, sort_index_by_missing=True, sort_columns_by_missing=False)

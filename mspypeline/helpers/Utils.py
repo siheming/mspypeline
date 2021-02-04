@@ -262,7 +262,6 @@ def remove_spare_axes(samples):
     n_exp = 9 - (samples - (n_figures - 1) * 9)
 
     to_be_removed = []
-    #if n_figure == (n_figures - 1):
     if n_exp < 4:
         for i in range(n_exp):
             to_be_removed.append([2, 2 - i])
