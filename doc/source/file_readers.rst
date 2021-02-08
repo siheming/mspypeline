@@ -26,7 +26,7 @@ The Report will use these files (if available):
 * msmsScans.txt
 * evidence.txt
 
-If files are missing some plots will not be created or might be empty.
+If files are missing some plots of the quality control report will not be created or might be empty.
 
 The Plots will use these files:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

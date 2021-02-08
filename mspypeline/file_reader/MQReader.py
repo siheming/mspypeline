@@ -182,7 +182,7 @@ class MQReader(BaseReader):
         Returns
         -------
         DataFrame
-            containing preprocessed data of contaminants from *proteinGroups.txt* file
+            DataFrame containing preprocessed data of contaminants from *proteinGroups.txt* file
         """
         file_dir = os.path.join(self.data_dir, MQReader.proteins_txt)
         df_protein_groups = pd.read_csv(file_dir, sep="\t")
@@ -280,7 +280,7 @@ class MQReader(BaseReader):
         Returns
         -------
         DataFrame
-            containing preprocessed data from *proteinGroups.txt* file
+            DataFrame containing preprocessed data from *proteinGroups.txt* file
         """
         file_dir = os.path.join(self.data_dir, MQReader.proteins_txt)
         df_protein_groups = pd.read_csv(file_dir, sep="\t")
@@ -371,7 +371,7 @@ class MQReader(BaseReader):
         Returns
         -------
         DataFrame
-            containing preprocessed data from *peptides.txt* file
+            DataFrame containing preprocessed data from *peptides.txt* file
         """
         file_dir = os.path.join(self.data_dir, MQReader.peptides_txt)
         df_peptides = pd.read_csv(file_dir, sep="\t")
@@ -392,7 +392,7 @@ class MQReader(BaseReader):
         Returns
         -------
         DataFrame
-            containing preprocessed data from *summary.txt* file
+            DataFrame containing preprocessed data from *summary.txt* file
         """
         file_dir = os.path.join(self.data_dir, MQReader.summary_txt)
         df_summary = pd.read_csv(file_dir, sep="\t", encoding="unicode-escape")
@@ -407,6 +407,7 @@ class MQReader(BaseReader):
 
         Returns
         -------
+        DataFrame
             DataFrame containing preprocessed data from *parameters.txt* file
         """
         file_dir = os.path.join(self.data_dir, MQReader.parameters_txt)
@@ -422,7 +423,7 @@ class MQReader(BaseReader):
         Returns
         -------
         DataFrame
-            containing preprocessed data from *evidence.txt* file
+            DataFrame containing preprocessed data from *evidence.txt* file
         """
         file_dir = os.path.join(self.data_dir, MQReader.evidence_txt)
         df_evidence = pd.read_csv(file_dir, sep="\t")
@@ -440,7 +441,7 @@ class MQReader(BaseReader):
         Returns
         -------
         DataFrame
-            containing preprocessed data from *msScans.txt* file
+            DataFrame containing preprocessed data from *msScans.txt* file
         """
         file_dir = os.path.join(self.data_dir, MQReader.ms_scans_txt)
         df_msscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
@@ -455,7 +456,7 @@ class MQReader(BaseReader):
         Returns
         -------
         DataFrame
-            containing preprocessed data from *msmsScans.txt* file
+            DataFrame containing preprocessed data from *msmsScans.txt* file
         """
         file_dir = os.path.join(self.data_dir, MQReader.msms_scans_txt)
         df_msmsscans = pd.read_csv(file_dir, sep="\t", index_col=[0],

@@ -1,21 +1,22 @@
 # ##### MAIN SETTINGS ########
-# settings that effect which results will be created
+# settings that affect data processing
 
-selected_reader: mqreader
-selected_normalizer: None
+selected_reader: mqreader  # which file reader should be used
+selected_normalizer: None  # which normalizer should be used
 
-pathways: []
-# list of pathways which should be analyzed
+has_techrep: true  # does the file have technical replicates (can be "true" or "false")
 
-go_terms: []
-# list of go_terms which should be analyzed
+use_protein_id: false   # should the protein id be used (can be "true" or "false"), or TODO
 
-has_techrep: true
-# does the file have technical replicates
-# can be "true" or "false"
+equal_variance: false   # should equal variance be assumed for the t-test? (can be "true" or "false")
+
+pathways: []       # list of pathways which should be analyzed
+go_terms: []       # list of go_terms which should be analyzed
+
+mqreader: {}
 
 # ###### PLOT CREATION SETTINGS #######
-
+# settings that determine which results will be created
 plot_normalization_overview_all_normalizers_settings:
   create_plot: false
   dfs_to_use: []
@@ -36,22 +37,28 @@ plot_number_of_detected_proteins_settings:
   dfs_to_use: []
   levels: []
 
+plot_venn_results_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+
+plot_venn_groups_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+
+plot_pca_overview_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  no_missing_values: true      # should missing values be neglected? (can be "true" or "false")
+
 plot_intensity_histograms_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
 
 plot_relative_std_settings:
-  create_plot: false
-  dfs_to_use: []
-  levels: []
-
-plot_rank_settings:
-  create_plot: false
-  dfs_to_use: []
-  levels: []
-
-plot_pathway_analysis_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
@@ -66,12 +73,17 @@ plot_experiment_comparison_settings:
   dfs_to_use: []
   levels: []
 
-plot_go_analysis_settings:
+plot_rank_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
 
-plot_venn_results_settings:
+plot_pathway_analysis_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+
+plot_go_analysis_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
@@ -80,28 +92,6 @@ plot_r_volcano_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
+  # should the adjusted p-val be used? (can be "true" or "false")
   adj_pval: false
-  fchange_threshold: 2
 
-
-plot_venn_groups_settings:
-  create_plot: false
-  dfs_to_use: []
-  levels: []
-
-plot_pca_overview_settings:
-  create_plot: false
-  dfs_to_use: []
-  levels: []
-  no_missing_values: true
-  fill_na_before_norm: false
-  fill_value:  0
-
-
-use_protein_id: false
-# should the protein id be used, or TODO
-# can be "true" or "false"
-
-equal_variance: false
-# should equal variance be assumed for the t-test?
-# can be "true" or "false"

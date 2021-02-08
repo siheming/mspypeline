@@ -5,7 +5,8 @@ Default analysis settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. toctree::
    default_config
-
+.. toctree::
+   all_option_config
 
 .. _pathway-proteins:
 

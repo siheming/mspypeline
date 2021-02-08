@@ -1400,6 +1400,7 @@ class BasePlotter:
     def get_kde_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """
         Gets the protein intensities for all samples per group of the selected level.
+
         Parameters
         ----------
         df_to_use

@@ -1,0 +1,177 @@
+# ##### MAIN SETTINGS ########
+# settings that affect data processing
+
+selected_reader: mqreader       # which file reader should be used
+selected_normalizer: null       # which normalizer should be used
+
+has_techrep: true               # does the file have technical replicates (can be "true" or "false")
+
+use_protein_id: false           # should the protein id be used (can be "true" or "false"), or TODO
+
+equal_variance: false           # should equal variance be assumed for the t-test? (can be "true" or "false")
+
+pathways: []                    # list of pathways which should be analyzed
+go_terms: []                    # list of go_terms which should be analyzed
+
+mqreader:
+  index_col: "Gene name"        # default and so far only option that works stabely
+  duplicate_handling: "sum"     # how should proteins with duplicate index_col be treated ? can be sum or drop
+  drop_columns: []              # string or list of samples taht should be dropped
+  all_replicates: []            # list of all replicates
+  analysis_design: null         # mapping of the analysis design organized ad tree structure
+  levels: null                  # int giving the number of levels
+  level_names: null             # list of level names (e.g. 0, 1, 2, 3)
+
+# ###### PLOT CREATION SETTINGS #######
+# settings that determine which results will be created
+# required arguments to create a plot are only the plot function "plot_...", create_plot, dfs_to_use, and levels.
+plot_normalization_overview_all_normalizers_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  quantile_range: null          # Optional[np.array] e.g.: np.arange(0.05, 1, 0.05)
+  height: 15                    # height if the figure
+  intensity_label: "Intensity"  # name of the experiment
+
+plot_heatmap_overview_all_normalizers_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  sort_index: false             # should proteins be sorted alphanumerically
+  sort_index_by_missing: true   # should proteins be sorted by missing values
+  sort_columns_by_missing: true # should samples be sorted by missing values
+  cmap: "autum_r"               # color map to use for heatmap coloring
+  cmap_bad: "dimgray"           # color for missing values
+  cax: null                     # plt.Axes, axis for the color bar
+  plot: null                    # Optional[Tuple[plt.Figure, plt.Axes]]  --> figure to put plot
+  vmax: null                    # Optional[float]
+  vmin: null                    # Optional[float]
+  intensity_label: "Intensity"  # name of the experiment
+  show_suptitle: true           # should a figure title be shown
+
+plot_detection_counts_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  intensity_label: "Intensity"  # name of the experiment
+  show_suptitle: true           # should a figure title be shown
+
+plot_number_of_detected_proteins_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  intensity_label: "Intensity"  # name of the experiment
+  show_suptitle: true           # should a figure title be shown
+
+plot_venn_results_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  show_suptitle: true           # should a figure title be shown
+  title_font_size: 20           # font size of the figure title
+  set_label_font_size: 16       # font size of the text labels
+  subset_label_font_size: 14    # font size of the numbers
+
+plot_venn_groups_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  show_suptitle: true           # should a figure title be shown
+  title_font_size: 20           # font size of the figure title
+  set_label_font_size: 16       # font size of the text labels
+  subset_label_font_size: 14    # font size of the numbers
+
+plot_pca_overview_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  no_missing_values: true       # should missing values be neglected? (can be "true" or "false")
+  n_components: 2               # how many principal components should be calculated
+  fill_na_before_norm: false    # if data should be interpolated, should this be done before normalisation
+  fill_value:  0                # if data should be interpolated, which fill value should be used
+  normalize: true               # should transformed data be normalized with the singular values before plotting
+  intensity_label: "Intensity"  # name of the experiment
+  color_map: null               # Optional[dict]: a mapping from the column names to a color
+  show_suptitle: true           # should a figure title be shown
+  marker_size: 150              # size of the points in the scatter plots
+  legend_marker_size: 12        # size of the legend marker
+
+
+plot_intensity_histograms_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  intensity_label: "Intensity"  # name of the experiment
+  show_suptitle: true           # should a figure title be shown
+  compare_to_remaining: false   # should the sample be compared to the overall samples
+  legend: false                 # should a legend for the samples be displayed
+  n_bins: 25                    # how many bins should the histograms have
+  show_mean: true               # should the mean intensity be indicated
+  histtype: "bar"               # type of histogram: can be "bar", "barstacked" "step", "stepfilled"
+  color: null                   # string or list of any matplotlib supported color
+  plot: null                    # Optional[Tuple[plt.Figure, plt.Axes]]  --> figure to put plot
+
+plot_relative_std_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  experiment_name: ""           # string: name of the overall experiment
+  intensity_label: "Intensity"  # name of the intensities for the x label
+  show_suptitle: true           # should a figure title be shown
+  bins: (10, 20, 30)            # in which bins should the standard deviations be categorized
+  cmap: null                    # dict: mapping for the digitized labels to a color
+                                # example: default_cm = {0: "navy", 1: "royalblue", 2: "skyblue", 3: "darkgray"}
+
+plot_scatter_replicates_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  intensity_label: "Intensity"  # name of the experiment
+  show_suptitle: false          # should a figure title be shown
+
+plot_experiment_comparison_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  intensity_label: "Intensity"  # name of the experiment
+  show_suptitle: true           # should a figure title be shown
+  plot: null                    # Optional[Tuple[plt.Figure, plt.Axes]]  --> figure to put plot
+
+plot_rank_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  intensity_label: "Intensity"  # name of the experiment
+  full_name: "Experiment"       # which data node/group of samples should be compared
+  show_suptitle: true           # should a figure title be shown
+
+plot_pathway_analysis_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  equal_var: true
+  show_suptitle: true           # should a figure title be shown
+  threshold: 0.05               # maximum p value indicating significance
+  intensity_label: "Intensity"  # name of the intensities for the x label
+  color_map: null               # Optional[dict]: a mapping from the column names to a color
+
+plot_go_analysis_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  show_suptitle: true           # should a figure title be shown
+  intensity_label: "Intensity"  # name of the experiment
+
+plot_r_volcano_settings:
+  create_plot: false
+  dfs_to_use: []
+  levels: []
+  adj_pval: false               # should the adjusted p-val be used? (can be "true" or "false")
+  sample1: null                 # string of the sample that should be analysed (left side/ downregulated)
+  sample2: null                 # string of the sample that should be analysed (right side/ upregulated)
+  intensity_label: "Intensity"  # name of the experiment
+  show_suptitle: true           # should a figure title be shown
+  pval_threshold: 0.05          # float: maximum p value indicating significance
+  fchange_threshold: 2          # float: min fold change threshold (before log2 transformation) to be labelled significant
+  scatter_size: 20              # float: size of the points in the scatter plots
+  n_labelled_proteins: 10       # int: number of points that will be marked in th plot

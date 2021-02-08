@@ -11,9 +11,9 @@ Some of the documentation might be incomplete, but all important features are do
    :caption: Contents
 
    mspypeline
-   mspplots
    mspinitializer
    file_reader
+   mspplots
    modules
    plotting_backend
    helpers

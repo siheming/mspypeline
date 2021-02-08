@@ -28,9 +28,9 @@ In preparation.
    installation
    get_started
    workflow
-   package_design
-   plotters
    file_readers
+   analysis_options
+   settings_and_configuration
    examples
    package_config
    API <api_reference/index>

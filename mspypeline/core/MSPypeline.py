@@ -68,9 +68,6 @@ class UIHandler:
 class MSPGUI(tk.Tk):
     def __init__(self, file_dir, yml_file=None, loglevel=logging.DEBUG, configs: dict = None):
         """
-        Return a new Toplevel widget on screen SCREENNAME. A new Tcl interpreter will be created. BASENAME will be used
-        for the identification of the profile file (see readprofile). It is constructed from sys.argv[0] without
-        extensions if None is given. CLASSNAME is the name of the widget class.
         This class is called from the :class:`~UIHandler` to create the GUI.
 
         Parameters
