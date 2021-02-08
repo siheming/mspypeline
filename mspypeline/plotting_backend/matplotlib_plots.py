@@ -8,7 +8,6 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as colors
 import matplotlib.cm as cm
 import matplotlib.lines as mlines
-import seaborn as sns
 from matplotlib import rcParams
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.collections import LineCollection
@@ -23,7 +22,7 @@ import functools
 import warnings
 
 from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line, get_legend_elements, \
-    get_plot_name_suffix, get_intersection_and_unique, venn_names, format_docstrings
+    get_plot_name_suffix, venn_names, format_docstrings
 
 FIG_FORMAT = ".pdf"
 rcParams["pdf.fonttype"] = 42
@@ -267,7 +266,7 @@ def save_volcano_results(
         volcano_data: pd.DataFrame, interesting_proteins, unique_g1: pd.Series = None,
         unique_g2: pd.Series = None, g1: str = "group1", g2: str = "group2", adj_pval: bool = False,
         intensity_label: str = "Intensity", show_suptitle: bool = True, pval_threshold: float = 0.05,
-        fchange_threshold: float = 2, scatter_size: float = 10, n_labelled_proteins: int = 10, **kwargs
+        fchange_threshold: float = 2, scatter_size: float = 20, n_labelled_proteins: int = 10, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
     """
     Saves multiple csv files and images containing the information of the volcano plot
@@ -331,7 +330,6 @@ def save_volcano_results(
         else:
             raise ValueError(f"heisenbug: fold change: {fchange}, p value: {pval}")
 
-
     g1_name = g1.replace("_", " ")
     g2_name = g2.replace("_", " ")
 
@@ -340,13 +338,13 @@ def save_volcano_results(
                                   for log_fold_change, p_val in zip(volcano_data["logFC"], volcano_data[col])]
 
     # save the volcano data csv in full and only the significant part
-    save_path, csv_name = get_path_and_name_from_kwargs("csv_full/volcano_plot_data_{g1}_vs_{g2}_full_{p}_{pathway_label}",
-                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'),
-                                                        pathway_label=pathway_label, **kwargs)
+    save_path, csv_name = get_path_and_name_from_kwargs(
+        "csv_full/volcano_plot_data_{g1}_vs_{g2}_full_{p}_{pathway_label}", g1=g1, g2=g2,
+        p=col_mapping[col].replace(' ', '_'), pathway_label=pathway_label, **kwargs)
     save_csv_fn(save_path, csv_name, volcano_data)
-    save_path, csv_name = get_path_and_name_from_kwargs("csv_significant/volcano_plot_data_{g1}_vs_{g2}_significant_{p}_{pathway_label}",
-                                                        g1=g1, g2=g2, p=col_mapping[col].replace(' ', '_'),
-                                                        pathway_label=pathway_label, **kwargs)
+    save_path, csv_name = get_path_and_name_from_kwargs(
+        "csv_significant/volcano_plot_data_{g1}_vs_{g2}_significant_{p}_{pathway_label}", g1=g1, g2=g2,
+        p=col_mapping[col].replace(' ', '_'), pathway_label=pathway_label, **kwargs)
     save_csv_fn(save_path, csv_name, volcano_data[volcano_data[col] < 0.05])
 
     significance_to_color = {"down": "blue", "ns": "gray", "up": "red"}
@@ -373,7 +371,7 @@ def save_volcano_results(
     # non sign gray, left side significant blue, right side red
     for regulation in significance_to_color:
         mask = [x == regulation for x in volcano_data["regulation"]]
-        ax.scatter(volcano_data["logFC"][mask], -np.log10(volcano_data[col])[mask], s=scatter_size, edgecolors=None,
+        ax.scatter(volcano_data["logFC"][mask], -np.log10(volcano_data[col])[mask], s=scatter_size, edgecolors="none",
                    color=significance_to_color[regulation], alpha=0.6,
                    label=f"{sum(mask)} {significance_to_label[regulation]}")
     # get axis bounds for vertical and horizontal lines
@@ -397,9 +395,9 @@ def save_volcano_results(
         ax.axvline(-np.log2(fchange_threshold), **axline_kwargs, ymin=y_percentage, ymax=1)
         ax.axvline(np.log2(fchange_threshold), **axline_kwargs, ymin=y_percentage, ymax=1)
     # plot unique values with mean intensity at over maximum
-    ax_unique_down.scatter([0] * len(unique_g1), unique_g1, s=scatter_size, color="dodgerblue", edgecolors=None,
+    ax_unique_down.scatter([0] * len(unique_g1), unique_g1, s=scatter_size, color="dodgerblue", edgecolors="none",
                            alpha=0.6, label=f"{len(unique_g1)} unique in  {g1_name}")
-    ax_unique_up.scatter([0] * len(unique_g2), unique_g2, s=scatter_size, color="coral", edgecolors=None,
+    ax_unique_up.scatter([0] * len(unique_g2), unique_g2, s=scatter_size, color="coral", edgecolors="none",
                          alpha=0.6, label=f"{len(unique_g2)} unique in  {g2_name}")
     # adjust bounds for unique axis
     ymin_down, ymax_down = ax_unique_down.get_ybound()
@@ -458,8 +456,8 @@ def save_volcano_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_pca_results(
         pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, intensity_label: str = "Intensity",
-        color_map: Optional[dict] = None, show_suptitle: bool = True, marker_size: int = 100,
-        legend_marker_size: int = 10, **kwargs
+        color_map: Optional[dict] = None, show_suptitle: bool = True, marker_size: int = 150,
+        legend_marker_size: int = 12, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Saves image containing the pca results with prefix: {{name}}
@@ -509,11 +507,11 @@ def save_pca_results(
         ax.scatter(
             pca_data.loc["PC_1"] / singular_values[0],
             pca_data.loc["PC_2"] / singular_values[1],
-            s = marker_size, edgecolors=None,
+            s=marker_size, edgecolors="none",
             c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-        ax.set_xlabel("PC 1 - {0}".format(pca_var[0]), fontsize = 22, labelpad=20)
-        ax.set_ylabel("PC 2 - {0}".format(pca_var[1]), fontsize = 22, labelpad=20)
-        ax.tick_params(axis = "both", labelsize = 18)
+        ax.set_xlabel("PC 1 - {0}".format(pca_var[0]), fontsize=22, labelpad=20)
+        ax.set_ylabel("PC 2 - {0}".format(pca_var[1]), fontsize=22, labelpad=20)
+        ax.tick_params(axis="both", labelsize=18)
     else:
         fig, axarr = plt.subplots(n_components, n_components, figsize=(14, 14))
         for row in range(n_components):
@@ -525,17 +523,17 @@ def save_pca_results(
                     ax.scatter(
                         pca_data.loc[f"PC_{row_pc}"] / singular_values[row],
                         pca_data.loc[f"PC_{col_pc}"] / singular_values[col],
-                        s = marker_size, edgecolors=None,
+                        s=marker_size, edgecolors=None,
                         c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-                    ax.set_xlabel(f"PC {row_pc} - {0}".format(pca_var[0]), fontsize = 22, labelpad=20)
-                    ax.set_ylabel(f"PC {col_pc} - {0}".format(pca_var[1]), fontsize = 22, labelpad=20)
-                    ax.tick_params(axis = "both", labelsize = 18)
+                    ax.set_xlabel(f"PC {row_pc} - {0}".format(pca_var[0]), fontsize=22, labelpad=20)
+                    ax.set_ylabel(f"PC {col_pc} - {0}".format(pca_var[1]), fontsize=22, labelpad=20)
+                    ax.tick_params(axis="both", labelsize=18)
 
     if show_suptitle:
         fig.suptitle(intensity_label, fontsize=30)
-    legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(), color_map=base_color_map,
-                                          marker_size= legend_marker_size)
-    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize = 20)
+    legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(),
+                                          color_map=base_color_map, marker_size=legend_marker_size)
+    fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=20)
     fig.tight_layout(rect=[0.03, 0.03, 1, 0.95])
     return fig, axarr
 
@@ -583,11 +581,12 @@ def save_pathway_analysis_results(
     result_color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
     result_color_map.update(color_map if color_map is not None else {})
     if show_suptitle:
-        fig.suptitle(pathway.replace("_", " "), size=28)
+        fig.suptitle(pathway.replace("_", " "), size=26)
     for protein, (pos, ax) in zip(protein_intensities.index, np.ndenumerate(axarr)):
-        ax.scatter(protein_intensities.loc[protein], [level_keys.index(c) for c in protein_intensities.columns.get_level_values(0)],
-                   c=[result_color_map[c] for c in protein_intensities.columns.get_level_values(0)], edgecolors=None,
-                   alpha=0.6)
+        ax.scatter(protein_intensities.loc[protein],
+                   [level_keys.index(c) for c in protein_intensities.columns.get_level_values(0)],
+                   c=[result_color_map[c] for c in protein_intensities.columns.get_level_values(0)], edgecolors="none",
+                   alpha=0.7)
         ax.set_title(protein)
         ax.set_ylim((-1, len(level_keys)))
         ax.set_yticks([i for i in range(len(level_keys))])
@@ -720,8 +719,8 @@ def save_relative_std_results(
     color_counts = {color: (plot_colors == color).sum() for color in plot_colors.unique()}
 
     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-    ax.scatter(intensities.mean(axis=1), relative_std_percent, c=plot_colors, marker="o", s=(2 * 72. / fig.dpi) ** 2,
-               alpha=0.8, edgecolors=None)
+    ax.scatter(intensities.mean(axis=1), relative_std_percent, c=plot_colors, marker="o", s=(4 * 72. / fig.dpi) ** 2,
+               alpha=0.7, edgecolors="none")
 
     experiment_name = experiment_name.replace("_", "  ")
     if show_suptitle:
@@ -773,12 +772,10 @@ def save_detection_counts_results(
         fig.suptitle(f"Detection counts from {intensity_label}")
 
     global_max = counts.max().max()
-
-
     for (pos, ax), col in zip(np.ndenumerate(axarr), counts.columns):
         col_data = counts.loc[:, col]
         col_data = col_data[~pd.isna(col_data)]
-        col_name  = col.replace("_", " ")
+        col_name = col.replace("_", " ")
 
         ax.set_title(f"{col_name} \n total detected: {int(col_data.sum())}")
         ax.barh(col_data.index, col_data, color="skyblue")
@@ -921,7 +918,7 @@ def save_n_proteins_vs_quantile_results(
 
     m = n_proteins.sort_values()
     for quant in quantiles.index:
-        ax.scatter(quantiles.loc[quant, :], n_proteins, c=[cmap(quant)] * len(n_proteins), alpha=0.5, edgecolors=None)
+        ax.scatter(quantiles.loc[quant, :], n_proteins, c=[cmap(quant)] * len(n_proteins), alpha=0.5, edgecolors="none")
         popt, pcov = curve_fit(linear, n_proteins, quantiles.loc[quant, :])
         fit = linear(m, *popt)
 
@@ -990,9 +987,10 @@ def save_normalization_overview_results(
     plot_kwargs.update(**kwargs)
     plot_kwargs["save_path"] = None
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)  # ignore warning for mixing constrained layout with thight_layout
+        warnings.simplefilter("ignore", UserWarning)  # ignore warning for mixing constrained layout with tight_layout
         save_kde_results(intensities=intensities,  plot=(fig, ax_density), **plot_kwargs)
-        save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, plot=(fig, ax_nprot), cbar_ax=ax_colorbar, **plot_kwargs)
+        save_n_proteins_vs_quantile_results(quantiles=quantiles, n_proteins=n_proteins, plot=(fig, ax_nprot),
+                                            cbar_ax=ax_colorbar, **plot_kwargs)
         save_boxplot_results(boxplot_data, plot=(fig, ax_boxplot), vertical=False, **plot_kwargs)
     ax_density.set_xlim(ax_nprot.get_xlim())
 
@@ -1003,33 +1001,36 @@ def save_normalization_overview_results(
 @save_plot("intensities_heatmap")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_intensities_heatmap_result(
-        intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad: str ="dimgray",
-        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None, vmin: Optional[float] = None,
+        intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad: str = "dimgray",
+        cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None,
+        vmin: Optional[float] = None,
         intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
     """
     saves plot with prefix: {{name}}
-    
+
     Parameters
     ----------
     intensities
+        DataFrame containing protein intensities of samples
     cmap
         color map to use for heatmap coloring
     cmap_bad
         color for missing values
+    cax
+        axis for the color bar
     plot
         figure to put plot
     vmax
-        passed to seaborn heatmap
+        passed to imshow
     vmin
-        passed to seaborn heatmap
+        passed to imshow
     intensity_label
         name of the experiment
     show_suptitle
-        should the figure title be shown
+        should figure title be shown
     kwargs
         {kwargs}
-
     """
     if plot is not None:
         fig, ax = plot
@@ -1046,21 +1047,25 @@ def save_intensities_heatmap_result(
     if cmap_bad is not None:
         cmap.set_bad(color='dimgray')
 
-    sns.heatmap(intensities.values.T, cmap=cmap, vmin=vmin, vmax=vmax, ax=ax, cbar_kws={'label': f"{intensity_label}"})
+    im = ax.imshow(intensities.values.T, aspect="auto", cmap=cmap, vmin=vmin, vmax=vmax, interpolation="none")
+    if cax is None:
+        cbar = ax.figure.colorbar(im, ax=ax)
+    else:
+        cbar = ax.figure.colorbar(im, cax=cax)
 
     if show_suptitle:
         fig.suptitle(f"Proteins detected or missing in {intensity_label}", fontsize=16)
     ax.set_xlabel("Total proteins detected", fontsize=12)
 
+    y_lim = ax.get_ylim()
+    ax.set_yticks(np.linspace(0, len(intensities.columns) - 1, len(intensities.columns)))
     labels = [sample.replace("_", " ") for sample in intensities.columns.values]
     ax.set_yticklabels(labels=labels)
-    ax.tick_params(axis="both", labelrotation=360, labelsize=10)
-    ax.set_xticks(np.arange(0, len(intensities), 500))
-    ax.set_xticklabels(np.arange(0, len(intensities), 500))
+    ax.set_ylim(*y_lim)
+    ax.tick_params(axis="both", labelsize=10)
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    return fig, ax
-
+    return fig, (ax, cbar.ax)
 
 @save_plot("detection_per_replicate")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
@@ -1185,19 +1190,23 @@ def save_intensity_histogram_results(
     for col, (pos, ax) in zip(hist_data.columns.get_level_values(0).unique(), np.ndenumerate(axarr)):
         intensities = hist_data[col]
         try:
-            labels = intensities.columns.replace("_", " ")
+            labels = intensities.columns
         except AttributeError:
-            labels = col.replace("_", " ")
+            labels = col
+        labels = [label.replace("_", " ") for label in labels]
 
         if "Log_2" in intensity_label:
             bins = np.linspace(np.nanmin(intensities.values), np.nanmax(intensities.values), n_bins)
         else:
-            bins = np.logspace(np.log2(np.nanmin(intensities.values)), np.log2(np.nanmax(intensities.values)), n_bins, base=2)
+            bins = np.logspace(np.log2(np.nanmin(intensities.values)), np.log2(np.nanmax(intensities.values)), n_bins,
+                               base=2)
 
         col_name = col.replace("_", "  ")
         ax.set_title(col_name)
 
         if not legend:
+            ax.hist(intensities, bins=bins, histtype=histtype, color=color)
+        elif legend and len(labels)<2:
             ax.hist(intensities, bins=bins, histtype=histtype, color=color)
         else:
             ax.hist(intensities, bins=bins, histtype=histtype, color=color, label=labels)
@@ -1264,7 +1273,7 @@ def save_scatter_replicates_results(
         ax.scatter(x1.fillna(min_counts)[plot_mask], x2.fillna(min_counts)[plot_mask],
                    label=f"{rep1}  vs  {rep2},  "
                          fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
-                   alpha=0.5, marker=".", edgecolors=None)
+                   alpha=0.5, s=40,  marker=".", edgecolors="none")
         ax.set_xlabel(f"{intensity_label} of x1")
         ax.set_ylabel(f"{intensity_label} of x2")
         if show_suptitle:
@@ -1323,7 +1332,7 @@ def save_rank_results(
     y = [dic[protein][1] for protein in non_pathway_proteins]  # intensity
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-    ax.scatter(x, y, c="darkgray", s=12, alpha=0.2, marker=".", label="no pathway")
+    ax.scatter(x, y, c="darkgray", s=30, alpha=0.2, marker=".", label="no pathway", edgecolors="none")
 
     # plot all proteins of a specific pathway
     legend_text = []
@@ -1333,7 +1342,8 @@ def save_rank_results(
         if proteins:
             x = [dic[protein][0] for protein in proteins]  # the rank of each protein
             y = [dic[protein][1] for protein in proteins]  # the intensity of each protein
-            ax.scatter(x, y, c=f"C{i}", s=80, alpha=0.7, marker=".", edgecolors=None, label=pathway.replace("_", " "))
+            ax.scatter(x, y, c=f"C{i}", s=120, alpha=0.7, marker=".", edgecolors="none",
+                       label=pathway.replace("_", " "))
 
             median_pathway_rank = int(np.median(x))
             median_intensity = rank_data.iloc[median_pathway_rank]
@@ -1352,7 +1362,7 @@ def save_rank_results(
 
     median_int_total = rank_data.dropna().median()
     legend_text.append(f"Median intensity: {median_int_total :.1f} {intensity_label}")
-    handle = mlines.Line2D([], [], color="lightgray", marker='.', markersize=10, label=text, linewidth=0)
+    handle = mlines.Line2D([], [], color="lightgray", marker='.', markersize=10, label=legend_text[-1], linewidth=0)
     handles.append(handle)
 
     exp_name = full_name.replace("_", " ")
@@ -1373,7 +1383,7 @@ def save_rank_results(
 def save_experiment_comparison_results(
         protein_intensities_sample1: pd.Series, protein_intensities_sample2: pd.Series,
         exclusive_sample1: pd.Series, exclusive_sample2: pd.Series, sample1: str, sample2: str,
-        intensity_label: str = "Intensity", show_suptitle: bool = False,
+        intensity_label: str = "Intensity", show_suptitle: bool = True,
         plot: Optional[Tuple[plt.Figure, plt.Axes]] = None,  **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
@@ -1420,12 +1430,12 @@ def save_experiment_comparison_results(
     sample1 = sample1.replace("_", " ")
     sample2 = sample2.replace("_", " ")
 
-    ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=8, alpha=0.6, marker=".", edgecolors=None,
+    ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=40, alpha=0.7, marker=".", edgecolors="none",
                label=f"{sample1}  vs  {sample2}, {exp}: {r[0] ** 2:.4f}")
     ax.scatter(exclusive_sample1, [np.min(protein_intensities_sample2) * 0.95] * exclusive_sample1.shape[0],
-               s=8, alpha=0.6, marker=".", edgecolors=None, label=f"unique for  {sample1}")
+               s=40, alpha=0.7, marker=".", edgecolors="none", label=f"unique for  {sample1}")
     ax.scatter([np.min(protein_intensities_sample1) * 0.95] * exclusive_sample2.shape[0], exclusive_sample2,
-               s=8, alpha=0.6, marker=".", edgecolors=None, label=f"unique for  {sample2}")
+               s=40, alpha=0.7, marker=".", edgecolors="none", label=f"unique for  {sample2}")
 
     ax.set_xlabel(f"{intensity_label} of {sample1}", labelpad=10)
     ax.set_ylabel(f"{intensity_label} of {sample2}", labelpad=10)
@@ -1449,8 +1459,8 @@ def save_experiment_comparison_results(
 @save_plot("go_analysis")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_go_analysis_results(
-        heights: Dict[str, list], test_results: Dict[str, list], go_length: Dict[str, list], go_analysis_gene_names: list,
-        show_suptitle: bool = True, intensity_label="Intensity", **kwargs
+        heights: Dict[str, list], test_results: Dict[str, list], go_length: Dict[str, list],
+        go_analysis_gene_names: list, show_suptitle: bool = True, intensity_label="Intensity", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1485,7 +1495,7 @@ def save_go_analysis_results(
     save_csv_fn(save_path, csv_name, heights_df)
     save_path, csv_name = get_path_and_name_from_kwargs(name="tables/go_analysis_pvals", **kwargs)
     save_csv_fn(save_path, csv_name, test_results_df)
-    #add extra col "background" to data frame - easier data handeling later
+    # add extra col "Total" to data frame - easier data handeling later
     test_results_df.insert(0, "Total", [1] * len(go_analysis_gene_names), True)
 
     barwidth = 1 / (len(heights_df.columns) + 1)
@@ -1640,6 +1650,7 @@ def save_venn(
     Parameters
     ----------
     named_sets
+        a mapping of samples to protein names
     ex
         title for the plot
     show_suptitle

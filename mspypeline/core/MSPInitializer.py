@@ -26,6 +26,20 @@ class MSPInitializer:
                                 if x.endswith(".txt")])
 
     def __init__(self, dir_: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
+        """
+        An initializer class which is responsible for creating the directory to save the default YAML configuration file
+        as well as reading and saving the specified settings. The initializer also operates as a means of passing stored
+        configurations to the plotter classes.
+
+        Parameters
+        ----------
+        dir_
+            location where the directory/txt folder to the data can be found.
+        file_path_yml
+            path to the yaml config file
+        loglevel
+            level of the logger
+        """
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # create a yaml file reader
         self.yaml = YAML()
@@ -117,12 +131,15 @@ class MSPInitializer:
 
     def init_config(self):
         """
-        Creates the directory to save the configuration file and saves the configuration
+        Creates the directory to save the configuration file if not present, updates and saves the configuration. The
+        function is usually applied to ensure that configs are provided to the initializer in order to avoid problems
+        initializing the file reader with :meth:`read_data`.
         """
         os.makedirs(self.path_config, exist_ok=True)
         self.update_config_file()
 
     def has_yml_file(self) -> bool:
+
         if not os.path.isdir(self.start_dir):
             return False
         if "config" in os.listdir(self.start_dir):
@@ -185,6 +202,11 @@ class MSPInitializer:
         os.rename(yml_file_loc_tmp, yml_file_loc)
 
     def read_data(self):
+        """
+        Initiates the file reader by providing the directory to the data and the configs e.g. by :meth:`init_configs`.
+        In turn a data dictionary is generated to provide the mapping to the input data (*reader_data*) for the further
+        analysis with the :ref:`mspypeline plotters <plotters>`.
+        """
         for Reader in BaseReader.__subclasses__():
             Reader: Type[BaseReader]  # for IDE hints
             try:
@@ -196,6 +218,6 @@ class MSPInitializer:
                 self.logger.debug("No files found for reader: %s", Reader.name)
 
         # read all proteins and receptors of interest from the config dir
-        self.logger.info("Reading proteins and receptors of interest")
+        self.logger.info("Reading pathway and GO list of interest")
         self.interesting_proteins, self.go_analysis_gene_names = self.init_interest_from_txt()
         self.update_config_file()

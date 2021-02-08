@@ -4,15 +4,10 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib import rcParams
 
 from mspypeline.core import MSPInitializer
 from mspypeline.core.MSPPlots import BasePlotter
 from mspypeline.plotting_backend import matplotlib_plots
-from mspypeline.helpers import remove_spare_axes
-
-rcParams["pdf.fonttype"] = 42
-rcParams["ps.fonttype"] = 42
 
 class MQReader:  # TODO currently circular dependency
     pass
@@ -31,6 +26,31 @@ class MaxQuantPlotter(BasePlotter):
             intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"), ("ibaq", "iBAQ ", "iBAQ intensity")),
             loglevel=logging.DEBUG
     ):
+        """
+        MaxQuant Plotter is a child class of the :class:`BasePlotter` and inherits all functionality to get data and
+        generate plots.
+
+        Parameters
+        ----------
+        start_dir
+            location to save results
+        reader_data
+            mapping to provide input data
+        intensity_df_name
+            name/key to input data
+        interesting_proteins
+            mapping with pathway proteins to analyze
+        go_analysis_gene_names
+            mapping with go terms to analyze
+        configs
+            mapping of configuration
+        required_reader
+            name of the file reader
+        intensity_entries
+            tuple of (key in all_tree_dict, prefix in data, name in plot). See :meth:`add_intensity_column`.
+        loglevel
+            level of the logger
+        """
         super().__init__(
             start_dir,
             reader_data,
@@ -66,7 +86,7 @@ class MaxQuantPlotter(BasePlotter):
 
     def create_report(self):
         """
-        Creates a MaxQuantReport.pdf, which can be used as quality control.
+        Creates a MaxQuantReport.pdf, which can be used as :ref:`quality control <plotters>`.
 
         Returns
         -------
@@ -521,9 +541,10 @@ class MaxQuantPlotter(BasePlotter):
                         ax.set_ylabel("Density")
 
                     if n_figure == (n_figures - 1):
-                        to_remove = remove_spare_axes(len(log2_intensities.columns))
-                        for i in to_remove:
-                            axarr[i[0], i[1]].remove()
+                        n_empty = n_figures * 9 - len(log2_intensities.columns)
+                        for i in range(1, n_empty + 1):
+                            axarr.flat[-i].remove()
+
                     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
                     pdf.savefig(fig)
@@ -582,9 +603,9 @@ class MaxQuantPlotter(BasePlotter):
                         ax.set_ylabel("Density")
 
                     if n_figure == (n_figures - 1):
-                        to_remove = remove_spare_axes(len(retention_time.columns))
-                        for i in to_remove:
-                            axarr[i[0], i[1]].remove()
+                        n_empty = n_figures * 9 - len(retention_time.columns)
+                        for i in range(1, n_empty + 1):
+                            axarr.flat[-i].remove()
 
                     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 

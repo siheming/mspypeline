@@ -12,7 +12,31 @@ from mspypeline.file_reader import BaseReader, MQReader
 
 
 class UIHandler:
-    def __init__(self, file_dir, yml_file=None, gui=False, host_flask=False, selected_reader=MQReader.MQReader, loglevel=logging.DEBUG, configs: dict = None):
+    def __init__(self, file_dir, yml_file=None, gui=False, host_flask=False, selected_reader=MQReader.MQReader,
+                 loglevel=logging.DEBUG, configs: dict = None):
+        """
+        Used to take the mapping of arguments provided by the :class:`~MSPParser` through the command line to organize
+        through which point of entry the data analysis should be performed. The UIHandler can initialize the creation of
+        the GUI, perform the whole analysis instantly by running the pipeline and creating all plots according to the
+        configs or (not yet available) host the mspypeline on a flask server.
+
+        Parameters
+        ----------
+        file_dir
+            location where the directory/txt folder to the data can be found.
+        yml_file
+            path to the yaml config file
+        gui
+            should a GUI be compiled
+        host_flask
+            currently not implemented (should a flsk server be hosted)
+        selected_reader
+            instance of an :class:`~BaseReader` used to process data to an internal format for the plotter.
+        loglevel
+            level of the logger
+        configs
+            mapping of configuration
+        """
         base_config = {
             "has_techrep": False,
             "has_groups": False,
@@ -43,6 +67,23 @@ class UIHandler:
 
 class MSPGUI(tk.Tk):
     def __init__(self, file_dir, yml_file=None, loglevel=logging.DEBUG, configs: dict = None):
+        """
+        Return a new Toplevel widget on screen SCREENNAME. A new Tcl interpreter will be created. BASENAME will be used
+        for the identification of the profile file (see readprofile). It is constructed from sys.argv[0] without
+        extensions if None is given. CLASSNAME is the name of the widget class.
+        This class is called from the :class:`~UIHandler` to create the GUI.
+
+        Parameters
+        ----------
+        file_dir
+            location where the directory/txt folder to the data can be found.
+        yml_file
+            path to the yaml config file
+        loglevel
+            level of the logger
+        configs
+            mapping containing the configurations
+        """
         super().__init__()
         self.yaml_options = ["default"]
         self.reader_options = {reader.name: reader for reader in BaseReader.__subclasses__()}
@@ -364,6 +405,10 @@ class MultiSelectOptionMenu(tk.Frame):
 
 class MSPParser(argparse.ArgumentParser):
     def __init__(self):
+        """
+        Uses the ``argparse`` module to provide a parser for command line options, arguments and sub-commands through
+        which the analysis can be started or the GUI can be called (see :ref:`get-started`).
+        """
         super().__init__(description="A pipeline to analyze result files from a MaxQuant report. "
                                      "The required result files are in the txt directory.")
         self.add_argument(

@@ -28,6 +28,29 @@ class MQReader(BaseReader):
                  duplicate_handling: str = "sum",
                  drop_columns: Union[list, tuple, str] = [],
                  loglevel=logging.DEBUG):
+        """
+        A child class of the :class:`~BaseReader`. The MQReader preprocesses data from MaxQuant files into the
+        internal data format to provide the correct input for the plotters. Required files to start the MQReader
+        is the *proteinGroups.txt* file from MaxQuant. Additionally, the file reader can preprocess the *evidence,
+        msmsScans, msScans, parameters, peptides* and *summary* txt files from the MaxQuant output.
+        The reader also recognizes :ref:`sample_mapping.txt files <sample-mapping>` if provided and corrects the
+        sample naming for instance in the case of naming convention violation (see :ref:`analysis-design`).
+
+        Parameters
+        ----------
+        start_dir
+            location where the directory/txt folder to the data can be found.
+        reader_config
+            mapping of the file reader configuration (as e.g. given in the config.yml file)
+        index_col
+            with which identification type should detected proteins in the *proteinGroups.txt* file be handled
+        duplicate_handling
+            how should proteins with duplicate index_col be treated ? can be "sum" or "drop"
+        drop_columns
+            should any samples be excluded from the analysis
+        loglevel
+            level of the logger
+        """
         super().__init__(start_dir, reader_config, loglevel=loglevel)
 
         if os.path.split(self.start_dir)[1] != "txt":
@@ -151,14 +174,19 @@ class MQReader(BaseReader):
 
 
     def preprocess_contaminants(self):
+        """
+        Preprocess the *proteinGroups.txt* file to internal format and return DataFrame with all those proteins marked
+        as contaminant. Contaminants are defined as those proteins *"Only identified by site"*, marked as *"Reverse"* or
+        as *"Potential contaminant"* in the *proteinGroups.txt* file.
+
+        Returns
+        -------
+        DataFrame
+            containing preprocessed data of contaminants from *proteinGroups.txt* file
+        """
         file_dir = os.path.join(self.data_dir, MQReader.proteins_txt)
         df_protein_groups = pd.read_csv(file_dir, sep="\t")
         df_protein_groups.columns = self.rename_df_columns(df_protein_groups.columns)
-        if len(self.to_drop) > 0:
-            for i in self.to_drop: # funktioniert
-                cols = [c for c in df_protein_groups.columns if i in c]
-                df_protein_groups = df_protein_groups.drop(columns=cols)
-
 
         contaminants = (df_protein_groups[["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) != 0
@@ -244,13 +272,19 @@ class MQReader(BaseReader):
 
 
     def preprocess_proteinGroups(self):
+        """
+        Preprocess the *proteinGroups.txt* file to internal format and return DataFrame with all those proteins not
+        marked as contaminant. Contaminants are defined as those proteins *"Only identified by site"*, marked as
+        *"Reverse"* or as *"Potential contaminant"* in the *proteinGroups.txt* file.
+
+        Returns
+        -------
+        DataFrame
+            containing preprocessed data from *proteinGroups.txt* file
+        """
         file_dir = os.path.join(self.data_dir, MQReader.proteins_txt)
         df_protein_groups = pd.read_csv(file_dir, sep="\t")
         df_protein_groups.columns = self.rename_df_columns(df_protein_groups.columns)
-        if len(self.to_drop) > 0:
-            for i in self.to_drop: # funktioniert
-                cols = [c for c in df_protein_groups.columns if i in c]
-                df_protein_groups = df_protein_groups.drop(columns=cols)
         not_contaminants = (df_protein_groups[
                                 ["Only identified by site", "Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
@@ -329,14 +363,19 @@ class MQReader(BaseReader):
         return df_protein_groups
 
     def preprocess_peptides(self):
+        """
+        Preprocess the *peptides.txt* file to internal format and return DataFrame with all those peptides not
+        marked as contaminant. Contaminants are defined as those peptides marked as *"Reverse"* or as
+        *"Potential contaminant"* in the *peptides.txt* file.
+
+        Returns
+        -------
+        DataFrame
+            containing preprocessed data from *peptides.txt* file
+        """
         file_dir = os.path.join(self.data_dir, MQReader.peptides_txt)
         df_peptides = pd.read_csv(file_dir, sep="\t")
         df_peptides.columns = self.rename_df_columns(df_peptides.columns)
-        if len(self.to_drop) > 0:
-            for i in self.to_drop: # funktioniert
-                cols = [c for c in df_peptides.columns if i in c]
-                df_peptides = df_peptides.drop(columns=cols)
-
         not_contaminants = (df_peptides[
                                 ["Reverse", "Potential contaminant"]] == "+"
                             ).sum(axis=1) == 0
@@ -347,27 +386,46 @@ class MQReader(BaseReader):
         return df_peptides
 
     def preprocess_summary(self):
+        """
+        Preprocess the *summary.txt* file to internal format and return DataFrame.
+
+        Returns
+        -------
+        DataFrame
+            containing preprocessed data from *summary.txt* file
+        """
         file_dir = os.path.join(self.data_dir, MQReader.summary_txt)
         df_summary = pd.read_csv(file_dir, sep="\t", encoding="unicode-escape")
         df_summary.columns = self.rename_df_columns(df_summary.columns)
         df_summary = df_summary[df_summary["Enzyme"].notna()]
         df_summary["Experiment"] = self.rename_df_columns(df_summary["Experiment"])
-        if len(self.to_drop) > 0:
-            for drop_sample in self.to_drop:
-                df_summary = df_summary[df_summary["Experiment"] != drop_sample]
         return df_summary
 
     def preprocess_parameters(self):
+        """
+        Preprocess the *parameters.txt* file to internal format and return DataFrame.
+
+        Returns
+        -------
+            DataFrame containing preprocessed data from *parameters.txt* file
+        """
         file_dir = os.path.join(self.data_dir, MQReader.parameters_txt)
         df_parameters = pd.read_csv(file_dir, sep="\t", index_col=[0], squeeze=True)
         return df_parameters
 
     def preprocess_evidence(self):
+        """
+        Preprocess the *evidence.txt* file to internal format and return DataFrame with all those peptides not
+        marked as contaminant. Contaminants are defined as those peptides marked as *"Reverse"* or as
+        *"Potential contaminant"* in the *evidence.txt* file.
+
+        Returns
+        -------
+        DataFrame
+            containing preprocessed data from *evidence.txt* file
+        """
         file_dir = os.path.join(self.data_dir, MQReader.evidence_txt)
         df_evidence = pd.read_csv(file_dir, sep="\t")
-        if len(self.to_drop) > 0:
-            for i in self.to_drop:
-                df_evidence = df_evidence[df_evidence["Experiment"] != i]
         not_contaminants = (df_evidence[["Reverse", "Potential contaminant"]] == "+").sum(axis=1) == 0
         df_evidence = df_evidence[not_contaminants]
         df_evidence.columns = self.rename_df_columns(df_evidence.columns)
@@ -375,19 +433,31 @@ class MQReader(BaseReader):
         return df_evidence
 
     def preprocess_msScans(self):
+        """
+        Preprocess the *msScans.txt* file to internal format and return DataFrame. Only columns *"Raw file",
+        "Total ion current"* and *"Retention time"* are read in.
+
+        Returns
+        -------
+        DataFrame
+            containing preprocessed data from *msScans.txt* file
+        """
         file_dir = os.path.join(self.data_dir, MQReader.ms_scans_txt)
         df_msscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
                                  usecols=["Raw file", "Total ion current", "Retention time"])
-        if len(self.to_drop) > 0:
-            for i in self.to_drop:
-                df_msscans = df_msscans[df_msscans.index.str.contains(i) == False]
         return df_msscans
 
     def preprocess_msmsScans(self):
+        """
+        Preprocess the *msmsScans.txt* file to internal format and return DataFrame. Only columns *"Raw file",
+        "Total ion current"* and *"Retention time"* are read in.
+
+        Returns
+        -------
+        DataFrame
+            containing preprocessed data from *msmsScans.txt* file
+        """
         file_dir = os.path.join(self.data_dir, MQReader.msms_scans_txt)
         df_msmsscans = pd.read_csv(file_dir, sep="\t", index_col=[0],
                                    usecols=["Raw file", "Total ion current", "Retention time"])
-        if len(self.to_drop) > 0:
-            for i in self.to_drop:
-                df_msmsscans = df_msmsscans[df_msmsscans.index.str.contains(i) == False]
         return df_msmsscans
