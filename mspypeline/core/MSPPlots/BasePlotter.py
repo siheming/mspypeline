@@ -491,8 +491,8 @@ class BasePlotter:
 
     def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """
-        Counts the number of intensity values greater than 0 per protein (number of samples that the protein was d
-        etected in) per group of the selected level.
+        Counts the number of intensity values greater than 0 per protein (number of samples that the protein was
+        detected in) per group of the selected level.
 
         Parameters
         ----------

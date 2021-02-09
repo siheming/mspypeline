@@ -8,6 +8,8 @@ Quality control
 Ensure that the quality of the results to analyze are of sufficient quality. This can be done with the report provided
 by the :ref:`mspypeline plotters <plotters>`.
 
+.. _hyperparameter:
+
 Determining Data Hyperparameter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Data may be processed in multiple ways and such modeling has the potential to shape the results of an analysis

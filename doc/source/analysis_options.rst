@@ -18,12 +18,12 @@ Plots
 
 The GUI allows for the following plots:
 
-Normalization plots:
+**Normalization plots:**
 
 * Normalization overview: :meth:`~mspypeline.BasePlotter.plot_normalization_overview`
 * Heatmap overview: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers`
 
-Outlier detection / Comparison plots:
+**Outlier detection and comparison plots:**
 
 * Detection counts: :meth:`~mspypeline.BasePlotter.plot_detection_counts`
 * Number of detected proteins :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replicate`
@@ -36,13 +36,13 @@ Outlier detection / Comparison plots:
 * Experiment comparison: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
 * Rank: :meth:`~mspypeline.BasePlotter.plot_rank`
 
-Statistical inference plots:
+**Statistical inference plots:**
 
 * Pathway analysis: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis`
 * Go analysis: :meth:`~mspypeline.BasePlotter.plot_go_analysis`
 * Volcano plot (R): :meth:`~mspypeline.BasePlotter.plot_r_volcano`
 
-Additionally via python:
+**Additionally via python:**
 
 * :meth:`~mspypeline.BasePlotter.plot_kde`
 * :meth:`~mspypeline.BasePlotter.plot_boxplot`

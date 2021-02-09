@@ -2,21 +2,26 @@
 
 File readers
 ============
-File readers are required to translate the format of each specific file into an internal format.
+File readers are required to translate the format of each specific file into an internal format. File readers scan
+available data and create a data dictionary with keys to the data. Data stored on system hardware, is thus only loaded
+on demand.
 
 
-Max Quant Reader
+MaxQuant Reader
 ~~~~~~~~~~~~~~~~
+The MQReader preprocesses data from MaxQuant files into the internal data format to provide the correct input for the
+plotters.
+Minimum requirement to start and work with the MQReader:
 
-Minimum requirements: proteinGroups.txt file.
+* proteinGroups.txt file.
 
 .. note::
-    Currently tested with Max Quant version: 1.5+
+    Currently tested with MaxQuant version: 1.5+
 .. warning::
     All files to be analyzed need to be in a directory called txt
 
-The Report will use these files (if available):
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The Quality Report will use these files (if available):
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * proteinGroups.txt
 * peptides.txt
@@ -26,7 +31,7 @@ The Report will use these files (if available):
 * msmsScans.txt
 * evidence.txt
 
-If files are missing some plots of the quality control report will not be created or might be empty.
+If files are missing some plots of the :ref:`quality control report <plotters>` will not be created or might be empty.
 
 The Plots will use these files:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

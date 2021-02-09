@@ -1,12 +1,9 @@
-package configuration
+Custom Protein Lists
 =====================
 
-Default analysis settings
+Pathway and GO analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-.. toctree::
-   default_config
-.. toctree::
-   all_option_config
+
 
 .. _pathway-proteins:
 

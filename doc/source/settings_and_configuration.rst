@@ -23,6 +23,7 @@ Analysis settings
     adjustable_options_config
 
 
+.. _analysis-design:
 
 Analysis Design
 ~~~~~~~~~~~~~~~
@@ -80,7 +81,7 @@ If the naming convention is violated a sample mapping can be provided manually o
   as the config directory. The first column named *old_name* should contain the sample name
   of the ms run. The second column named *new_name* should follow the naming convention.
 
-
+.. _tech-reps:
 
 Technical Replicates
 ********************
