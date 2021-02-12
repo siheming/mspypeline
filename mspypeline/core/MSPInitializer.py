@@ -43,8 +43,8 @@ class MSPInitializer:
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # create a yaml file reader
         self.yaml = YAML()
-        # self.yaml.indent(mapping=2, sequence=4, offset=2)
-        self.yaml.indent(offset=2)
+        self.yaml.indent(mapping=2, sequence=4, offset=2)
+        # self.yaml.indent(offset=2)
         self.yaml.default_flow_style = False
         self.yaml.width = 4096
 
@@ -151,7 +151,7 @@ class MSPInitializer:
         return False
 
     def get_default_yml_path(self) -> str:
-        self.logger.debug("Loading default yml file from: %s, since no (valid) file was selected",
+        self.logger.debug("Loading default yml file from: %s, since 'default' or no (valid) file was selected",
                           path_package)
         return os.path.join(path_package_config, MSPInitializer.default_yml_name)
 
