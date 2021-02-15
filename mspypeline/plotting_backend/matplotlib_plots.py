@@ -1,4 +1,5 @@
 import os
+from copy import copy
 from itertools import combinations
 from typing import Tuple, Optional, Union, Callable, Dict, Iterable
 import pandas as pd
@@ -27,6 +28,7 @@ from mspypeline.helpers import get_number_rows_cols_for_fig, plot_annotate_line,
 FIG_FORMAT = ".pdf"
 rcParams["pdf.fonttype"] = 42
 rcParams["ps.fonttype"] = 42
+
 
 def linear(x, m, b):
     return m * x + b
@@ -203,6 +205,8 @@ def save_venn_to_txt(name_map: Dict[str, str]):
                                       f"({len(named_sets)}")
                         continue
                     save_path, txt_name = get_path_and_name_from_kwargs(file_name, **kwargs)
+                    if save_path is None:
+                        continue
                     os.makedirs(save_path, exist_ok=True)
                     for intersected, unioned, result in venn_names(named_sets):
                         # create name based on the intersections and unions that were done
@@ -266,7 +270,8 @@ def save_volcano_results(
         volcano_data: pd.DataFrame, interesting_proteins, unique_g1: pd.Series = None,
         unique_g2: pd.Series = None, g1: str = "group1", g2: str = "group2", adj_pval: bool = False,
         intensity_label: str = "Intensity", show_suptitle: bool = True, pval_threshold: float = 0.05,
-        fchange_threshold: float = 2, scatter_size: float = 20, n_labelled_proteins: int = 10, **kwargs
+        fchange_threshold: float = 2, scatter_size: float = 20, n_labelled_proteins: int = 10, close_plots: str = "all",
+        **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
     """
     Saves multiple csv files and images containing the information of the volcano plot
@@ -300,11 +305,14 @@ def save_volcano_results(
         size of the points in the scatter plots
     n_labelled_proteins
         number of points that will be annotated in th plot
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
 
     col_mapping = {"adjpval": "adjusted p value", "pval": "unadjusted p value"}
     if adj_pval:
@@ -457,7 +465,7 @@ def save_volcano_results(
 def save_pca_results(
         pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, intensity_label: str = "Intensity",
         color_map: Optional[dict] = None, show_suptitle: bool = True, marker_size: int = 150,
-        legend_marker_size: int = 12, **kwargs
+        legend_marker_size: int = 12, close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Saves image containing the pca results with prefix: {{name}}
@@ -480,11 +488,14 @@ def save_pca_results(
         size of the points in the scatter plots
     legend_marker_size
         size of the legend marker
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
     n_components = pca_data.shape[0]
     singular_values = np.ones(n_components)
     base_color_map = {value: f"C{i}" for i, value in enumerate(pca_data.columns.get_level_values(0).unique())}
@@ -525,8 +536,8 @@ def save_pca_results(
                         pca_data.loc[f"PC_{col_pc}"] / singular_values[col],
                         s=marker_size, edgecolors=None,
                         c=[base_color_map.get(name, "blue") for name in pca_data.columns.get_level_values(0)])
-                    ax.set_xlabel(f"PC {row_pc} - {0}".format(pca_var[0]), fontsize=22, labelpad=20)
-                    ax.set_ylabel(f"PC {col_pc} - {0}".format(pca_var[1]), fontsize=22, labelpad=20)
+                    ax.set_xlabel(f"PC {row_pc} - {pca_var[0]}", fontsize=22, labelpad=20)
+                    ax.set_ylabel(f"PC {col_pc} - {pca_var[1]}", fontsize=22, labelpad=20)
                     ax.tick_params(axis="both", labelsize=18)
 
     if show_suptitle:
@@ -544,7 +555,7 @@ def save_pca_results(
 def save_pathway_analysis_results(
         protein_intensities: pd.DataFrame, significances: pd.DataFrame = None, pathway: str = "",
         show_suptitle: bool = True, threshold: float = 0.05, intensity_label: str = "Intensity",
-        color_map: Optional[dict] = None, **kwargs
+        color_map: Optional[dict] = None, close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Saves plots into the pathway_analysis dir.
@@ -565,6 +576,8 @@ def save_pathway_analysis_results(
         from which intensity was the data. will be shown on x axis
     color_map
         a mapping from the column names to a color
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
@@ -572,7 +585,8 @@ def save_pathway_analysis_results(
     -------
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
     level_keys = list(protein_intensities.columns.get_level_values(0).unique())
     n_rows, n_cols = get_number_rows_cols_for_fig(protein_intensities.index)
     fig, axarr = plt.subplots(n_rows, n_cols, figsize=(n_cols * 5, int(n_rows * len(level_keys) / 1.1)))
@@ -622,7 +636,7 @@ def save_pathway_analysis_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_boxplot_results(
         protein_intensities: pd.DataFrame, intensity_label: str = "Intensity",
-        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vertical: bool = False, **kwargs
+        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vertical: bool = False, close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Boxplot of intensities. Saves the plot with prefix: {{name}}
@@ -637,13 +651,16 @@ def save_boxplot_results(
         figure to put plot
     vertical
         should a vertical boxplot be created
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
     # TODO give colors to the different groups
     if plot is None:
-        plt.close("all")
+        if close_plots is not None:
+            plt.close(close_plots)
         fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
     else:
         fig, ax = plot
@@ -674,7 +691,7 @@ def save_boxplot_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_relative_std_results(
         intensities: pd.DataFrame, experiment_name: str, intensity_label: str = "Intensity",
-        show_suptitle: bool = True, bins=(10, 20, 30), cmap: dict = None, **kwargs
+        show_suptitle: bool = True, bins=(10, 20, 30), cmap: dict = None, close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Relative standard deviations of passed intensities with color marking based on the specified bins and color map.
@@ -694,13 +711,16 @@ def save_relative_std_results(
         in which bins should the standard deviations be categorized
     cmap
         mapping for the digitized labels to a color
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
     # TODO add percentage to absolute numbers
     # TODO see if code could be optimized
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
 
     bins = np.array(bins)
 
@@ -743,7 +763,8 @@ def save_relative_std_results(
 @save_plot("detected_counts")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_detection_counts_results(
-        counts: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
+        counts: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True, close_plots: str = "all",
+        **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Saves the plot with prefix: {{name}}
@@ -756,11 +777,14 @@ def save_detection_counts_results(
         label of the dataframe
     show_suptitle
         should the figure title be shown
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
 
     n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(counts.columns)
     fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment, squeeze=True,
@@ -806,7 +830,7 @@ def save_detection_counts_results(
 def save_kde_results(
         intensities: pd.DataFrame, quantile_range: Optional[np.array] = None, n_points: int = 1000,
         cmap: Union[str, colors.Colormap] = "viridis", plot: Optional[Tuple[plt.Figure, plt.Axes]] = None,
-        intensity_label: str = "Intensity", **kwargs
+        intensity_label: str = "Intensity", close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves the plot with prefix: {{name}}
@@ -825,6 +849,8 @@ def save_kde_results(
         figure to put plot
     intensity_label
         label to be put on x axis
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
@@ -835,7 +861,8 @@ def save_kde_results(
     if plot is not None:
         fig, ax = plot
     else:
-        plt.close("all")
+        if close_plots is not None:
+            plt.close(close_plots)
         fig, ax = plt.subplots(1, 1)
 
     if quantile_range is None:
@@ -877,7 +904,7 @@ def save_kde_results(
 def save_n_proteins_vs_quantile_results(
         quantiles: pd.DataFrame, n_proteins: pd.Series, nstd: int = 1, cmap: Union[str, colors.Colormap] = "viridis",
         plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, cbar_ax: Optional[plt.Axes] = None,
-        intensity_label: str = "Intensity", fill_between: bool = False, **kwargs
+        intensity_label: str = "Intensity", fill_between: bool = False, close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
     """
     saves plot with prefix: {{name}}
@@ -900,6 +927,8 @@ def save_n_proteins_vs_quantile_results(
         label to put on x label
     fill_between
         should the area around the line be filled
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
@@ -910,11 +939,12 @@ def save_n_proteins_vs_quantile_results(
     if plot is not None:
         fig, ax = plot
     else:
-        plt.close("all")
+        if close_plots is not None:
+            plt.close(close_plots)
         fig, ax = plt.subplots(1, 1, figsize=(14, 7))
 
     if not isinstance(cmap, colors.Colormap):
-        cmap = cm.get_cmap(cmap)
+        cmap = copy(cm.get_cmap(cmap))
 
     m = n_proteins.sort_values()
     for quant in quantiles.index:
@@ -949,7 +979,7 @@ def save_n_proteins_vs_quantile_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_normalization_overview_results(
         quantiles, n_proteins, intensities, protein_intensities,
-        height: int = 15, intensity_label: str = "Intensity", **kwargs
+        height: int = 15, intensity_label: str = "Intensity", close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]:
     """
     saves plot with prefix: {{name}}
@@ -968,10 +998,14 @@ def save_normalization_overview_results(
         height of the figure
     intensity_label
         name of the experiment
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
+    if close_plots is not None:
+        plt.close(close_plots)
     fig = plt.figure(figsize=(18, 18), constrained_layout=True)
     gs = fig.add_gridspec(height, 2)
     ax_density = fig.add_subplot(gs[0:height // 2, 0])
@@ -986,6 +1020,7 @@ def save_normalization_overview_results(
     plot_kwargs = dict(intensity_label=intensity_label)
     plot_kwargs.update(**kwargs)
     plot_kwargs["save_path"] = None
+    plot_kwargs["close_plots"] = None
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)  # ignore warning for mixing constrained layout with tight_layout
         save_kde_results(intensities=intensities,  plot=(fig, ax_density), **plot_kwargs)
@@ -1004,7 +1039,7 @@ def save_intensities_heatmap_result(
         intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad: str = "dimgray",
         cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None,
         vmin: Optional[float] = None,
-        intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
+        intensity_label: str = "Intensity", show_suptitle: bool = True, close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
     """
     saves plot with prefix: {{name}}
@@ -1029,13 +1064,16 @@ def save_intensities_heatmap_result(
         name of the experiment
     show_suptitle
         should figure title be shown
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
     """
     if plot is not None:
         fig, ax = plot
     else:
-        plt.close("all")
+        if close_plots is not None:
+            plt.close(close_plots)
         if len(intensities.columns)*0.5 < 4:
             height = 4
         else:
@@ -1043,7 +1081,7 @@ def save_intensities_heatmap_result(
         fig, ax = plt.subplots(figsize=(17, height))
 
     if not isinstance(cmap, colors.Colormap):
-        cmap = cm.get_cmap(cmap)
+        cmap = copy(cm.get_cmap(cmap))
     if cmap_bad is not None:
         cmap.set_bad(color='dimgray')
 
@@ -1067,10 +1105,12 @@ def save_intensities_heatmap_result(
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, (ax, cbar.ax)
 
+
 @save_plot("detection_per_replicate")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_detected_proteins_per_replicate_results(
-        all_heights: Dict[str, pd.Series], intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
+        all_heights: Dict[str, pd.Series], intensity_label: str = "Intensity", show_suptitle: bool = True,
+        close_plots: str = "all", **kwargs
 ):
     """
     saves plot with prefix: {{name}}
@@ -1083,11 +1123,14 @@ def save_detected_proteins_per_replicate_results(
         name of the experiment
     show_suptitle
         should the figure title be shown
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
     # determine number of rows and columns in the plot based on the number of experiments
     n_rows_experiment, n_cols_experiment = get_number_rows_cols_for_fig(all_heights.keys())
     fig, axarr = plt.subplots(n_rows_experiment, n_cols_experiment,
@@ -1139,7 +1182,8 @@ def save_detected_proteins_per_replicate_results(
 def save_intensity_histogram_results(
         hist_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False,
         compare_to_remaining: bool = False, legend: bool = True, n_bins: int = 25, show_mean: bool = True,
-        histtype="bar", color=None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, **kwargs
+        histtype="bar", color=None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, close_plots: str = "all",
+        **kwargs
 ):
     """
     saves plot with prefix: {{name}}
@@ -1166,6 +1210,8 @@ def save_intensity_histogram_results(
         passed to hist
     plot
         figure to put plot
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
@@ -1173,7 +1219,8 @@ def save_intensity_histogram_results(
     if plot is not None:
         fig, axarr = plot
     else:
-        plt.close("all")
+        if close_plots is not None:
+            plt.close(close_plots)
         n_rows, n_cols = get_number_rows_cols_for_fig(hist_data.columns.get_level_values(0).unique())
         fig, axarr = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 5 * n_rows))
         for i in range(n_rows * n_cols - len(hist_data.columns.get_level_values(0).unique())):
@@ -1240,7 +1287,8 @@ def save_intensity_histogram_results(
 @save_plot("scatter_{full_name}")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_scatter_replicates_results(
-        scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True, **kwargs
+        scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True,
+        close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1253,11 +1301,14 @@ def save_scatter_replicates_results(
         name of the experiment
     show_suptitle
         should the figure title be shown
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
     fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 
     min_counts = scatter_data.min().min()
@@ -1274,8 +1325,8 @@ def save_scatter_replicates_results(
                    label=f"{rep1}  vs  {rep2},  "
                          fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
                    alpha=0.5, s=40,  marker=".", edgecolors="none")
-        ax.set_xlabel(f"{intensity_label} of x1")
-        ax.set_ylabel(f"{intensity_label} of x2")
+        ax.set_xlabel(f"{intensity_label} of {rep1}")
+        ax.set_ylabel(f"{intensity_label} of {rep2}")
         if show_suptitle:
             ax.set_title(f"Scatter comparison of replicates using {intensity_label}")
 
@@ -1292,7 +1343,7 @@ def save_scatter_replicates_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_rank_results(
         rank_data: pd.Series, interesting_proteins, intensity_label: str = "Intensity", full_name="Experiment",
-        **kwargs
+        close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1307,11 +1358,14 @@ def save_rank_results(
         name of the experiment
     full_name
         name of the sample/group plotted
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
     if interesting_proteins.values():
         all_pathway_proteins = set.union(*(set(x) for x in interesting_proteins.values()))
     else:
@@ -1384,7 +1438,7 @@ def save_experiment_comparison_results(
         protein_intensities_sample1: pd.Series, protein_intensities_sample2: pd.Series,
         exclusive_sample1: pd.Series, exclusive_sample2: pd.Series, sample1: str, sample2: str,
         intensity_label: str = "Intensity", show_suptitle: bool = True,
-        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None,  **kwargs
+        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, close_plots: str = "all", **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1409,6 +1463,8 @@ def save_experiment_comparison_results(
         should the figure title be shown
     plot
         figure to put plot
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
@@ -1423,7 +1479,8 @@ def save_experiment_comparison_results(
     if plot is not None:
         fig, ax = plot
     else:
-        plt.close("all")
+        if close_plots is not None:
+            plt.close(close_plots)
         fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 
     exp = r"$r^{2}$"
@@ -1460,7 +1517,8 @@ def save_experiment_comparison_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_go_analysis_results(
         heights: Dict[str, list], test_results: Dict[str, list], go_length: Dict[str, list],
-        go_analysis_gene_names: list, show_suptitle: bool = True, intensity_label="Intensity", **kwargs
+        go_analysis_gene_names: list, show_suptitle: bool = True, intensity_label="Intensity", close_plots: str = "all",
+        **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1479,12 +1537,14 @@ def save_go_analysis_results(
         should the figure title be shown
     intensity_label
         name of the experiment
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
 
     go_analysis_gene_names = [go_term.replace("_", " \n").replace(" + ", " \n") for go_term in go_analysis_gene_names]
 
@@ -1576,7 +1636,7 @@ def save_pathway_timecourse_results():
 @save_venn_to_txt({"named_sets": "txts/set_bar"})
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_bar_venn(
-        named_sets: Dict[str, set], ex: str, show_suptitle: bool = True, **kwargs
+        named_sets: Dict[str, set], ex: str, show_suptitle: bool = True, close_plots: str = "all", **kwargs
 ) -> Optional[Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]]:
     """
     saves plot with prefix: {{name}}
@@ -1589,11 +1649,14 @@ def save_bar_venn(
         figure title
     show_suptitle
         should the figure title be shown
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
     if len(named_sets) > 6:
         warnings.warn(f"Skipping bar-venn for {ex} because it has more than 6 experiments")
         return
@@ -1642,7 +1705,7 @@ def save_bar_venn(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_venn(
         named_sets: Dict[str, set], ex: str, show_suptitle: bool = True,
-        title_font_size=20, set_label_font_size=16, subset_label_font_size=14, **kwargs
+        title_font_size=20, set_label_font_size=16, subset_label_font_size=14, close_plots: str = "all", **kwargs
 ) -> Optional[Tuple[plt.Figure, plt.Axes]]:
     """
     Creates Venn Diagrams from passed data. saves plot with prefix: {{name}}
@@ -1661,11 +1724,14 @@ def save_venn(
         font size of sets
     subset_label_font_size
         font size of subsets
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
     kwargs
         {kwargs}
 
     """
-    plt.close("all")
+    if close_plots is not None:
+        plt.close(close_plots)
     fig, ax = plt.subplots(1, 1, figsize=(14, 7))
     if show_suptitle:
         plt.title(ex.replace("_", " "), fontsize=title_font_size, weight="bold")
