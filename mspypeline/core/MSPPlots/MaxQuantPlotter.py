@@ -84,9 +84,14 @@ class MaxQuantPlotter(BasePlotter):
         default_kwargs.update(**kwargs)
         return super().from_file_reader(reader_instance, **default_kwargs)
 
-    def create_report(self):
+    def create_report(self, target_dir: str = None):
         """
         Creates a MaxQuantReport.pdf, which can be used as :ref:`quality control <plotters>`.
+
+        Parameters
+        ----------
+        target_dir
+            directory where report will be written
 
         Returns
         -------
@@ -273,7 +278,8 @@ class MaxQuantPlotter(BasePlotter):
             msms_scans = None
 
         self.logger.info("Creating plots")
-        with PdfPages(os.path.join(self.start_dir, "MaxQuantReport.pdf")) as pdf:
+        target_dir = target_dir if target_dir is not None else self.start_dir
+        with PdfPages(os.path.join(target_dir, "MaxQuantReport.pdf")) as pdf:
             self.logger.debug("Creating start page")
             fig = plt.figure(figsize=(14, 7))
             text_conf = dict(transform=fig.transFigure, size=24, ha="center")
