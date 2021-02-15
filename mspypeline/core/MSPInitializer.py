@@ -25,7 +25,7 @@ class MSPInitializer:
     possible_pathways = sorted([x for x in os.listdir(os.path.join(path_package_config, pathway_path))
                                 if x.endswith(".txt")])
 
-    def __init__(self, dir_: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
+    def __init__(self, path: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
         """
         An initializer class which is responsible for creating the directory to save the default YAML configuration file
         as well as reading and saving the specified settings. The initializer also operates as a means of passing stored
@@ -33,7 +33,7 @@ class MSPInitializer:
 
         Parameters
         ----------
-        dir_
+        path
             location where the directory/txt folder to the data can be found.
         file_path_yml
             path to the yaml config file
@@ -59,7 +59,7 @@ class MSPInitializer:
         self._file_path_yaml = None
 
         # set the specified dirs
-        self.start_dir = dir_
+        self.start_dir = path
         if file_path_yml is not None:
             self.file_path_yaml = file_path_yml
 

@@ -255,9 +255,3 @@ def make_contrasts(exp1, exp2):
     contrast_matrix = pd.DataFrame(data=(1, -1), columns=[f"{exp2}-{exp1}"], index=[exp2, exp1])
     contrast_matrix.name = "Contrasts"
     return contrast_matrix
-
-
-def remove_spare_axes(samples):
-    n_figures = int(np.ceil(samples / 9))
-    n_exp = 9 - (samples - (n_figures - 1) * 9)
-
