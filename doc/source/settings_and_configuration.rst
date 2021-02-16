@@ -74,12 +74,37 @@ naming with a provided sample mapping so that samples translate to a proper anal
 If the naming convention is violated a sample mapping can be provided manually or by using the default file.
 
 * default **sample_mapping_template.txt** file: This file is created automatically if the naming convention is
-  incorrect. The file already provides the general structure of the sample mapping consisting of two columns *old_name*
-  which is readily filled out and *new_name* which needs to be filled with the new desired sample name. Then the file
+  incorrect. The file already provides the general structure of the sample mapping consisting of two columns *old name*
+  which is readily filled out and *new name* which needs to be filled with the new desired sample name. Then the file
   needs to be renamed to **sample_mapping.txt**.
 * manual **sample_mapping.txt** file: The file needs to be tab-separated with two columns and saved on the same level
-  as the config directory. The first column named *old_name* should contain the sample name
-  of the ms run. The second column named *new_name* should follow the naming convention.
+  as the config directory. The first column named *old name* should contain the sample name
+  of the ms run. The second column named *new name* should follow the naming convention.
+
+A *sample-mapping.txt* file should have a simple structure as shown in the table below. All samples need to be mapped,
+non-conforming sample names need to be corrected in the *new name* columns (e.g. row 1-3) and sample names that are already
+correct simply need to be copied in the *new name* columns (e.g. row 4-5).
+Since this example is only intended to give a small insight into the sample-mapping file, the remaining samples of the
+analysis design are not listed here, which would be necessary for a real data analysis.
+
+.. list-table:: sample_mapping.txt
+    :widths: 25, 25
+    :header-rows: 1
+
+    * - old name
+      - new name
+    * - Cancer_Line1-Rep1
+      - Cancer_Line1_Rep1
+    * - Cance_Line1_Rep2
+      - Cancer_Line1_Rep2
+    * - Cancer_Line_1_Rep3
+      - Cancer_Line1_Rep3
+    * - Cancer_Line2_Rep1
+      - Cancer_Line2_Rep1
+    * - Cancer_Line2_Rep2
+      - Cancer_Line2_Rep2
+    * - Cancer...
+      - Cancer..
 
 .. _tech-reps:
 
