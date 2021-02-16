@@ -10,7 +10,7 @@ code example to create this plot when using the package as a :ref:`python module
 
 Plotter creation
 ^^^^^^^^^^^^^^^^^
-Firstly, a plotter object has to be created too make the plots. Here, the :class:`~MaxQuantPlotter` is build from
+First, a plotter object has to be created too make the plots. Here, the :class:`~MaxQuantPlotter` is build from
 the :class:`~MSPInitializer` class which creates and reads in the :ref:`configuration file <settings>` and initiates the
 :class:`~MQReader` that loads the exemplary data set provided.
 
@@ -21,7 +21,7 @@ the :class:`~MSPInitializer` class which creates and reads in the :ref:`configur
     from mspypeline import load_example_dataset, MaxQuantPlotter
     # load the data that is provided in a submodule
     init = load_example_dataset(configs={
-        "pathways": ["BIOCARTA_EGF_PATHWAY.txt", "HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY.txt"],
+        "pathways": ["BIOCARTA_EGF_PATHWAY.txt", "HALLMARK_IL2_STAT5_SIGNALING.txt"],
         "go_terms": ["GO_POSITIVE_REGULATION_OF_CYTOKINE_PRODUCTION.txt", "GO_INFLAMMATORY_RESPONSE.txt"]
         })
     plotter = MaxQuantPlotter.from_MSPInitializer(init)
@@ -43,13 +43,13 @@ MaxQuant Report
 ^^^^^^^^^^^^^^^^^^^^^^^
 Created using: :meth:`~mspypeline.MaxQuantPlotter.create_report`
 
-    The MaxQuant report was built with the intention to offer a broad insight into the different sources of information
-    from a MaxQuant output. Besides the protein intensities (from the *proteinGroups.txt* file) which are the only
-    source of data for all other parts of the analysis with the :ref:`MaxQuant Plotter <plotters>`, further information
-    about experimental and technical parameters of the experiment are taken into account. The MaxQuant report can
-    function as quality control of the data and will output a multi-page pdf document composed of a variety of
-    information and graphics.
-    Make sure that :ref:`all MaxQuant files <file-readers>` are provided, which are used to create the report.
+    | The MaxQuant report was built with the intention to offer a broad insight into the different sources of information
+      from a MaxQuant output. Besides the protein intensities (from the *proteinGroups.txt* file) which are the only source
+      of data for all other parts of the analysis with the :ref:`MaxQuant Plotter <plotters>`, further information
+      about experimental and technical parameters of the experiment are taken into account.
+    | The MaxQuant report can function as quality control of the data and will output a multi-page pdf document composed of
+      a variety of information and graphics.
+    | Make sure that :ref:`all MaxQuant files <file-readers>` are provided, which are used to create the report.
 
 .. ipython:: python
 
@@ -88,12 +88,13 @@ Heatmap overview
 Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` by calling
 :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`.
 
-    The Heatmap overview offers the opportunity to visually inspect how the distribution of protein intensities and missing
-    values for each sample. As in the normalization overview, with this method, a separate plot is generated for each
-    normalizer and attached to the document as another page. The heatmap overview can help to understand the differences
-    between the distinct :ref:`protein intensity options <hyperparameter>` and :ref:`normalization methods <hyperparameter>`
-    as it allows for instance to spot patterns between the different plot. The heatmap overview is based on the
-    :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap` method.
+    | The Heatmap overview offers the opportunity to visually inspect how the distribution of protein intensities and missing
+      values for each sample.
+    | As in the normalization overview, with this method, a separate plot is generated for each normalizer and attached
+      to the document as another page. The heatmap overview can help to understand the differences between the distinct
+      :ref:`protein intensity options <hyperparameter>` and :ref:`normalization methods <hyperparameter>` as it allows
+      for instance to spot patterns between the different plot.
+    | The heatmap overview is based on the :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap` method.
 
 .. ipython:: python
 
@@ -124,9 +125,11 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replica
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_detected_proteins_per_replicate
 
-    Depending on whether :ref:`technical replicates <tech-reps>` should be recognized/averaged (top graph) or not
-    (bottom graph) the data and resulting plot will have different outcomes. The number of detected proteins in total and
-    per sample changes as 0 values are handled as missing values ("nan") and neglected when calculating the mean of samples.
+
+    | Depending on whether :ref:`technical replicates <tech-reps>` should be recognized/averaged (top graph) or not
+      (bottom graph) the data and resulting plot will have different outcomes. The number of detected proteins in total
+      and per sample changes as 0 values are handled as missing values ("nan") and neglected when calculating the mean of
+      samples.
 
 .. ipython:: python
 
@@ -162,13 +165,17 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
 
 .. ipython:: python
 
-    plots = plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path=None);
+    plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./source/_static", fig_format=".png");
 
-    @savefig venn_group_plot1.png height=300 width=540 align=left
-    select_fig(plots, 0);
+.. figure:: _static/plots/venn_replicate_group_level_0_lfq_log2_level_0.png
+    :width: 440
+    :height: 400
+    :align: left
 
-    @savefig venn_group_plot2.png height=300 width=100 align=right
-    select_fig(plots, 1);
+.. figure:: _static/plots/venn_bar_group_level_0_lfq_log2_level_0.png
+    :width: 200
+    :height: 400
+    :align: right
 
 
 PCA overview
@@ -179,8 +186,11 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
 
 .. ipython:: python
 
-    @savefig pca_overview.png width=450 align=center
-    plotter.plot_pca_overview("lfq_log2", 1, save_path=None);
+    plotter.plot_pca_overview("lfq_log2", 1, save_path="./source/_static", fig_format=".png");
+
+.. figure:: _static/pca_overview_lfq_log2_level_1.png
+    :width: 550
+    :align: center
 
 
 Intensity histogram
@@ -215,10 +225,11 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
 
 .. ipython:: python
 
-    plots = plotter.plot_scatter_replicates("lfq_log2", 1, close_plots=None, save_path=None);
+    plotter.plot_scatter_replicates("lfq_log2", 1, save_path="./source/_static", fig_format=".png");
 
-    @savefig scatter_replicates.png width=500 align=center
-    select_fig(plots, 0);
+.. figure:: _static/scatter_H838_unst_lfq_log2_level_1.png
+    :width: 700
+    :align: center
 
 
 Experiment comparison
@@ -229,8 +240,11 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
 
 .. ipython:: python
 
-    @savefig experiment_comparison.png width=500 align=center
-    plotter.plot_experiment_comparison("lfq_log2", 0, save_path=None);
+    plotter.plot_experiment_comparison("lfq_log2", 0, save_path="./source/_static", fig_format=".png");
+
+.. figure:: _static/scatter_comparison_H1975_vs_H838_lfq_log2_level_0.png
+    :width: 650
+    :align: center
 
 
 Rank
@@ -241,8 +255,11 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_rank`
 
 .. ipython:: python
 
-    @savefig rank_plot.png width=500 align=center
-    plotter.plot_rank("lfq_log2", 0, save_path=None);
+    plotter.plot_rank("lfq_log2", 0, save_path="./source/_static", fig_format=".png");
+
+.. figure:: _static/rank_H1975_lfq_log2_level_0.png
+    :width: 700
+    :align: center
 
 
 Statistical inference plots
@@ -253,6 +270,16 @@ Pathway analysis
 Created using: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_pathway_analysis
+
+| Shown below are two pathway analysis figures, both plotting the protein intensities of the
+  :ref:`Biocarta EGF pathway <pathway-proteins>` but calculated for different analysis levels. Here, the choice of the
+  :ref:`analysis level <analysis-design>` or depth determines which samples are considered a *"group"*.
+| In the upper figure where the analysis was performed on the lowest level (level 0) which only consists of two groups
+  (H1975 & H838), all samples belonging to any one of them are grouped together.
+| In the lower figure, where the analysis was performed on then next higher level (level 1) the two groups of level 0
+  are further subdivided into a total of four different groups to which (only) 3 samples are assigned.
+| Statistical analysis are always performed between two *"groups"* of samples and require a minimum of 3 samples to
+  indicate significances.
 
 .. ipython:: python
 
@@ -284,10 +311,15 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_r_volcano`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_r_volcano
 
+    | In the here shown volcano plot, the 10 most significant proteins for each group are annotated. However, if proteins
+      of a specific pathway should be annotated, this can be achieved by selecting one or more
+      :ref:`pathway lists <pathway-proteins>`.
+
 .. ipython:: python
 
-    @savefig volcano_plot.png width=500 align=center
-    plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path=None);
+    plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path="./source/_static", fig_format=".png");
+
+.. figure:: _static/plots/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
 
 
 Additionally via python
@@ -298,6 +330,10 @@ Kernel density estimate plot
 Created using: :meth:`~mspypeline.BasePlotter.plot_kde`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_kde
+
+    | In the graphs shown below, the effect of the two different protein :ref:`intensity types <hyperparameter>`
+      *"raw"* and *"lfq"* is visible. The KDE can thus help to understand the effect of configuring certain
+      hyperparameters and how intensity types or normalization methods may influence the data.
 
 .. ipython:: python
 
@@ -337,7 +373,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_heatmap
 
+    | In the heatmap shown below, samples are sorted by the number of missing values and proteins are ranked by the number
+      of missing values across all samples. So depending on the defined preferences, the heatmap can, for instance, be
+      used to gather information about the distribution of missing values or the influence of the normalization method by
+      the appearance of patterns.
+
 .. ipython:: python
 
     @savefig intensity_heatmap.png width=700 align=center
-    plotter.plot_intensity_heatmap("lfq_log2", 3, save_path=None);
+    plotter.plot_intensity_heatmap("lfq_log2", 3, sort_index_by_missing=True, sort_columns_by_missing=True, save_path=None);

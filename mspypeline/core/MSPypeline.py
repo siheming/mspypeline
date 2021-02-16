@@ -15,10 +15,11 @@ class UIHandler:
     def __init__(self, file_dir, yml_file=None, gui=False, host_flask=False, selected_reader=MQReader.MQReader,
                  loglevel=logging.DEBUG, configs: dict = None):
         """
-        Used to take the mapping of arguments provided by the :class:`~MSPParser` through the command line to organize
-        through which point of entry the data analysis should be performed. The UIHandler can initialize the creation of
-        the GUI, perform the whole analysis instantly by running the pipeline and creating all plots according to the
-        configs or (not yet available) host the mspypeline on a flask server.
+        | Used to take the mapping of arguments provided by the :class:`~MSPParser` through the command line to organize
+          through which point of entry the data analysis should be performed.
+        | The UIHandler can initialize the creation of the GUI, perform the whole analysis instantly by running the
+          pipeline and creating all plots according to the configs or (not yet available) host the mspypeline on a flask
+          server.
 
         Parameters
         ----------
@@ -68,7 +69,7 @@ class UIHandler:
 class MSPGUI(tk.Tk):
     def __init__(self, file_dir, yml_file=None, loglevel=logging.DEBUG, configs: dict = None):
         """
-        This class is called from the :class:`~UIHandler` to create the GUI.
+        | This class is called from the :class:`~UIHandler` to create the GUI.
 
         Parameters
         ----------
@@ -404,8 +405,8 @@ class MultiSelectOptionMenu(tk.Frame):
 class MSPParser(argparse.ArgumentParser):
     def __init__(self):
         """
-        Uses the ``argparse`` module to provide a parser for command line options, arguments and sub-commands through
-        which the analysis can be started or the GUI can be called (see :ref:`get-started`).
+        | Uses the ``argparse`` module to provide a parser for command line options, arguments and sub-commands through
+          which the analysis can be started or the GUI can be called (see :ref:`get-started`).
         """
         super().__init__(description="A pipeline to analyze result files from a MaxQuant report. "
                                      "The required result files are in the txt directory.")

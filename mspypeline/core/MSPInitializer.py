@@ -27,9 +27,9 @@ class MSPInitializer:
 
     def __init__(self, path: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
         """
-        An initializer class which is responsible for creating the directory to save the default YAML configuration file
-        as well as reading and saving the specified settings. The initializer also operates as a means of passing stored
-        configurations to the plotter classes.
+        | An initializer class which is responsible for creating the directory to save the default YAML configuration
+          file as well as reading and saving the specified settings.
+        | The initializer also operates as a means of passing stored configurations to the plotter classes.
 
         Parameters
         ----------
@@ -131,9 +131,9 @@ class MSPInitializer:
 
     def init_config(self):
         """
-        Creates the directory to save the configuration file if not present, updates and saves the configuration. The
-        function is usually applied to ensure that configs are provided to the initializer in order to avoid problems
-        initializing the file reader with :meth:`read_data`.
+        | Creates the directory to save the configuration file if not present, updates and saves the configuration.
+        | The function is usually applied to ensure that configs are provided to the initializer in order to avoid
+          problems initializing the file reader with :meth:`read_data`.
         """
         os.makedirs(self.path_config, exist_ok=True)
         self.update_config_file()
@@ -203,9 +203,9 @@ class MSPInitializer:
 
     def read_data(self):
         """
-        Initiates the file reader by providing the directory to the data and the configs e.g. by :meth:`init_configs`.
-        In turn a data dictionary is generated to provide the mapping to the input data (*reader_data*) for the further
-        analysis with the :ref:`mspypeline plotters <plotters>`.
+        | Initiates the file reader by providing the directory to the data and the configs e.g. by :meth:`init_configs`.
+        | In turn a data dictionary is generated to provide the mapping to the input data (*reader_data*) for the further
+          analysis with the :ref:`mspypeline plotters <plotters>`.
         """
         for Reader in BaseReader.__subclasses__():
             Reader: Type[BaseReader]  # for IDE hints

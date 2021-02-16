@@ -661,7 +661,7 @@ def save_boxplot_results(
     if plot is None:
         if close_plots is not None:
             plt.close(close_plots)
-        fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 3))
+        fig, ax = plt.subplots(figsize=(14, 1 + len(protein_intensities.columns) // 2))
     else:
         fig, ax = plot
     # indicate overall median with a line

@@ -5,13 +5,13 @@ Settings and Configurations
 
 The configuration YAML file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-To specify the settings for the analysis a config.yml YAML file has to be provided. The YAML file stores the main
-configurations that determine which results will be created. This configuration file also offers the specification of
-multiple optional analysis options.
-If no custom YAML file is generated, the :ref:`default YAML file <default-yaml>` provided by the ``mspypeline`` at the
-start of the analysis may be used containing the default analysis settings. If the data analysis is performed via the
-GUI, no further interaction with the YAML file is necessary.
-Plots can be easily reproduced by reusing the same settings/YAML file.
+| To specify the settings for the analysis a config.yml YAML file has to be provided. The YAML file stores the main
+  configurations that determine which results will be created. This configuration file also offers the specification of
+  multiple optional analysis options.
+| If no custom YAML file is generated, the :ref:`default YAML file <default-yaml>` provided by the ``mspypeline`` at the
+  start of the analysis may be used containing the default analysis settings. If the data analysis is performed via the
+  GUI, no further interaction with the YAML file is necessary.
+| Plots can be easily reproduced by reusing the same settings/YAML file.
 
 .. _default-yaml:
 
@@ -27,10 +27,10 @@ Analysis settings
 
 Analysis Design
 ~~~~~~~~~~~~~~~
-To perform comparative data analysis, the ``mspypeline`` assumes that the data consists samples that can be arranged
-into a tree structure that resamples the experimental setup. Different samples of an experiment are arranged
-in groups and subgroups dependent on the samples name. This naming convention is the key principal to draw comparisons
-between distinct samples of different groups/at different levels. The analysis design can be of any level of depth.
+| To perform comparative data analysis, the ``mspypeline`` assumes that the data consists samples that can be arranged
+  into a tree structure that resamples the experimental setup. Different samples of an experiment are arranged
+  in groups and subgroups dependent on the samples name. This naming convention is the key principal to draw comparisons
+  between distinct samples of different groups/at different levels. The analysis design can be of any level of depth.
 
 .. warning::
    * Different levels of the analysis design need to be separated by underscore (**_**)
@@ -39,9 +39,9 @@ between distinct samples of different groups/at different levels. The analysis d
 
 **Example Analysis Design**
 
-Assume an experiment, where two cancer cell lines are compared to two non-cancer cell lines. Additionally, we have 3
-technical replicates per cell line. One sample could be called e.g. "Cancer_Line1_Rep1", or "Control_Line2_Rep3".
-The resulting analysis design could look like this:
+| Assume an experiment, where two cancer cell lines are compared to two non-cancer cell lines. Additionally, we have 3
+  technical replicates per cell line. One sample could be called e.g. "Cancer_Line1_Rep1", or "Control_Line2_Rep3".
+| The resulting analysis design could look like this:
 
 .. ipython:: python
 
@@ -52,16 +52,16 @@ The resulting analysis design could look like this:
     analysis_design = get_analysis_design(samples)
     pprint(analysis_design)
 
-Level 0 corresponds to "Cancer" and "Control", level 1 corresponds to "Cancer_Line1", "Cancer_Line2", "Control_Line1"
-and "Control_Line2" and level 2 corresponds to the technical replicates "Cancer_Line1_Rep1", ... . Here, the "Cancer"
-group has a total of 6 children, which are then split in "Line1" and "Line2". "Line1" and "Line2" both have 3 children.
-If a comparison between the "Cancer" and "Control" groups should be performed, the lowest level (level 0) of the Data
-Tree must be chosen in rhe analysis. The results will consequently show the comparison of both level 0 groups "Cancer"
-and "Control" with all their children.
-On the other hand, if the different cancer and control cell lines should be compared, the second level (level 1) of the
-Data Tree must be selected. The results will consequently show the comparison of the four different level 1 groups
-"Cancer_Line1", "Cancer_Line2", "Control_Line1 and "Control_Line2" each with their 3 replicates.
-If all the 12 replicates should be compared to each other, the last level (level 2) must be selected in the analysis.
+| Level 0 corresponds to "Cancer" and "Control", level 1 corresponds to "Cancer_Line1", "Cancer_Line2", "Control_Line1"
+  and "Control_Line2" and level 2 corresponds to the technical replicates "Cancer_Line1_Rep1", ... . Here, the "Cancer"
+  group has a total of 6 children, which are then split in "Line1" and "Line2". "Line1" and "Line2" both have 3 children.
+| If a comparison between the "Cancer" and "Control" groups should be performed, the lowest level (level 0) of the Data
+  Tree must be chosen in rhe analysis. The results will consequently show the comparison of both level 0 groups "Cancer"
+  and "Control" with all their children.
+| On the other hand, if the different cancer and control cell lines should be compared, the second level (level 1) of the
+  Data Tree must be selected. The results will consequently show the comparison of the four different level 1 groups
+  "Cancer_Line1", "Cancer_Line2", "Control_Line1 and "Control_Line2" each with their 3 replicates.
+| If all the 12 replicates should be compared to each other, the last level (level 2) must be selected in the analysis.
 
 
 .. _sample-mapping:
@@ -69,9 +69,9 @@ If all the 12 replicates should be compared to each other, the last level (level
 Sample Mapping
 ***************
 
-Should the naming convention deviate from the expected standard, it is possible to subsequently correct the sample
-naming with a provided sample mapping so that samples translate to a proper analysis design.
-If the naming convention is violated a sample mapping can be provided manually or by using the default file.
+| Should the naming convention deviate from the expected standard, it is possible to subsequently correct the sample
+  naming with a provided sample mapping so that samples translate to a proper analysis design.
+| If the naming convention is violated a sample mapping can be provided manually or by using the default file.
 
 * default **sample_mapping_template.txt** file: This file is created automatically if the naming convention is
   incorrect. The file already provides the general structure of the sample mapping consisting of two columns *old name*
@@ -81,11 +81,11 @@ If the naming convention is violated a sample mapping can be provided manually o
   as the config directory. The first column named *old name* should contain the sample name
   of the ms run. The second column named *new name* should follow the naming convention.
 
-A *sample-mapping.txt* file should have a simple structure as shown in the table below. All samples need to be mapped,
-non-conforming sample names need to be corrected in the *new name* columns (e.g. row 1-3) and sample names that are already
-correct simply need to be copied in the *new name* columns (e.g. row 4-5).
-Since this example is only intended to give a small insight into the sample-mapping file, the remaining samples of the
-analysis design are not listed here, which would be necessary for a real data analysis.
+| A *sample-mapping.txt* file should have a simple structure as shown in the table below. All samples need to be mapped,
+  non-conforming sample names need to be corrected in the *new name* columns (e.g. row 1-3) and sample names that are
+  already correct simply need to be copied in the *new name* columns (e.g. row 4-5).
+| Since this example is only intended to give a small insight into the sample-mapping file, the remaining samples of the
+  analysis design are not listed here, which would be necessary for a real data analysis.
 
 .. list-table:: sample_mapping.txt
     :widths: 25, 25
@@ -110,12 +110,13 @@ analysis design are not listed here, which would be necessary for a real data an
 
 Technical Replicates
 ********************
-If the :ref:`configuration setting <default-yaml>` `has_techrep` is set to True or the corresponding checkbox in the GUI
-is ticked, the highest level of the analysis design is considered as a technical replicate. Technical replicates are
-averaged and cumulated to one sample of the next lowest level in the analysis design. Resoectively, the mean of all
-samples below a node is calculated and assigned to that node. The last level of the Data Tree is thus omitted. Values
-that are 0 are replaced with missing values, which are neglected when calculating the mean of samples (e.g. the
-average of the three values 32, 30, 0 would be replaced with 32, 30 and NaN resulting in an average of 30).
+| If the :ref:`configuration setting <default-yaml>` `has_techrep` is set to True or the corresponding checkbox in the
+  GUI is ticked, the highest level of the analysis design is considered as a technical replicate.
+| Technical replicates are averaged and cumulated to one sample of the next lowest level in the analysis design.
+  Respectively, the mean of all samples below a node is calculated and assigned to that node. The last level of the Data
+  Tree is thus omitted. Values that are 0 are replaced with missing values, which are neglected when calculating the
+  mean of samples (e.g. the average of the three values 32, 30, 0 would be replaced with 32, 30 and NaN resulting in an
+  average of 30).
 
 .. ipython:: python
 
@@ -128,9 +129,9 @@ average of the three values 32, 30, 0 would be replaced with 32, 30 and NaN resu
     tree_no_agg.aggregate(None, None)
     tree_agg.aggregate(None, None)
 
-The columns of the last output are now named "Cancer_Line1", "Cancer_Line2", etc. and the values of the replicates
-"Rep1" to "Rep3" is averaged as mean. This can help to improve results since measurement results are noisy or proteins
-might be missing in some of the samples by random chance.
+| The columns of the last output are now named "Cancer_Line1", "Cancer_Line2", etc. and the values of the replicates
+  "Rep1" to "Rep3" is averaged as mean. This can help to improve results since measurement results are noisy or proteins
+  might be missing in some of the samples by random chance.
 
 
 
@@ -138,16 +139,16 @@ might be missing in some of the samples by random chance.
 
 Thresholds and Comparisons
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-Some plots need to determine whether a protein can be compared between two different groups.
-Four different results are possible when comparing a protein between group A and group B.
+| Some plots need to determine whether a protein can be compared between two different groups.
+| Four different results are possible when comparing a protein between group A and group B.
 
 * Unique in A: above threshold in A and completely absent in B
 * Unique in B: above threshold in B and completely absent in A
 * Can be compared: above threshold in A and B
 * Otherwise: not considered
 
-The threshold is determined dynamically based on the number of samples in a group. The next two plots show the
-thresholding for different numbers of samples.
+| The threshold is determined dynamically based on the number of samples in a group. The next two plots show the
+  thresholding for different numbers of samples.
 
 .. ipython:: python
 

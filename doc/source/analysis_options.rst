@@ -5,12 +5,13 @@ Analysis options
 
 Data Analysis
 ~~~~~~~~~~~~~
-The ``mspypeline`` was developed to consolidate the proteomics data analysis workflow while providing both simplicity
-and flexibility. The :ref:`usage of the GUI <gui-quickstart>` provides the opportunity to explore and visualize data
-straight forward, without interaction of the code. The GUI offers the majority of data analysis options currently
-available in the ``mspypeline``. Additional plots and more advanced analysis may be performed by specifying optional
-arguments in the :ref:`configuration <default-yaml>` file or by accessing the package as a
-:ref:`python module <python-quickstart>`.
+| The ``mspypeline`` was developed to consolidate the proteomics data analysis workflow while providing both simplicity
+  and flexibility.
+| The :ref:`usage of the GUI <gui-quickstart>` provides the opportunity to explore and visualize data straight forward,
+  without interaction of the code. The GUI offers the majority of data analysis options currently available in the
+  ``mspypeline``.
+| Additional plots and more advanced analysis may be performed by specifying optional arguments in the
+  :ref:`configuration <default-yaml>` file or by accessing the package as a :ref:`python module <python-quickstart>`.
 
 
 Plots
@@ -69,10 +70,10 @@ above. Additionally, the MaxQuant Plotter provides a quality control report base
 
 Quality Control Report
 ***********************
-A quality control report for the output of MaxQuant. See :meth:`~mspypeline.MaxQuantPlotter.create_report`
-for a description of the output.
-This quality control report is specifically designed to process supplementary MaxQuant files
-available to generate a multi-page pdf document. Here, the quality of the raw data can be investigated, for instance,
-the influence of experimental parameters such as protein digestion, technical information like retention time and
-length of individual samples as well as the corresponding chromatograms or the number of peptides measured and
-sequenced and the proportion of contamination of protein intensities.
+| A quality control report for the output of MaxQuant. See :meth:`~mspypeline.MaxQuantPlotter.create_report`
+  for a description of the output.
+| This quality control report is specifically designed to process supplementary MaxQuant files available to generate a
+  multi-page pdf document. Here, the quality of the raw data can be investigated, for instance, the influence of
+  experimental parameters such as protein digestion, technical information like retention time and length of individual
+  samples as well as the corresponding chromatograms or the number of peptides measured and sequenced and the proportion
+  of contamination of protein intensities.

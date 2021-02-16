@@ -12,9 +12,9 @@ from mspypeline.helpers import get_logger, DataDict
 class BaseReader(ABC):
     def __init__(self, start_dir: str, reader_config: dict, loglevel=logging.DEBUG):
         """
-        Base reader to provide a data dictionary with keys to the data. Data stored on system hardware, is thus only
-        loaded on demand. This is the parent class of any file reader that will be use to preprocess data to the
-        internal format.
+        | Base reader to provide a data dictionary with keys to the data. Data stored on system hardware, is thus only
+          loaded on demand. This is the parent class of any file reader that will be use to preprocess data to the
+          internal format.
 
         Parameters
         ----------

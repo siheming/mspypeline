@@ -29,12 +29,13 @@ class MQReader(BaseReader):
                  drop_columns: Union[list, tuple, str] = [],
                  loglevel=logging.DEBUG):
         """
-        A child class of the :class:`~BaseReader`. The MQReader preprocesses data from MaxQuant files into the
-        internal data format to provide the correct input for the plotters. Required files to start the MQReader
-        is the *proteinGroups.txt* file from MaxQuant. Additionally, the file reader can preprocess the *evidence,
-        msmsScans, msScans, parameters, peptides* and *summary* txt files from the MaxQuant output.
-        The reader also recognizes :ref:`sample_mapping.txt files <sample-mapping>` if provided and corrects the
-        sample naming for instance in the case of naming convention violation (see :ref:`analysis-design`).
+        | A child class of the :class:`~BaseReader`.
+        | The MQReader preprocesses data from MaxQuant files into the internal data format to provide the correct input
+          for the plotters. Required files to start the MQReader is the **proteinGroups.txt** file from MaxQuant.
+        | Additionally, the file reader can preprocess the *evidence, msmsScans, msScans, parameters, peptides* and
+          *summary* txt files from the MaxQuant output.
+        | The reader also recognizes :ref:`sample_mapping.txt files <sample-mapping>` if provided and corrects the
+          sample naming for instance in the case of naming convention violation (see :ref:`analysis-design`).
 
         Parameters
         ----------
@@ -174,9 +175,10 @@ class MQReader(BaseReader):
 
     def preprocess_contaminants(self):
         """
-        Preprocess the *proteinGroups.txt* file to internal format and return DataFrame with all those proteins marked
-        as contaminant. Contaminants are defined as those proteins *"Only identified by site"*, marked as *"Reverse"* or
-        as *"Potential contaminant"* in the *proteinGroups.txt* file.
+        | Preprocess the *proteinGroups.txt* file to internal format and return DataFrame with all those proteins marked
+          as contaminant.
+        | Contaminants are defined as those proteins *"Only identified by site"*, marked as *"Reverse"* or as
+          *"Potential contaminant"* in the *proteinGroups.txt* file.
 
         Returns
         -------
@@ -271,9 +273,10 @@ class MQReader(BaseReader):
 
     def preprocess_proteinGroups(self):
         """
-        Preprocess the *proteinGroups.txt* file to internal format and return DataFrame with all those proteins not
-        marked as contaminant. Contaminants are defined as those proteins *"Only identified by site"*, marked as
-        *"Reverse"* or as *"Potential contaminant"* in the *proteinGroups.txt* file.
+        | Preprocess the *proteinGroups.txt* file to internal format and return DataFrame with all those proteins not
+          marked as contaminant.
+        | Contaminants are defined as those proteins *"Only identified by site"*, marked as *"Reverse"* or as
+          *"Potential contaminant"* in the *proteinGroups.txt* file.
 
         Returns
         -------
@@ -362,9 +365,10 @@ class MQReader(BaseReader):
 
     def preprocess_peptides(self):
         """
-        Preprocess the *peptides.txt* file to internal format and return DataFrame with all those peptides not
-        marked as contaminant. Contaminants are defined as those peptides marked as *"Reverse"* or as
-        *"Potential contaminant"* in the *peptides.txt* file.
+        | Preprocess the *peptides.txt* file to internal format and return DataFrame with all those peptides not
+          marked as contaminant.
+        | Contaminants are defined as those peptides marked as *"Reverse"* or as *"Potential contaminant"* in the
+          *peptides.txt* file.
 
         Returns
         -------
@@ -385,7 +389,7 @@ class MQReader(BaseReader):
 
     def preprocess_summary(self):
         """
-        Preprocess the *summary.txt* file to internal format and return DataFrame.
+        | Preprocess the *summary.txt* file to internal format and return DataFrame.
 
         Returns
         -------
@@ -401,7 +405,7 @@ class MQReader(BaseReader):
 
     def preprocess_parameters(self):
         """
-        Preprocess the *parameters.txt* file to internal format and return DataFrame.
+        | Preprocess the *parameters.txt* file to internal format and return DataFrame.
 
         Returns
         -------
@@ -414,9 +418,10 @@ class MQReader(BaseReader):
 
     def preprocess_evidence(self):
         """
-        Preprocess the *evidence.txt* file to internal format and return DataFrame with all those peptides not
-        marked as contaminant. Contaminants are defined as those peptides marked as *"Reverse"* or as
-        *"Potential contaminant"* in the *evidence.txt* file.
+        | Preprocess the *evidence.txt* file to internal format and return DataFrame with all those peptides not
+          marked as contaminant.
+        | Contaminants are defined as those peptides marked as *"Reverse"* or as *"Potential contaminant"* in the
+          *evidence.txt* file.
 
         Returns
         -------
@@ -433,8 +438,8 @@ class MQReader(BaseReader):
 
     def preprocess_msScans(self):
         """
-        Preprocess the *msScans.txt* file to internal format and return DataFrame. Only columns *"Raw file",
-        "Total ion current"* and *"Retention time"* are read in.
+        | Preprocess the *msScans.txt* file to internal format and return DataFrame.
+        | Only columns *"Raw file", "Total ion current"* and *"Retention time"* are read in.
 
         Returns
         -------
@@ -448,8 +453,8 @@ class MQReader(BaseReader):
 
     def preprocess_msmsScans(self):
         """
-        Preprocess the *msmsScans.txt* file to internal format and return DataFrame. Only columns *"Raw file",
-        "Total ion current"* and *"Retention time"* are read in.
+        | Preprocess the *msmsScans.txt* file to internal format and return DataFrame.
+        | Only columns *"Raw file", "Total ion current"* and *"Retention time"* are read in.
 
         Returns
         -------
