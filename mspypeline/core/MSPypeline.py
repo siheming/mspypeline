@@ -312,7 +312,8 @@ class MSPGUI(tk.Tk):
             additional_settings = {k: v for k, v in additional_settings.items()
                                    if k != "create_plot" and k != "dfs_to_use" and k != "levels"}
             selected_settings.update(additional_settings)
-            self.mspinit.configs.update({plot_settings: selected_settings})
+            for k, v in selected_settings.items():
+                self.mspinit.configs[plot_settings][k] = v
         gos = self.go_proteins_list.curselection()
         gos = [MSPInitializer.possible_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()

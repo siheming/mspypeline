@@ -172,7 +172,6 @@ class MQReader(BaseReader):
         raise NotImplementedError("This is not implemented at the moment. Please stick to the naming convention")
         # TODO update the attempted matching mechanism
 
-
     def preprocess_contaminants(self):
         """
         Preprocess the *proteinGroups.txt* file to internal format and return DataFrame with all those proteins marked
@@ -269,7 +268,6 @@ class MQReader(BaseReader):
         self.logger.debug("%s shape after preprocessing: %s", MQReader.proteins_txt, df_protein_groups.shape)
 
         return df_protein_groups
-
 
     def preprocess_proteinGroups(self):
         """

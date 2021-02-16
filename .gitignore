@@ -6,6 +6,8 @@ test/mock_data/
 doc/build/*
 .coverage
 htmlcov/
+doc/source/_static
+doc/source/savefig
 
 *.ipynb
 *.df

@@ -56,7 +56,7 @@ plot_detection_counts_settings:
   intensity_label: "Intensity"  # name of the experiment
   show_suptitle: true           # should a figure title be shown
 
-plot_number_of_detected_proteins_settings:
+plot_detected_proteins_per_replicate_settings:
   create_plot: false
   dfs_to_use: []
   levels: []

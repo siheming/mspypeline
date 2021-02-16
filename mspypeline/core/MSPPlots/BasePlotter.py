@@ -1564,7 +1564,7 @@ class BasePlotter:
         normalizers.update(self.normalizers)
         plot_kwargs = dict()
         plot_kwargs.update(**kwargs)
-        plot_kwargs.update({"save_path": None})
+        save_path = plot_kwargs.pop("save_path", self.file_dir_normalization)
         for df_to_use in dfs_to_use:
             for normaliser_name, normalizer in normalizers.items():
                 self.add_normalized_option(df_to_use, normalizer, normaliser_name)
@@ -1573,9 +1573,10 @@ class BasePlotter:
                 dfs = [x for x in dfs if x.endswith("log2")]
             df_plots = plot_function(dfs, max_depth - 1, **plot_kwargs)
             plots += df_plots
-            save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(file_name, **plot_kwargs,
-                                                                                    df_to_use=df_to_use)
-            matplotlib_plots.collect_plots_to_pdf(os.path.join(self.file_dir_normalization, result_name), *df_plots)
+            if save_path is not None:
+                save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(
+                    file_name, **plot_kwargs, df_to_use=df_to_use, save_path=save_path)
+                matplotlib_plots.collect_plots_to_pdf(os.path.join(save_path, result_name), *df_plots)
         return plots
 
     @validate_input

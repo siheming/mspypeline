@@ -32,7 +32,7 @@ plot_detection_counts_settings:
   dfs_to_use: []
   levels: []
 
-plot_number_of_detected_proteins_settings:
+plot_detected_proteins_per_replicate_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
@@ -92,6 +92,5 @@ plot_r_volcano_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
-  # should the adjusted p-val be used? (can be "true" or "false")
-  adj_pval: false
+  adj_pval: false # should the adjusted p-val be used? (can be "true" or "false")
 

@@ -1,3 +1,5 @@
+.. currentmodule:: mspypeline
+
 .. _gallery:
 
 Gallery
@@ -6,23 +8,60 @@ Gallery
 In the following, each plot that can be created with the ``mspypeline`` will be shown and explained giving a minimal
 code example to create this plot when using the package as a :ref:`python module <python-quickstart>`.
 
+Plotter creation
+^^^^^^^^^^^^^^^^^
+Firstly, a plotter object is created too make the plots.
+
+.. ipython:: python
+
+    import pandas as pd
+    import os
+    from mspypeline import load_example_dataset, MaxQuantPlotter
+    # load the data that is provided in a submodule
+    init = load_example_dataset(configs={
+        "pathways": ["HALLMARK_APOPTOSIS.txt", "HALLMARK_DNA_REPAIR.txt"],
+        "go_terms": ["BIOCARTA_EGF_PATHWAY.txt", "BIOCARTA_TGFB_PATHWAY.txt"]
+        })
+    plotter = MaxQuantPlotter.from_MSPInitializer(init)
+
+    # create a second plotter without collapsed technical replicates
+    init = load_example_dataset(configs={"has_techrep": False})
+    plotter_with_tech_reps = MaxQuantPlotter.from_MSPInitializer(init)
+
+define some helper functions
+
+.. ipython:: python
+
+    def select_fig(plts, idx):
+        # sets active figure which can then be saved by the @savefig decorator
+        plt.figure(plts[idx][0].number)
+
+
 Quality Control Report
 ^^^^^^^^^^^^^^^^^^^^^^^
-Given that :ref:`all MaxQuant files <file-readers>` which are used to create the report are provided, the resulting
-Quality Control Report will be a multi-page pdf document composed of a variety of information and graphics.
-Several examples of diagrams from the report are given below, a complete report can be viewed in more detail here (ref).
+The Quality Control Report will be a multi-page pdf document composed of a variety of information and graphics.
+Make sure that :ref:`all MaxQuant files <file-readers>` are provided, which are used to create the report.
 
---> include figure
+.. ipython:: python
+
+    #plotter.create_report("./source/_static");
+    print("skipping report")
+
+The resulting `QC Report <./_static/MaxQuantReport.pdf>`_.
 
 
 Normalization Plots
 ^^^^^^^^^^^^^^^^^^^^
 
+The helper function :meth:`~mspypeline.BasePlotter.plot_all_normalizer_overview` is used to generate the same plot
+multiple times with different normalizations methods of the base data.
+
 .. _norm-overview:
 
 Normalization overview
 ***********************
-Created using: :meth:`~mspypeline.BasePlotter.plot_normalization_overview`
+Created using: :meth:`~mspypeline.BasePlotter.plot_normalization_overview_all_normalizers` by calling
+:meth:`~mspypeline.BasePlotter.plot_normalization_overview`
 
 The Normalization overview offers the opportunity to examine different aspects of the data in three distinct plots. For
 each :ref:`normalization method <hyperparameter>` provided an additional page will be attached to the resulting pdf file starting with the
@@ -31,13 +70,21 @@ methods on the data, to inspect the different approaches and to find the best su
 normalization overview combines the plots :meth:`~mspypeline.BasePlotter.plot_kde`,
 :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` and :meth:`~mspypeline.BasePlotter.plot_boxplot`.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_normalization_overview
 
+.. ipython:: python
+
+    #plotter.plot_normalization_overview_all_normalizers("raw_log2", 0, save_path="./source/_static");
+    print("skipping norm overview")
+
+View `this normalization overview example <./_static/normalization_overview_all_normalizers_raw_log2.pdf>`_.
 
 .. _heatmap-overview:
 
 Heatmap overview
 ******************
-Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers`
+Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` by calling
+:meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`.
 
 The Heatmap overview offers the opportunity to visually inspect how the distribution of protein intensities and missing
 values for each sample. As in the normalization overview, with this method, a separate plot is generated for each
@@ -46,8 +93,14 @@ between the distinct :ref:`protein intensity options <hyperparameter>` and :ref:
 as it allows for instance to spot patterns between the different plot. The heatmap overview is based on the
 :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap` method.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers
 
+.. ipython:: python
 
+    #plotter.plot_heatmap_overview_all_normalizers("raw_log2", 0, save_path="./source/_static");
+    print("skipping heatmap overview")
+
+View `this heatmap overview example <./_static/heatmap_overview_all_normalizers_raw_log2.pdf>`_.
 
 
 Outlier detection and comparison plots
@@ -58,6 +111,13 @@ Detection counts
 Created using: :meth:`~mspypeline.BasePlotter.plot_detection_counts`
 
 This bar diagram shows how often proteins were detected in a number of replicates for each group.
+
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_detection_counts
+
+.. ipython:: python
+
+    @savefig detection_counts.png width=4in
+    plotter.plot_detection_counts("lfq_log2", 0, save_path=None);
 
 
 Number of detected proteins
@@ -70,6 +130,15 @@ whether :ref:`technical replicates <tech-reps>` should be recognized/averaged (t
 and resulting plot will have different outcomes. The number of detected proteins in total and per sample changes as 0
 values are handled as missing values ("nan") and neglected when calculating the mean of samples.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_detected_proteins_per_replicate
+
+.. ipython:: python
+
+    @savefig detected_proteins.png width=4in
+    plotter.plot_detected_proteins_per_replicate("lfq_log2", 0, save_path=None);
+
+    @savefig detected_proteins_tech_rep.png width=4in
+    plotter_with_tech_reps.plot_detected_proteins_per_replicate("lfq_log2", 0, save_path=None);
 
 
 Venn diagrams
@@ -90,6 +159,17 @@ diagram, tha indicates the number of unique or shared proteins of a set or overl
 which set or sets are being compared, respectively, which protein count (upper graph) belongs to which comparison
 (lower graph). An example of a bar-venn diagram is shown in the paragraph below (ref group diagrams).
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_venn_results
+
+.. ipython:: python
+
+    plots = plotter.plot_venn_results("lfq_log2", 1, close_plots=None, save_path=None)
+
+    @savefig venn_plot1.png height=4in align=center
+    select_fig(plots, 0);
+
+    @savefig venn_plot2.png height=4in align=center
+    select_fig(plots, 1);
 
 
 Group diagrams
@@ -111,6 +191,17 @@ which set or sets are being compared, respectively, which protein count (upper g
     To determine which proteins can be compared between the groups and which are unique for one group an
     internal :ref:`threshold function <thresholding>` is applied.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_venn_groups
+
+.. ipython:: python
+
+    plots = plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path=None);
+
+    @savefig venn_group_plot1.png height=4in align=center
+    select_fig(plots, 0);
+
+    @savefig venn_group_plot2.png height=4in align=center
+    select_fig(plots, 1);
 
 
 PCA overview
@@ -123,7 +214,12 @@ the level on which the data should be compared influences the coloring of the sc
 selected level is colored differently. Multiple different analysis options can be chosen to generate a PCA
 (see: :ref:`multiple option config <default-yaml>`).
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_pca_overview
 
+.. ipython:: python
+
+    @savefig pca_overview.png width=4in align=center
+    plotter.plot_pca_overview("lfq_log2", 2, save_path=None);
 
 
 Intensity histogram
@@ -134,6 +230,12 @@ For each group of the selected level a histogram is created that counts the occu
 each sample. If *"show_mean"* is set to True in the :ref:`configs <default-yaml>` the mean intensity of the plotted
 samples of a group will be shown as gray dashed line.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_histograms
+
+.. ipython:: python
+
+    @savefig intensity_hist.png width=4in align=center
+    plotter.plot_intensity_histograms("lfq_log2", 0, save_path=None);
 
 
 Relative std
@@ -147,18 +249,30 @@ samples of a group. Low deviation shows that measured intensities are stable ove
     To determine which proteins can be compared between the two samples an internal :ref:`threshold function
     <thresholding>` is applied.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_relative_std
+
+.. ipython:: python
+
+    @savefig relative_std.png width=4in align=center
+    plotter.plot_relative_std("lfq_log2", 0, save_path=None);
 
 
 Scatter replicates
 *******************
 Created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
 
-With this plotting methos, for each group of the selected level, pairwise scatter comparisons of all replicates of a
+With this plotting method, for each group of the selected level, pairwise scatter comparisons of all replicates of a
 group are plotted above each other in one graph (based on protein intensities). Unique proteins per replicate are shown
 at the bottom and right side of the graph (substitution of na values by min value of data set). Pearsons's Correlation
 Coefficient r² is given in the legend and calculated based on proteins of diagonal scatter/proteins that have a non na
 value in both samples compared.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_scatter_replicates
+
+.. ipython:: python
+
+    @savefig scatter_replicates.png width=4in align=center
+    plotter.plot_scatter_replicates("lfq_log2", 0, save_path=None);
 
 
 Experiment comparison
@@ -175,6 +289,12 @@ samples.
     To determine which proteins can be compared between the two groups and which are unique for one group an
     internal :ref:`threshold function <thresholding>` is applied.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_experiment_comparison
+
+.. ipython:: python
+
+    @savefig experiment_comparison.png width=4in align=center
+    plotter.plot_experiment_comparison("lfq_log2", 0, save_path=None);
 
 
 Rank
@@ -188,7 +308,12 @@ legend. Additionally, if a protein is part of a selected :ref:`pathway <pathway-
 and the median rank of all proteins of a given pathway is indicated. Multiple pathways can be selected and will be
 represented in the same graph as distinct groups.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_rank
 
+.. ipython:: python
+
+    @savefig rank_plot.png width=4in align=center
+    plotter.plot_rank("lfq_log2", 0, save_path=None);
 
 
 Statistical inference plots
@@ -208,6 +333,12 @@ samples, the protein intensity per sample is shown as a single scatter dot color
     To determine which proteins can be compared between two groups an internal :ref:`threshold function
     <thresholding>` is applied.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_pathway_analysis
+
+.. ipython:: python
+
+    @savefig pathway_analysis.png width=4in align=center
+    plotter.plot_pathway_analysis("lfq_log2", 0, save_path=None);
 
 
 Go analysis
@@ -233,6 +364,13 @@ calculated with the following contingency table and the "greater" alternative.
 
 The resulting p-value is thus, also dependent on the overall protein count of the sample/group of samples.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_go_analysis
+
+.. ipython:: python
+
+    @savefig go_analysis.png width=4in align=center
+    plotter.plot_go_analysis("lfq_log2", 0, save_path=None);
+
 
 Volcano plot (R)
 *****************
@@ -250,7 +388,12 @@ unique proteins of both conditions are shown next to the volcano plot.
     To determine which proteins can be compared between the two groups and which are unique for one group an internal
     :ref:`threshold function <thresholding>` is applied.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_r_volcano
 
+.. ipython:: python
+
+    @savefig volcano_plot.png width=4in align=center
+    plotter.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path=None);
 
 
 Additionally via python
@@ -263,6 +406,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_kde`
 In the Kernel density estimate (KDE) plot, one density graph per sample is plotted indicating the Intensity on the x
 axis and the density on the y axis. The KDE is part of the :ref:`Normalization overview <norm-overview>`.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_kde
+
+.. ipython:: python
+
+    @savefig kde_plot.png width=4in align=center
+    plotter.plot_kde("lfq_log2", 3, save_path=None);
 
 Boxplot
 ********
@@ -271,6 +420,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_boxplot`
 Creates one boxplot per group of the selected level sorted by median intensity. The boxplot is part of the
 :ref:`Normalization overview <norm-overview>`.
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_boxplot
+
+.. ipython:: python
+
+    @savefig boxplot.png width=4in align=center
+    plotter.plot_boxplot("lfq_log2", 3, save_path=None);
 
 Number of Proteins vs Quantiles
 ********************************
@@ -283,6 +438,15 @@ sample. Solid, rather vertical lines indicate a linear fit of each quantile for 
 the :ref:`Normalization overview <norm-overview>`.
 
 
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_n_proteins_vs_quantile
+
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig n_proteins_vs_quantile.png width=4in align=center
+    plotter.plot_n_proteins_vs_quantile("lfq_log2", 3, save_path=None);
+
 Intensity Heatmap
 ******************
 Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`
@@ -292,3 +456,10 @@ Missing values are colored in gray. The heatmap can be used to spot patterns in 
 :ref:`normalization methods <hyperparameter>` and to understand how different :ref:`intensity types <hyperparameter>`
 affect the data. The :ref:`Heatmap-overview <heatmap-overview>` is created from a series of these intensity heatmap
 plot.
+
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_heatmap
+
+.. ipython:: python
+
+    @savefig intensity_heatmap.png width=4in align=center
+    plotter.plot_intensity_heatmap("lfq_log2", 3, save_path=None);
