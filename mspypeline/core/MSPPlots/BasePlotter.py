@@ -426,14 +426,19 @@ class BasePlotter:
         the selected level (based on protein counts).
         Here, the venn diagram depicts the number of identified proteins per group/set as circle. Overlapping areas
         indicate the number of detected proteins that are shared between the overlapping groups. Non overlapping areas
-        indicate the number of proteins uniquely found in the group/set. A maximum of 3 groups can be compared in the
-        venn diagram.
-        The bar-venn diagrams can show the comparison of more than 3 groups. The plot consists of two graphs, an upper
-        bar diagram, tha indicates the number of unique or shared proteins of a set or overlapping sets. The lower
-        graph indicates which set or sets are being compared, respectively, which protein count (upper graph)
-        belongs to which comparison (lower graph).
-        To determine which proteins can be compared between the groups and which are unique for one group an
-        internal :ref:`threshold function <thresholding>` is applied.
+        indicate the number of proteins uniquely found in the group/set.
+        The bar-venn diagram consists of two graphs, an upper bar diagram, tha indicates the number of unique or shared
+        proteins of a set or overlapping sets. The lower graph indicates which set or sets are being compared,
+        respectively, which protein count (upper graph) belongs to which comparison (lower graph).
+
+        .. note::
+            * A venn diagram can compare a maximum of 3 samples.
+            * A bar-venn diagram can compare more than 3 samples.
+            * If the selected level has more than 3 groups, only the bar-venn diagram will be created.
+
+        .. note::
+            To determine which proteins can be compared between the groups and which are unique for one group an
+            internal :ref:`threshold function <thresholding>` is applied.
 
         """
         plots = []
@@ -464,13 +469,15 @@ class BasePlotter:
         from the selected level (based on protein counts).
         Here, the venn diagram depicts the number of identified proteins per replicate/set as circle. Overlapping areas
         indicate the number of detected proteins that are shared between the overlapping replicates. Non overlapping
-        areas indicate the number of proteins uniquely found in the replicate/set. A maximum of 3 replicates per group
-        can be compared in the venn diagram.
-        The bar-venn diagrams can show the comparison of more than 3 replicates. The plot consists of two graphs, an
-        upper bar diagram, tha indicates the number of unique or shared proteins of a set or overlapping sets. The lower
-        graph indicates which set or sets are being compared, respectively, which protein count (upper graph)
-        belongs to which comparison (lower graph).
+        areas indicate the number of proteins uniquely found in the replicate/set.
+        The bar-venn diagram consists of two graphs, an upper bar diagram, tha indicates the number of unique or shared
+        proteins of a set or overlapping sets. The lower graph indicates which set or sets are being compared,
+        respectively, which protein count (upper graph) belongs to which comparison (lower graph).
 
+        .. note::
+            * A venn diagram can compare a maximum of 3 samples.
+            * A bar-venn diagram can compare more than 3 samples.
+            * If a group of the selected level has more than 3 replicates, only the bar-venn diagram will be created.
 
         """
         plots = []
@@ -581,8 +588,9 @@ class BasePlotter:
     def plot_detected_proteins_per_replicate(self, dfs_to_use: Union[str, Iterable[str]],
                                              levels: Union[int, Iterable[int]], **kwargs):
         """
-        Shows the number of detected proteins per sample as well as the total number of detected proteins for each
-        group of a selected level. The average number of detected proteins is indicated as gray dashed line.
+        Bar diagram showing the number of detected proteins per sample as well as the total number of detected proteins
+        for each group of a selected level. The average number of detected proteins per group is indicated as gray
+        dashed line.
 
         """
         plots = []
@@ -714,9 +722,9 @@ class BasePlotter:
         Creates one plot per group (mean intensity of samples), where all proteins are sorted by intensity value and
         plotted against their rank. The highest intensity accounts for rank 0 the lowest intensity for the number of
         proteins - 1 whereby proteins with missing values are neglected. The median intensity of all proteins is given
-        in the legend. Additionally, if a protein is part of a selected pathway it will be presented in color and the
-        median rank of all proteins of a given pathway is indicated. Multiple pathways can be selected and will be
-        represented in the same graph as distinct groups.
+        in the legend. Additionally, if a protein is part of a selected :ref:`pathway <pathway-proteins>` it will be
+        presented in color and the median rank of all proteins of a given pathway is indicated. Multiple pathways can be
+        selected and will be represented in the same graph as distinct groups.
 
         """
         plots = []
@@ -767,8 +775,10 @@ class BasePlotter:
         """
         Creates one plot per group of the selected level with the relative standard deviation of each protein between
         the samples of a group. Low deviation shows that measured intensities are stable over multiple samples.
-        To determine which proteins can be compared between the two samples an internal :ref:`threshold function
-        <thresholding>` is applied.
+
+        .. note::
+            To determine which proteins can be compared between the two samples an internal :ref:`threshold function
+            <thresholding>` is applied.
 
         """
 
@@ -850,14 +860,16 @@ class BasePlotter:
     @validate_input
     def plot_pathway_analysis(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
-        Creates two plots per selected pathway, one indicating significances and the other without. For each protein of
-        the pathway a subplot is created displaying the intensities of the protein for all groups and significances
-        are calculated for each pairwise comparison between groups with an independent
+        Creates two plots per selected :ref:`pathway <pathway-proteins>`, one indicating significances and the other
+        without. For each protein of the pathway a subplot is created displaying the intensities of the protein for all
+        groups and significances are calculated for each pairwise comparison between groups with an independent
         `t-test <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html>`__.
         For a group of multiple samples, the protein intensity per sample is shown as a single scatter dot colored
         per group.
-        To determine which proteins can be compared between two groups an internal :ref:`threshold function
-        <thresholding>` is applied.
+
+        .. note::
+            To determine which proteins can be compared between two groups an internal :ref:`threshold function
+            <thresholding>` is applied.
 
         """
         plots = []
@@ -967,8 +979,10 @@ class BasePlotter:
         bottom and right side of the graph (substitution of na values by min*0.95 value of sample data set). Pearsons's
         Correlation Coefficient r² is given in the legend and calculated based on proteins of diagonal scatter/proteins
         that have a non na value in both samples.
-        To determine which proteins can be compared between the two groups and which are unique for one group an
-        internal :ref:`threshold function <thresholding>` is applied.
+
+        .. note::
+            To determine which proteins can be compared between the two groups and which are unique for one group an
+            internal :ref:`threshold function <thresholding>` is applied.
 
         """
         plots = []
@@ -1090,7 +1104,7 @@ class BasePlotter:
         <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__. Results are
         converted back to python format afterwards.
 
-        .. note:
+        .. note::
             This function uses the R package limma which will be automatically downloaded the first time this analysis
             is performed
 
@@ -1172,18 +1186,21 @@ class BasePlotter:
     def plot_r_volcano(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]],
                        sample1: str = None, sample2: str = None, **kwargs):
         """
-        Creates two plots for each pairwise comparison of the groups of the selected level (min 3 samples per group
-        required) where one plot has a set of proteins annotated and the other does not. The volcano plot shows the log2
-        fold change between the two different conditions against the -log10(p value) (based on protein intensities).
-        The p value is determined using the R limma package (`moderated t-statistic
+        Creates two plots for each pairwise comparison of the groups of the selected level where one plot has a set of
+        proteins annotated and the other does not. The volcano plot shows the log2 fold change between the two different
+        conditions against the -log10(p value) (based on protein intensities). The p value is determined using the R
+        limma package (`moderated t-statistic
         <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__).
         A p value and fold change cutoff are applied and all proteins below the cutoff are considered non significant.
         Additionally, the intensities of unique proteins of both conditions are shown next to the volcano plot.
-        To determine which proteins can be compared between the two groups and which are unique for one group an
-        internal :ref:`threshold function <thresholding>` is applied.
 
         .. note::
-           should be used with log2 intensities
+           * should be used with log2 intensities
+           * minimum of 3 samples per group required
+
+        .. note::
+            To determine which proteins can be compared between the two groups and which are unique for one group an
+            internal :ref:`threshold function <thresholding>` is applied.
 
         Parameters
         ----------
@@ -1325,7 +1342,8 @@ class BasePlotter:
     @validate_input
     def plot_boxplot(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
-        Creates one boxplot per group sorted by median intensity.
+        Creates one boxplot per group sorted by median intensity. The boxplot is part of the
+        :ref:`Normalization overview <norm-overview>`.
 
         """
         plots = []
@@ -1376,13 +1394,11 @@ class BasePlotter:
     def plot_n_proteins_vs_quantile(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]],
                                     **kwargs):
         """
-        Plots the intensity from df_to_use against the number of identified proteins. Samples are indicated as a
-        horizontal line of scatter dots where the color anf x position of a dot indicate the intensity value of the
-        respective quantile. The y position of the dots of a sample indicate the total nu,ber of detected proteins in
-        that sample. Solid, rather vertical lines indicate a linear fit of each quantile for all the samples.
-        --> ?
-        There should be no correlation (a perpendicular / vertical line) between the x and y axis. Otherwise this
-        indicates that intensity values are probably not missing at random but due to the detection limit.
+        Plots the protein intensities against the number of identified proteins. Samples are indicated as a horizontal
+        line of scatter dots where the color anf x position of a dot indicate the intensity value of the respective
+        quantile. The y position of the dots of a sample indicate the total nu,ber of detected proteins in that sample.
+        Solid, rather vertical lines indicate a linear fit of each quantile for all the samples. This plot is part of
+        the :ref:`Normalization overview <norm-overview>`.
 
         """
         plots = []
@@ -1424,7 +1440,7 @@ class BasePlotter:
     def plot_kde(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
         Kernel density estimate plot where one density graph per sample is plotted indicating the Intensity on the x
-        axis and the density on the y axis.
+        axis and the density on the y axis. The KDE is part of the :ref:`Normalization overview <norm-overview>`.
 
         """
         plots = []
@@ -1447,9 +1463,13 @@ class BasePlotter:
             self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs
     ) -> List[Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]]:
         """
-        Combines three different plots into a single plot to provide an overview of the distribution of the data.
-        This can be useful to compare different normalization methods or intensity types. The three different combined
-        plots are: :meth:`plot_kde`, :meth:`plot_boxplot`, :meth:`plot_n_proteins_vs_quantile`.
+        The Normalization overview offers the opportunity to examine different aspects of the data in three distinct
+        plots. For each :ref:`normalization method <hyperparameter>` provided an additional page will be attached to the
+        resulting pdf file starting with the raw or not normalized data. That way it is possible to get a better
+        understanding of the effects of the normalization methods on the data, to inspect the different approaches and
+        to find the best suitable normalization for the data. The normalization overview combines the plots
+        :meth:`~mspypeline.BasePlotter.plot_kde`, :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` and
+        :meth:`~mspypeline.BasePlotter.plot_boxplot`.
 
         """
         plots = []
@@ -1517,7 +1537,8 @@ class BasePlotter:
         """
         Heatmap showing protein intensities, where samples are given in rows on the y axis and proteins on the x axis.
         Missing values are colored in gray. The heatmap can be used to spot patterns in the different normalization
-        methods and to understand how different intensity types affect the data.
+        methods and to understand how different intensity types affect the data. The
+        :ref:`Heatmap-overview <heatmap-overview>` is created from a series of these intensity heatmap plot.
 
         """
         plots = []

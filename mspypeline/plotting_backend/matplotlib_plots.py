@@ -1325,8 +1325,8 @@ def save_scatter_replicates_results(
                    label=f"{rep1}  vs  {rep2},  "
                          fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
                    alpha=0.5, s=40,  marker=".", edgecolors="none")
-        ax.set_xlabel(f"{intensity_label} of {rep1}")
-        ax.set_ylabel(f"{intensity_label} of {rep2}")
+        ax.set_xlabel(f"{intensity_label} of x1")
+        ax.set_ylabel(f"{intensity_label} of x2")
         if show_suptitle:
             ax.set_title(f"Scatter comparison of replicates using {intensity_label}")
 
