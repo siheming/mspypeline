@@ -88,13 +88,7 @@ Heatmap overview
 Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` by calling
 :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`.
 
-    | The Heatmap overview offers the opportunity to visually inspect how the distribution of protein intensities and missing
-      values for each sample.
-    | As in the normalization overview, with this method, a separate plot is generated for each normalizer and attached
-      to the document as another page. The heatmap overview can help to understand the differences between the distinct
-      :ref:`protein intensity options <hyperparameter>` and :ref:`normalization methods <hyperparameter>` as it allows
-      for instance to spot patterns between the different plot.
-    | The heatmap overview is based on the :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap` method.
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_heatmap
 
 .. ipython:: python
 
@@ -167,12 +161,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
 
     plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./source/_static", fig_format=".png");
 
-.. figure:: _static/plots/venn_replicate_group_level_0_lfq_log2_level_0.png
+.. image:: _static/plots/venn_replicate_group_level_0_lfq_log2_level_0.png
     :width: 440
     :height: 400
     :align: left
 
-.. figure:: _static/plots/venn_bar_group_level_0_lfq_log2_level_0.png
+.. image:: _static/plots/venn_bar_group_level_0_lfq_log2_level_0.png
     :width: 200
     :height: 400
     :align: right
@@ -188,7 +182,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
 
     plotter.plot_pca_overview("lfq_log2", 1, save_path="./source/_static", fig_format=".png");
 
-.. figure:: _static/pca_overview_lfq_log2_level_1.png
+.. image:: _static/pca_overview_lfq_log2_level_1.png
     :width: 550
     :align: center
 
@@ -227,7 +221,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
 
     plotter.plot_scatter_replicates("lfq_log2", 1, save_path="./source/_static", fig_format=".png");
 
-.. figure:: _static/scatter_H838_unst_lfq_log2_level_1.png
+.. image:: _static/scatter_H838_unst_lfq_log2_level_1.png
     :width: 700
     :align: center
 
@@ -242,7 +236,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
 
     plotter.plot_experiment_comparison("lfq_log2", 0, save_path="./source/_static", fig_format=".png");
 
-.. figure:: _static/scatter_comparison_H1975_vs_H838_lfq_log2_level_0.png
+.. image:: _static/scatter_comparison_H1975_vs_H838_lfq_log2_level_0.png
     :width: 650
     :align: center
 
@@ -257,7 +251,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_rank`
 
     plotter.plot_rank("lfq_log2", 0, save_path="./source/_static", fig_format=".png");
 
-.. figure:: _static/rank_H1975_lfq_log2_level_0.png
+.. image:: _static/rank_H1975_lfq_log2_level_0.png
     :width: 700
     :align: center
 
@@ -319,7 +313,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_r_volcano`
 
     plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path="./source/_static", fig_format=".png");
 
-.. figure:: _static/plots/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
+.. image:: _static/plots/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
 
 
 Additionally via python
@@ -331,17 +325,28 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_kde`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_kde
 
-    | In the graphs shown below, the effect of the two different protein :ref:`intensity types <hyperparameter>`
-      *"raw"* and *"lfq"* is visible. The KDE can thus help to understand the effect of configuring certain
+    | In the graphs shown below, the effect of the two different protein :ref:`intensity types <hyperparameter>`.
+      In the images below the *"raw"* and *"lfq"* intensities are shown, as well as two normalizations of the raw data,
+      *"tail robust quantile normalization"* and *"tail robust quantile normalization with missing value handling"*.
+      The KDE can thus help to understand the effect of configuring certain
       hyperparameters and how intensity types or normalization methods may influence the data.
 
 .. ipython:: python
 
-    @savefig kde_lfq_plot.png width=320 align=left
+    plotter.add_normalized_option("raw", plotter.normalizers["trqn"], "trqn")
+    plotter.add_normalized_option("raw", plotter.normalizers["trqn_missing_handled"], "trqn_missing_handled")
+
+    @savefig kde_raw_plot.png width=320 align=left
+    plotter.plot_kde("raw_log2", 3, save_path=None);
+
+    @savefig kde_lfq_plot.png width=320 align=right
     plotter.plot_kde("lfq_log2", 3, save_path=None);
 
-    @savefig kde_raw_plot.png width=320 align=right
-    plotter.plot_kde("raw_log2", 3, save_path=None);
+    @savefig kde_raw_trqn.png width=320 align=left
+    plotter.plot_kde("raw_trqn_log2", 3, save_path=None);
+
+    @savefig kde_raw_trqn_missing.png width=320 align=right
+    plotter.plot_kde("raw_trqn_missing_handled_log2", 3, save_path=None);
 
 Boxplot
 ********
@@ -364,8 +369,9 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile`
 .. ipython:: python
     :okwarning:
 
-    @savefig n_proteins_vs_quantile.png width=700 align=center
-    plotter.plot_n_proteins_vs_quantile("lfq_log2", 3, save_path=None);
+    plotter.plot_n_proteins_vs_quantile("lfq_log2", 3, save_path="./source/_static", fig_format=".png");
+
+.. image:: _static/n_proteins_vs_quantile_lfq_log2_level_3.png
 
 Intensity Heatmap
 ******************

@@ -77,6 +77,13 @@ See Also
 
 
 class BasePlotter:
+    """
+    | Base plotter to create plots.
+    | The two main methods of the Base plotter comprise *"get_"* functions to calculate and provide the data for the
+      *"plot_"* functions. The latter incorporates the *"get_"* functions as well as functions from the matplotlib
+      backend to combine data calculation, plotting and saving of the results in one method.
+    """
+
     possible_plots = [
         "plot_detection_counts", "plot_detected_proteins_per_replicate", "plot_intensity_histograms",
         "plot_relative_std", "plot_rank", "plot_pathway_analysis",
@@ -94,15 +101,10 @@ class BasePlotter:
             go_analysis_gene_names: Optional[Dict[str, pd.Series]] = None,
             configs: Optional[dict] = None,
             required_reader: Optional[str] = None,
-            intensity_entries=(),
-            loglevel=logging.DEBUG
+            intensity_entries: Tuple[str, str, str] = (),
+            loglevel: int = logging.DEBUG
     ):
         """
-        | Base plotter to create plots.
-        | The two main methods of the Base plotter comprise *"get_"* functions to calculate and provide the data for the
-          *"plot_"* functions. The latter incorporates the *"get_"* functions as well as functions from the matplotlib
-          backend to combine data calculation, plotting and saving of the results in one method.
-
         Parameters
         ----------
         start_dir
@@ -435,6 +437,7 @@ class BasePlotter:
             * A venn diagram can compare a maximum of 3 samples.
             * A bar-venn diagram can compare more than 3 samples.
             * If the selected level has more than 3 groups, only the bar-venn diagram will be created.
+            * If the selected level has more than 6 groups no diagram will be created
 
         .. note::
             To determine which proteins can be compared between the groups and which are unique for one group an
@@ -477,6 +480,7 @@ class BasePlotter:
             * A venn diagram can compare a maximum of 3 samples.
             * A bar-venn diagram can compare more than 3 samples.
             * If a group of the selected level has more than 3 replicates, only the bar-venn diagram will be created.
+            * If the selected level has more than 6 groups no diagram will be created
         """
         plots = []
         for level in levels:
@@ -1534,9 +1538,16 @@ class BasePlotter:
     def plot_intensity_heatmap(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]],
                                **kwargs):
         """
-        | Heatmap showing protein intensities, where samples are given in rows on the y axis and proteins on the x axis.
+        | The Heatmap overview offers the opportunity to visually inspect how the distribution of protein intensities
+          and missing values for each sample.
+        | The Heatmap shows protein intensities. Samples are shown in rows on the y axis and proteins on the x axis.
         | Missing values are colored in gray. The heatmap can be used to spot patterns in the different normalization
           methods and to understand how different intensity types affect the data.
+        | As in the normalization overview, with this method, a separate plot is generated for each normalizer and
+          attached to the document as another page. The heatmap overview can help to understand the differences between
+          the distinct :ref:`protein intensity options <hyperparameter>` and
+          :ref:`normalization methods <hyperparameter>` as it allows for instance to spot patterns between the
+          different plots.
         | The :ref:`Heatmap-overview <heatmap-overview>` is created from a series of these intensity heatmap plot.
 
         """

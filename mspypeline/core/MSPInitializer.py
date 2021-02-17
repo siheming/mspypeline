@@ -14,6 +14,11 @@ from mspypeline.file_reader import MissingFilesException, BaseReader
 
 
 class MSPInitializer:
+    """
+    | An initializer class which is responsible for creating the directory to save the default YAML configuration
+      file as well as reading and saving the specified settings.
+    | The initializer also operates as a means of passing stored configurations to the plotter classes.
+    """
     # set all file names that are required
     yml_file_name_tmp = "config_tmp.yml"
     yml_file_name = "config.yml"
@@ -27,10 +32,6 @@ class MSPInitializer:
 
     def __init__(self, path: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
         """
-        | An initializer class which is responsible for creating the directory to save the default YAML configuration
-          file as well as reading and saving the specified settings.
-        | The initializer also operates as a means of passing stored configurations to the plotter classes.
-
         Parameters
         ----------
         path
@@ -49,6 +50,7 @@ class MSPInitializer:
         self.yaml.width = 4096
 
         # attributes that change upon changing the starting dir
+        #: configurations for the run. also saved configurations for the reader under the respective reader name
         self.configs = {}
         self.reader_data = {}
 
@@ -88,19 +90,16 @@ class MSPInitializer:
 
     @property
     def file_path_yaml(self):
-        return self._file_path_yaml
-
-    @file_path_yaml.setter
-    def file_path_yaml(self, file_path_yml: str):
         """
+        Setting the yaml file path will set the configurations of the class to the ones specified in the file.
 
-        Parameters
-        ----------
-        file_path_yml
-            can be either:
-                - "default"
-                - "file"
-                - a path to a yml file
+        Note
+        -----
+        The value can be set to either:
+
+        - "default"
+        - "file"
+        - a path to a yml file
 
         Raises
         ------
@@ -110,6 +109,10 @@ class MSPInitializer:
             if the file specified by the file_path_yml was not found
 
         """
+        return self._file_path_yaml
+
+    @file_path_yaml.setter
+    def file_path_yaml(self, file_path_yml: str):
         if file_path_yml.lower() == "default":
             self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml.lower() == "file":
@@ -203,9 +206,10 @@ class MSPInitializer:
 
     def read_data(self):
         """
-        | Initiates the file reader by providing the directory to the data and the configs e.g. by :meth:`init_configs`.
-        | In turn a data dictionary is generated to provide the mapping to the input data (*reader_data*) for the further
-          analysis with the :ref:`mspypeline plotters <plotters>`.
+        | Initiates the file reader by providing the directory and the configs to the reader.
+        | The configs for the reader are taken from the configs from the name of the reader as key. E.g. mqreader.
+        | In turn a :class:`~mspypeline.helpers.Utils.DataDict` is generated to provide the mapping to the input data
+          (*reader_data*) for the further analysis with the :ref:`mspypeline plotters <plotters>`.
         """
         for Reader in BaseReader.__subclasses__():
             Reader: Type[BaseReader]  # for IDE hints

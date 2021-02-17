@@ -60,12 +60,12 @@ html_static_path = ['_static']
 
 # autodoc
 autodoc_typehints = "description"
-autoclass_content = "init"
+autoclass_content = "class"
 
 
 # napoleon options
 napoleon_google_docstring = False
-napoleon_include_init_with_doc = False
+napoleon_include_init_with_doc = True
 
 # create documentor for description only
 # from https://stackoverflow.com/questions/7825263/including-docstring-in-sphinx-documentation

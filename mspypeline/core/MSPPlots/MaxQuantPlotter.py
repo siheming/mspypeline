@@ -14,6 +14,10 @@ class MQReader:  # TODO currently circular dependency
 
 
 class MaxQuantPlotter(BasePlotter):
+    """
+    MaxQuant Plotter is a child class of the :class:`BasePlotter` and inherits all functionality to get data and
+    generate plots.
+    """
     def __init__(
             self,
             start_dir: str,
@@ -27,9 +31,6 @@ class MaxQuantPlotter(BasePlotter):
             loglevel=logging.DEBUG
     ):
         """
-        MaxQuant Plotter is a child class of the :class:`BasePlotter` and inherits all functionality to get data and
-        generate plots.
-
         Parameters
         ----------
         start_dir
@@ -92,10 +93,6 @@ class MaxQuantPlotter(BasePlotter):
         ----------
         target_dir
             directory where report will be written
-
-        Returns
-        -------
-        None
 
         """
         def bar_from_counts(ax, counts, compare_counts=None, title=None, relative=False, yscale=None,
@@ -557,36 +554,6 @@ class MaxQuantPlotter(BasePlotter):
                     plt.close(fig)
             # ################
 
-            def split_plot_to_multiple_figures(fig_rows_cols, total_size, figsize):
-                n_figures = int(np.ceil(total_size / sum(fig_rows_cols)))
-                plots = []
-                for n_figure in range(n_figures):
-                    fig, axarr = plt.subplots(*fig_rows_cols, figsize=figsize)
-                    for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
-                        idx = n_figure * sum(fig_rows_cols) + i
-                        yield
-                        if idx == sum(fig_rows_cols):
-                            plots += (fig, axarr)
-                            break
-                yield plots
-
-            def split_p(n_rwos, n_cols, figsize=(7, 7), plot_name="", data=None, plot_fn=None):
-                n_figures = int(np.ceil(len(retention_time.columns) / (n_rwos * n_cols)))
-
-                with PdfPages(os.path.join(self.start_dir, plot_name + ".pdf")) as pdf:
-                    for n_figure in range(n_figures):
-                        fig, axarr = plt.subplots(n_rwos, n_cols, figsize=figsize)
-                        for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
-                            idx = n_figure * (n_rwos * n_cols) + i
-                            try:
-                                experiment = retention_time.columns[idx]
-                            except IndexError:
-                                break
-                            plot_fn(ax, data[experiment], experiment)
-                        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-
-                        pdf.savefig(fig)
-                        plt.close(fig)
             # Retention time of individuals samples vs remaining
             if evidence is not None:
                 self.logger.debug("Creating individual retention time histograms")

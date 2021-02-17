@@ -223,10 +223,11 @@ def save_venn_to_txt(name_map: Dict[str, str]):
 
 
 class QuantileNormalize(colors.Normalize):
+    """
+    Can be used to color the values of a dataset according to the quantiles.
+    """
     def __init__(self, quantiles: pd.Series):
         """
-        Can be used to color the values of a dataset according to the quantiles.
-
         Parameters
         ----------
         quantiles
