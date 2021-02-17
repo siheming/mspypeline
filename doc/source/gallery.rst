@@ -30,6 +30,8 @@ the :class:`~MSPInitializer` class which creates and reads in the :ref:`configur
     init = load_example_dataset(configs={"has_techrep": False, "pathways":[]})
     plotter_with_tech_reps = MaxQuantPlotter.from_MSPInitializer(init)
 
+    os.makedirs("./source/_static", exist_ok=True)
+
 define some helper functions
 
 .. ipython:: python
