@@ -12,7 +12,7 @@ def create_app(test_config=None):
 
 # flatten package imports for the core package
 from .version import __version__
-from .plotting_backend import plotly_plots, matplotlib_plots
+from .plotting_backend import matplotlib_plots
 from .modules import *
 from .core import *
 from .file_reader import *
@@ -23,7 +23,6 @@ __all__ = [
     "path_package",
     "path_package_config",
     "__version__",
-    "plotly_plots",
     "matplotlib_plots",
     "MQReader"
 ]
