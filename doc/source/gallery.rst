@@ -53,8 +53,8 @@ Created using: :meth:`~mspypeline.MaxQuantPlotter.create_report`
 
 .. ipython:: python
 
-    #plotter.create_report("./source/_static");
-    print("skipping report")
+    plotter.create_report("./source/_static");
+    # print("skipping report")
 
 The resulting `MaxQuant Report <./_static/MaxQuantReport.pdf>`_.
 
@@ -76,8 +76,8 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_normalization_overview_all_no
 
 .. ipython:: python
 
-    #plotter.plot_normalization_overview_all_normalizers("raw_log2", 0, save_path="./source/_static");
-    print("skipping norm overview")
+    plotter.plot_normalization_overview_all_normalizers("raw_log2", 0, save_path="./source/_static");
+    # print("skipping norm overview")
 
 View `this normalization overview example <./_static/normalization_overview_all_normalizers_raw_log2.pdf>`_.
 
@@ -92,8 +92,8 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normaliz
 
 .. ipython:: python
 
-    #plotter.plot_heatmap_overview_all_normalizers("raw_log2", 0, save_path="./source/_static");
-    print("skipping heatmap overview")
+    plotter.plot_heatmap_overview_all_normalizers("raw_log2", 0, save_path="./source/_static");
+    # print("skipping heatmap overview")
 
 View `this heatmap overview example <./_static/heatmap_overview_all_normalizers_raw_log2.pdf>`_.
 
@@ -311,7 +311,8 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_r_volcano`
 
 .. ipython:: python
 
-    plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path="./source/_static", fig_format=".png");
+    print("pass")
+    # plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path="./source/_static", fig_format=".png");
 
 .. image:: _static/plots/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
 
