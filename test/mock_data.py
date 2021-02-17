@@ -14,7 +14,7 @@ class MockData:
 
     @staticmethod
     def create_mock_data(
-            test_cases = (0, 1, 10, 20, 50, 100, 250, 500),
+            test_cases = (0, 10, 20, 50, 100),
             number_of_non_pathway_genes = 1000,
             average = 28,
             gene_sigma = 2,
