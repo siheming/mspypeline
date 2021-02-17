@@ -9,12 +9,15 @@ from mspypeline.core import MSPInitializer
 from mspypeline.core.MSPPlots import BasePlotter
 from mspypeline.plotting_backend import matplotlib_plots
 
-
 class MQReader:  # TODO currently circular dependency
     pass
 
 
 class MaxQuantPlotter(BasePlotter):
+    """
+    MaxQuant Plotter is a child class of the :class:`BasePlotter` and inherits all functionality to get data and
+    generate plots.
+    """
     def __init__(
             self,
             start_dir: str,
@@ -27,6 +30,28 @@ class MaxQuantPlotter(BasePlotter):
             intensity_entries=(("raw", "Intensity ", "Intensity"), ("lfq", "LFQ intensity ", "LFQ intensity"), ("ibaq", "iBAQ ", "iBAQ intensity")),
             loglevel=logging.DEBUG
     ):
+        """
+        Parameters
+        ----------
+        start_dir
+            location to save results
+        reader_data
+            mapping to provide input data
+        intensity_df_name
+            name/key to input data
+        interesting_proteins
+            mapping with pathway proteins to analyze
+        go_analysis_gene_names
+            mapping with go terms to analyze
+        configs
+            mapping of configuration
+        required_reader
+            name of the file reader
+        intensity_entries
+            tuple of (key in all_tree_dict, prefix in data, name in plot). See :meth:`add_intensity_column`.
+        loglevel
+            level of the logger
+        """
         super().__init__(
             start_dir,
             reader_data,
@@ -60,17 +85,21 @@ class MaxQuantPlotter(BasePlotter):
         default_kwargs.update(**kwargs)
         return super().from_file_reader(reader_instance, **default_kwargs)
 
-    def create_report(self):
+    def create_report(self, target_dir: str = None):
         """
-        Creates a MaxQuantReport.pdf, which can be used as quality control.
+        Creates a MaxQuantReport.pdf, which can be used as :ref:`quality control <plotters>`.
 
-        Returns
-        -------
-        None
+        Parameters
+        ----------
+        target_dir
+            directory where report will be written
 
         """
-        def bar_from_counts(ax, counts, compare_counts=None, title=None, relative=False, yscale=None, bar_kwargs=None):
-            if relative:
+        def bar_from_counts(ax, counts, compare_counts=None, title=None, relative=False, yscale=None,
+                            ylabel = None, bar_kwargs=None):
+            if ylabel is not None:
+                ax.set_ylabel(ylabel)
+            elif relative:
                 ax.set_ylabel("Relative counts")
                 counts = counts / counts.sum()
             else:
@@ -99,7 +128,7 @@ class MaxQuantPlotter(BasePlotter):
                     ax.set_yscale(**yscale)
             return bar_container
 
-        def hist2d_with_hist(xdata, ydata, title=None, xlabel=None, ylabel=None):
+        def hist2d_with_hist(xdata, ydata, title=None, xlabel=None, ylabel=None, max_x=145):
             fig = plt.figure(figsize=(14, 7))
             if title is not None:
                 fig.suptitle(title)
@@ -110,15 +139,15 @@ class MaxQuantPlotter(BasePlotter):
             ax1dhisthor = fig.add_subplot(spec[1, 1])
 
             h, xedges, yedges, image = ax2dhist.hist2d(xdata, ydata,
-                                                       bins=100, range=((0, 145), (0, 2)))  # TODO find ranges/bins
+                                                       bins=100, range=((0, max_x), (0, 2)))  # TODO find bins
             ax2dhist.set_xlabel(xlabel)
             ax2dhist.set_ylabel(ylabel)
 
             ax1dhistvert.hist(xdata, bins=xedges)
-            ax1dhistvert.set_ylabel("Counts")
+            ax1dhistvert.set_ylabel("Peptide Counts")
 
             ax1dhisthor.hist(ydata, bins=yedges, orientation="horizontal")
-            ax1dhisthor.set_xlabel("Counts")
+            ax1dhisthor.set_xlabel("Peptide Counts")
 
             ax1dhistvert.set_xlim(*ax2dhist.get_xlim())
             ax1dhisthor.set_ylim(*ax2dhist.get_ylim())
@@ -246,7 +275,8 @@ class MaxQuantPlotter(BasePlotter):
             msms_scans = None
 
         self.logger.info("Creating plots")
-        with PdfPages(os.path.join(self.start_dir, "MaxQuantReport.pdf")) as pdf:
+        target_dir = target_dir if target_dir is not None else self.start_dir
+        with PdfPages(os.path.join(target_dir, "MaxQuantReport.pdf")) as pdf:
             self.logger.debug("Creating start page")
             fig = plt.figure(figsize=(14, 7))
             text_conf = dict(transform=fig.transFigure, size=24, ha="center")
@@ -300,8 +330,8 @@ class MaxQuantPlotter(BasePlotter):
             # ######
 
             # figure stuff
-            self.logger.debug("Creating start ??")  # TODO
-            fig, axarr = plt.subplots(3, 1, figsize=(14, 7))
+            self.logger.debug("Creating technical overview")
+            fig, axarr = plt.subplots(2, 1, figsize=(14, 7))
             if peptides is not None:
                 bar_from_counts(axarr[0], peptides["Charges"].str.split(";").explode().value_counts().sort_index(),
                                 title="Peptide Charges")
@@ -309,10 +339,10 @@ class MaxQuantPlotter(BasePlotter):
             if evidence is not None:
                 axarr[1].hist(evidence["m/z"])
                 axarr[1].set_xlabel("m/z")
-                axarr[1].set_ylabel("counts")
-                axarr[1].set_title("peptide m/z")
+                axarr[1].set_ylabel("Counts")
+                axarr[1].set_title("Peptide m/z")
 
-            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+            fig.tight_layout(rect=[0, 0.3, 1, 0.95])
 
             pdf.savefig()
             plt.close(fig)
@@ -324,12 +354,14 @@ class MaxQuantPlotter(BasePlotter):
             # hist with identified proteins and hist with identified peptides, shared axis
             if prot_groups is not None:
                 identified_proteins = (prot_groups_intensities["Grouped Intensity"] > 0).sum()
-                identified_proteins = identified_proteins.rename(lambda x: x.replace("Intensity ", ""), axis=0)
+                identified_proteins = identified_proteins.rename(lambda x: x.replace("Intensity ", "").replace("_", " ")
+                                                                 , axis=0)
                 bar_from_counts(axarr[0], identified_proteins, title="Identified proteins")
             # proteins from proteinGroups, peptides from peptides file per sample
             if peptides is not None:
                 identified_peptides = (peptides_intensities["Grouped Intensity"] > 0).sum()
-                identified_peptides = identified_peptides.rename(lambda x: x.replace("Intensity ", ""), axis=0)
+                identified_peptides = identified_peptides.rename(lambda x: x.replace("Intensity ", "").replace("_", " ")
+                                                                 , axis=0)
                 bar_from_counts(axarr[1], identified_peptides, title="Identified peptides")
                 axarr[1].xaxis.set_tick_params(rotation=90)
 
@@ -346,17 +378,18 @@ class MaxQuantPlotter(BasePlotter):
 
                 axarr[0].set_title("MS scans")
                 axarr[0].bar(range(summary.shape[0]), summary["MS"])
-                axarr[0].set_ylabel("count")
+                axarr[0].set_ylabel("Count")
 
                 axarr[1].set_title("MS/MS scans")
                 axarr[1].bar(range(summary.shape[0]), summary["MS/MS"])
-                axarr[1].set_ylabel("count")
+                axarr[1].set_ylabel("Count")
 
                 axarr[2].set_title("MS/MS identified [%]")
                 axarr[2].bar(range(summary.shape[0]), summary["MS/MS Identified [%]"])
-                axarr[2].set_ylabel("percent")
+                axarr[2].set_ylabel("Percent")
                 axarr[2].set_xticks(range(summary.shape[0]))
-                axarr[2].set_xticklabels(summary["Experiment"], rotation=90)
+                labels = [sample.replace("_", " ") for sample in summary["Experiment"]]
+                axarr[2].set_xticklabels(labels, rotation=90)
 
                 fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -373,19 +406,18 @@ class MaxQuantPlotter(BasePlotter):
                     "contaminants": df_contaminants_int.sum(axis=0),
                     "no_contaminants": df_no_contaminants_int.sum(axis=0)})
                 sum_int["total"] = sum_int["contaminants"] + sum_int["no_contaminants"]
-                sum_int["percent_cont"] = sum_int["contaminants"] / sum_int["total"]
-                sum_int["percent_no_cont"] = sum_int["no_contaminants"] / sum_int["total"]
-                fig, ax = plt.subplots(1, 1, sharex=True, figsize=(15, 6))
+                sum_int["percent_cont"] = (sum_int["contaminants"] / sum_int["total"])*100
+                sum_int["percent_no_cont"] = (sum_int["no_contaminants"] / sum_int["total"])*100
+                fig, ax = plt.subplots(1, 1, sharex=True, figsize=(14, 7))
 
                 labels = [label.replace("Intensity ", "").replace("_", " ") for label in sum_int.index.values]
-                labels[0] = "Total samples"
 
                 ax.bar(x=labels, height=sum_int["percent_cont"], width=0.8)
                 ax.set_title("Intensity of contaminants from total intensity", size=14, pad=20)
-                ax.set_ylabel("percent", size=13)
+                ax.set_ylabel("Percent", size=13)
                 ax.set_xticks(range(len(labels)))
                 ax.set_xticklabels(labels, rotation=90)
-                ax.axhline(0.05, linestyle="-", linewidth=2, color="red", alpha=0.6)
+                ax.axhline(5, linestyle="-", linewidth=2, color="red", alpha=0.6)
 
                 fig.tight_layout()
 
@@ -402,10 +434,12 @@ class MaxQuantPlotter(BasePlotter):
                 colors = prot_groups_intensities["Grouped Intensity"].rename(lambda x: x.replace("Intensity ", ""), axis=1).columns
                 colors = [plot_colors[c] for c in colors]
                 matplotlib_plots.save_intensity_histogram_results(prot_groups_intensities, n_bins=11, histtype="barstacked",
-                                                                  plot=(fig, axarr[0]), color=colors)
+                                                                  plot=(fig, axarr[0]), color=colors, show_mean=False,
+                                                                  legend=False)
                 # overlayed histogram of log2 intensities
                 matplotlib_plots.save_intensity_histogram_results(prot_groups_intensities, n_bins=11, histtype="step",
-                                                                  plot=(fig, axarr[1]), color=colors)
+                                                                  plot=(fig, axarr[1]), color=colors, show_mean=False,
+                                                                  legend=False)
                 fig.legend(bbox_to_anchor=(1.02, 0.5), loc="center left")
 
                 fig.tight_layout()
@@ -423,7 +457,8 @@ class MaxQuantPlotter(BasePlotter):
 
                 fig, ax = hist2d_with_hist(title="Overall Retention time vs Retention length",
                                            xdata=evidence["Retention time"], ydata=evidence["Retention length"],
-                                           xlabel="Retention time [min]", ylabel="Retention length [min]")
+                                           xlabel="Retention time [min]", ylabel="Retention length [min]",
+                                           max_x=evidence["Retention time"].max())
 
                 pdf.savefig(figure=fig)
                 plt.close(fig)
@@ -442,27 +477,27 @@ class MaxQuantPlotter(BasePlotter):
                 for experiment in mz.columns:
                     plot_color = plot_colors[experiment]
                     fig, axarr = plt.subplots(3, 2, figsize=(14, 7))
-                    fig.suptitle(experiment)
+                    fig.suptitle(experiment.replace("_", " "))
 
                     axarr[0, 0].hist(mz[experiment], density=True, color=plot_color, bins=mz_bins)
                     axarr[0, 0].plot(mz_x, mz_y, color="black")
                     # axarr[0, 0].hist(mz.drop(experiment, axis=1).values.flatten(), histtype="step", density=True, color="black", bins=bins, linewidth=2)
                     # axarr[0, 0].hist(mz_flat, histtype="step", density=True, color="black", bins=bins, linewidth=2)
                     axarr[0, 0].set_xlabel("m/z")
-                    axarr[0, 0].set_ylabel("density")
-                    axarr[0, 0].set_title("peptide m/z")
+                    axarr[0, 0].set_ylabel("Density")
+                    axarr[0, 0].set_title("Peptide m/z")
 
                     bar_from_counts(axarr[0, 1], charge[experiment],
                                     compare_counts=charge_flat,
                                     relative=True,
-                                    title="peptide charges", bar_kwargs={"color": plot_color})
-                    axarr[0, 1].set_xlabel("peptide charge")
+                                    title="Peptide charges", bar_kwargs={"color": plot_color})
+                    axarr[0, 1].set_xlabel("Peptide charge")
 
                     bar_from_counts(axarr[1, 0], missed_cleavages[experiment],
                                     compare_counts=missed_cleavages_flat,
                                     relative=True,
                                     title="Number of missed cleavages", bar_kwargs={"color": plot_color})
-                    axarr[1, 0].set_xlabel("missed cleavages")
+                    axarr[1, 0].set_xlabel("Missed cleavages")
 
                     # TODO this might be missing
                     bar_from_counts(axarr[1, 1], before_aa_counts[experiment],
@@ -477,6 +512,7 @@ class MaxQuantPlotter(BasePlotter):
                                     bar_kwargs={"color": plot_color})
                     axarr[2, 0].set_title("Last amino acid")
 
+                    axarr[2, 1].remove()
                     fig.tight_layout()
 
                     pdf.savefig()
@@ -492,7 +528,6 @@ class MaxQuantPlotter(BasePlotter):
                 b, h, bins = get_plot_data_from_hist(log2_intensities, density=True, n_bins=16)
 
                 n_figures = int(np.ceil(len(log2_intensities.columns) / 9))
-
                 for n_figure in range(n_figures):
                     fig, axarr = plt.subplots(3, 3, figsize=(15, 15))
                     for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
@@ -504,9 +539,14 @@ class MaxQuantPlotter(BasePlotter):
                         ax.hist(log2_intensities.loc[:, experiment], bins=bins, density=True,
                                 color=plot_colors[experiment])
                         ax.plot(b, h, color="black")
-                        ax.set_title(experiment)
+                        ax.set_title(experiment.replace("_", " "))
                         ax.set_xlabel("Intensity")
-                        ax.set_ylabel("density")
+                        ax.set_ylabel("Density")
+
+                    if n_figure == (n_figures - 1):
+                        n_empty = n_figures * 9 - len(log2_intensities.columns)
+                        for i in range(1, n_empty + 1):
+                            axarr.flat[-i].remove()
 
                     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -514,43 +554,12 @@ class MaxQuantPlotter(BasePlotter):
                     plt.close(fig)
             # ################
 
-            def split_plot_to_multiple_figures(fig_rows_cols, total_size, figsize):
-                n_figures = int(np.ceil(total_size / sum(fig_rows_cols)))
-                plots = []
-                for n_figure in range(n_figures):
-                    fig, axarr = plt.subplots(*fig_rows_cols, figsize=figsize)
-                    for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
-                        idx = n_figure * sum(fig_rows_cols) + i
-                        yield
-                        if idx == sum(fig_rows_cols):
-                            plots += (fig, axarr)
-                            break
-                yield plots
-
-            def split_p(n_rwos, n_cols, figsize=(7, 7), plot_name="", data=None, plot_fn=None):
-                n_figures = int(np.ceil(len(retention_time.columns) / (n_rwos * n_cols)))
-
-                with PdfPages(os.path.join(self.start_dir, plot_name + ".pdf")) as pdf:
-                    for n_figure in range(n_figures):
-                        fig, axarr = plt.subplots(n_rwos, n_cols, figsize=figsize)
-                        for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
-                            idx = n_figure * (n_rwos * n_cols) + i
-                            try:
-                                experiment = retention_time.columns[idx]
-                            except IndexError:
-                                break
-                            plot_fn(ax, data[experiment], experiment)
-                        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-
-                        pdf.savefig(fig)
-                        plt.close(fig)
             # Retention time of individuals samples vs remaining
             if evidence is not None:
                 self.logger.debug("Creating individual retention time histograms")
                 b, h, bins = get_plot_data_from_hist(retention_time, density=True, n_bins=25)
 
                 n_figures = int(np.ceil(len(retention_time.columns) / 9))
-
                 for n_figure in range(n_figures):
                     fig, axarr = plt.subplots(3, 3, figsize=(15, 15))
                     for i, (pos, ax) in enumerate(np.ndenumerate(axarr)):
@@ -562,9 +571,14 @@ class MaxQuantPlotter(BasePlotter):
                         ax.hist(retention_time.loc[:, experiment], bins=bins, density=True,
                                 color=plot_colors[experiment])
                         ax.plot(b, h, color="black")
-                        ax.set_title(experiment)
+                        ax.set_title(experiment.replace("_", " "))
                         ax.set_xlabel("Retention time")
-                        ax.set_ylabel("density")
+                        ax.set_ylabel("Density")
+
+                    if n_figure == (n_figures - 1):
+                        n_empty = n_figures * 9 - len(retention_time.columns)
+                        for i in range(1, n_empty + 1):
+                            axarr.flat[-i].remove()
 
                     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -575,9 +589,9 @@ class MaxQuantPlotter(BasePlotter):
             if evidence is not None:
                 self.logger.debug("Creating individual retention time vs retention length")
                 for experiment in retention_length.columns:
-                    fig, ax = hist2d_with_hist(title=experiment, xdata=retention_time[experiment],
+                    fig, ax = hist2d_with_hist(title=experiment.replace("_", " "), xdata=retention_time[experiment],
                                                ydata=retention_length[experiment], xlabel="Retention time [min]",
-                                               ylabel="Retention length [min]")
+                                               ylabel="Retention length [min]", max_x=retention_time.max().max())
 
                     pdf.savefig(figure=fig)
                     plt.close(fig)

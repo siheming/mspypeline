@@ -1,0 +1,3 @@
+[submodule "mspypeline_public_dataset"]
+	path = mspypeline_public_dataset
+	url = https://github.com/siheming/mspypeline_public_dataset.git

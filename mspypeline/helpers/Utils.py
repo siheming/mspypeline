@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Tuple, Iterator, Union, Iterable, Sized
+from typing import Optional, Dict, Tuple, Iterator, Union, Iterable, Sized, Callable
 import pandas as pd
 from collections import defaultdict as ddict
 from itertools import combinations
@@ -43,7 +43,7 @@ def get_analysis_design(names: Iterable[str]) -> dict:
     return default_to_regular(analysis_design)
 
 
-def plot_annotate_line(ax, row1, row2, x, data,  fs: int = None, maxasterix: int = 5):
+def plot_annotate_line(ax, row1, row2, x, data,  fs: int = None, maxasterix: int = 3):
     """
     adjusted function
     from: https://stackoverflow.com/questions/11517986/indicating-the-statistically-significant-difference-in-bar-graph
@@ -128,7 +128,27 @@ def get_number_of_non_na_values(x: int, offset: int = 0) -> int:
     return max(int(np.round(percentage * x)) - offset, 3 - offset)
 
 
-def get_intersection_and_unique(v1: pd.DataFrame, v2: pd.DataFrame, na_function=get_number_of_non_na_values):
+def get_intersection_and_unique(v1: pd.DataFrame, v2: pd.DataFrame, na_function: Callable = get_number_of_non_na_values):
+    """
+    Given two dataframes with identical index, determines which rows (proteins) are present in both dataframes, or
+    unique to either dataframe. The number of missing values are counted row-wise and all rows above a threshold are
+    marked as positive. The threshold is determined by the na_function, which determines the allowed number of missing
+    values based on the number of columns. Then all rows which are positive in both dataframes are marked as
+    intersection. Rows that are positive in one dataframe but are missing completely in the other are marked as unique.
+    Parameters
+    ----------
+    v1
+        first dataframe
+    v2
+        second dataframe
+    na_function
+        function which takes and returns an int
+
+    Returns
+    -------
+    Three masks: The intersection, unique in v1 and unique in v2
+
+    """
     # get number of allowed non na values for both dataframes
     non_na_group_1 = na_function(v1.shape[1])
     non_na_group_2 = na_function(v2.shape[1])
@@ -160,7 +180,7 @@ def dict_depth(d: dict) -> int:
     return level
 
 
-def get_legend_elements(labels: list, color_map: Optional[dict] = None):
+def get_legend_elements(labels: list, color_map: Optional[dict] = None, marker_size:Optional[int] = None):
     """
         Returns custom legend elements based on a list of labels and an optional color map.
         These elements can be passed to a legend via the 'handles' parameter
@@ -175,8 +195,10 @@ def get_legend_elements(labels: list, color_map: Optional[dict] = None):
     """
     if color_map is None:
         color_map = {name: f"C{i}" for i, name in enumerate(labels)}
+    if marker_size is None:
+        marker_size=10
     legend_elements = [Line2D([0], [0], marker='o', color='w', label=name.replace("_", " "),
-                              markerfacecolor=color_map.get(name, "blue"), markersize=10)
+                              markerfacecolor=color_map.get(name, "blue"), markersize=marker_size)
                        for name in labels]
     return legend_elements
 
@@ -203,14 +225,15 @@ def get_plot_name_suffix(df_to_use: Optional[str] = None, level: Optional[int] =
 
 
 class DataDict(dict):
+    """
+    Overwrites the standard dictionary to provide an additional DataSource.
+    When a missing key is looked up the DataSource is searched for a method named:
+    e.g. looking up key=parameters, looking for method named "preprocess_parameters",
+    which is expected to return data, which will then be stored under the key.
+    This allows data from disk to be loaded on demand instead of loading all possible data at the beginning.
+    """
     def __init__(self, data_source, *args, **kwargs):
         """
-        Overwrites the standard dictionary to provide an additional DataSource.
-        When a missing key is looked up the DataSource is searched for a method named:
-        e.g. looking up key=parameters, looking for method named "preprocess_parameters",
-        which is expected to return data, which will then be stored under the key.
-        This allows data from disk to be loaded on demand instead of loading all possible data at the beginning.
-
         Parameters
         ----------
         data_source

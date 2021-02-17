@@ -12,6 +12,8 @@
 #
 import os
 import sys
+from sphinx.ext import autodoc
+
 sys.path.insert(0, os.path.abspath("./_ext"))  # for custom extensions
 sys.path.insert(0, os.path.abspath("../.."))  # to find the package
 
@@ -58,10 +60,36 @@ html_static_path = ['_static']
 
 # autodoc
 autodoc_typehints = "description"
-autoclass_content = "init"
+autoclass_content = "class"
 
 
 # napoleon options
 napoleon_google_docstring = False
-napoleon_include_init_with_doc = False
+napoleon_include_init_with_doc = True
 
+# create documentor for description only
+# from https://stackoverflow.com/questions/7825263/including-docstring-in-sphinx-documentation
+
+
+class DescriptionOnlyDocumenter(autodoc.MethodDocumenter):
+    objtype = "descriptiononly"
+    priority = 0
+
+    # do not indent the content
+    content_indent = ""
+
+    def add_directive_header(self, sig):
+        pass
+
+    def get_doc(self, **kwargs):
+        res = super(DescriptionOnlyDocumenter, self).get_doc(**kwargs)
+        assert len(res) == 1
+        try:
+            res = [res[0][:res[0].index("Parameters")]]
+        except ValueError:
+            pass
+        return res
+
+
+def setup(app):
+    app.add_autodocumenter(DescriptionOnlyDocumenter)

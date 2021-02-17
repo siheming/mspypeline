@@ -133,14 +133,15 @@ def determine_rank_invariance(df: pd.DataFrame, nri_threshold: float = 0.5) -> T
 
 
 class BaseNormalizer(ABC):
+    """
+    Abstract base class for Normalizers. Derived normalizers should implement the :meth:`fit` and :meth:`transform`.
+    """
     def __init__(self, input_scale: str = "log2",
                  output_scale: str = "normal",
                  col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         """
-        Abstract base class for Normalizers. Derived normalizers should implement the :meth:`fit` and :meth:`transform`.
-
         Parameters
         ----------
         input_scale
@@ -225,15 +226,16 @@ class BaseNormalizer(ABC):
 
 
 class MedianNormalizer(BaseNormalizer):
+    """
+    Median normalizer, which calculates a factor for each column (sample) by taking the column wise median.
+    Then from each column wise median the mean of all medians is subtracted.
+    """
     def __init__(self, input_scale: str = "log2",
                  output_scale: str = "normal",
                  col_name_prefix: Optional[str] = None,
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         """
-        Median normalizer, which calculates a factor for each column (sample) by taking the column wise median.
-        Then from each column wise median the mean of all medians is subtracted.
-
         Parameters
         ----------
         input_scale
@@ -271,6 +273,10 @@ class MedianNormalizer(BaseNormalizer):
 
 
 class QuantileNormalizer(BaseNormalizer):
+    """
+    Quantile Normalizer as described on wikipedia
+    https://en.wikipedia.org/wiki/Quantile_normalization
+    """
     def __init__(self, missing_value_handler: Optional[Callable] = interpolate_data,
                  input_scale: str = "log2",
                  output_scale: str = "normal",
@@ -278,9 +284,6 @@ class QuantileNormalizer(BaseNormalizer):
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         """
-        Quantile Normalizer as described on wikipedia
-        https://en.wikipedia.org/wiki/Quantile_normalization
-
         Parameters
         ----------
         missing_value_handler
@@ -334,6 +337,12 @@ class QuantileNormalizer(BaseNormalizer):
 
 
 class TailRobustNormalizer(BaseNormalizer):
+    """
+    An abstracted implementation of the Tail Robust Quantile Normalization as described here:
+    https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full . Caclulates an offset factor by taking the
+    column wise mean. Then before a normalization is applied the offset factor is subtracted from each column.
+    Then the normalizer is applied and lastly the offset factor is added again.
+    """
     def __init__(self, normalizer: Type[BaseNormalizer] = QuantileNormalizer,
                  missing_value_handler: Optional[Callable] = interpolate_data,
                  input_scale: str = "log2",
@@ -342,11 +351,6 @@ class TailRobustNormalizer(BaseNormalizer):
                  loglevel: int = logging.DEBUG,
                  **kwargs):
         """
-        An abstracted implementation of the Tail Robust Quantile Normalization as described here:
-        https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full . Caclulates an offset factor by taking the
-        column wise mean. Then before a normalization is applied the offset factor is subtracted from each column.
-        Then the normalizer is applied and lastly the offset factor is added again.
-
         Parameters
         ----------
         normalizer
