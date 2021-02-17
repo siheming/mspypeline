@@ -14,6 +14,11 @@ from mspypeline.file_reader import MissingFilesException, BaseReader
 
 
 class MSPInitializer:
+    """
+    | An initializer class which is responsible for creating the directory to save the default YAML configuration
+      file as well as reading and saving the specified settings.
+    | The initializer also operates as a means of passing stored configurations to the plotter classes.
+    """
     # set all file names that are required
     yml_file_name_tmp = "config_tmp.yml"
     yml_file_name = "config.yml"
@@ -25,16 +30,27 @@ class MSPInitializer:
     possible_pathways = sorted([x for x in os.listdir(os.path.join(path_package_config, pathway_path))
                                 if x.endswith(".txt")])
 
-    def __init__(self, dir_: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
+    def __init__(self, path: str, file_path_yml: Optional[str] = None, loglevel=logging.DEBUG):
+        """
+        Parameters
+        ----------
+        path
+            location where the directory/txt folder to the data can be found.
+        file_path_yml
+            path to the yaml config file
+        loglevel
+            level of the logger
+        """
         self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
         # create a yaml file reader
         self.yaml = YAML()
-        # self.yaml.indent(mapping=2, sequence=4, offset=2)
-        self.yaml.indent(offset=2)
+        self.yaml.indent(mapping=2, sequence=4, offset=2)
+        # self.yaml.indent(offset=2)
         self.yaml.default_flow_style = False
         self.yaml.width = 4096
 
         # attributes that change upon changing the starting dir
+        #: configurations for the run. also saved configurations for the reader under the respective reader name
         self.configs = {}
         self.reader_data = {}
 
@@ -45,7 +61,7 @@ class MSPInitializer:
         self._file_path_yaml = None
 
         # set the specified dirs
-        self.start_dir = dir_
+        self.start_dir = path
         if file_path_yml is not None:
             self.file_path_yaml = file_path_yml
 
@@ -74,19 +90,16 @@ class MSPInitializer:
 
     @property
     def file_path_yaml(self):
-        return self._file_path_yaml
-
-    @file_path_yaml.setter
-    def file_path_yaml(self, file_path_yml: str):
         """
+        Setting the yaml file path will set the configurations of the class to the ones specified in the file.
 
-        Parameters
-        ----------
-        file_path_yml
-            can be either:
-                - "default"
-                - "file"
-                - a path to a yml file
+        Note
+        -----
+        The value can be set to either:
+
+        - "default"
+        - "file"
+        - a path to a yml file
 
         Raises
         ------
@@ -96,6 +109,10 @@ class MSPInitializer:
             if the file specified by the file_path_yml was not found
 
         """
+        return self._file_path_yaml
+
+    @file_path_yaml.setter
+    def file_path_yaml(self, file_path_yml: str):
         if file_path_yml.lower() == "default":
             self._file_path_yaml = self.get_default_yml_path()
         elif file_path_yml.lower() == "file":
@@ -117,12 +134,15 @@ class MSPInitializer:
 
     def init_config(self):
         """
-        Creates the directory to save the configuration file and saves the configuration
+        | Creates the directory to save the configuration file if not present, updates and saves the configuration.
+        | The function is usually applied to ensure that configs are provided to the initializer in order to avoid
+          problems initializing the file reader with :meth:`read_data`.
         """
         os.makedirs(self.path_config, exist_ok=True)
         self.update_config_file()
 
     def has_yml_file(self) -> bool:
+
         if not os.path.isdir(self.start_dir):
             return False
         if "config" in os.listdir(self.start_dir):
@@ -134,7 +154,7 @@ class MSPInitializer:
         return False
 
     def get_default_yml_path(self) -> str:
-        self.logger.debug("Loading default yml file from: %s, since no (valid) file was selected",
+        self.logger.debug("Loading default yml file from: %s, since 'default' or no (valid) file was selected",
                           path_package)
         return os.path.join(path_package_config, MSPInitializer.default_yml_name)
 
@@ -185,6 +205,12 @@ class MSPInitializer:
         os.rename(yml_file_loc_tmp, yml_file_loc)
 
     def read_data(self):
+        """
+        | Initiates the file reader by providing the directory and the configs to the reader.
+        | The configs for the reader are taken from the configs from the name of the reader as key. E.g. mqreader.
+        | In turn a :class:`~mspypeline.helpers.Utils.DataDict` is generated to provide the mapping to the input data
+          (*reader_data*) for the further analysis with the :ref:`mspypeline plotters <plotters>`.
+        """
         for Reader in BaseReader.__subclasses__():
             Reader: Type[BaseReader]  # for IDE hints
             try:
@@ -196,6 +222,6 @@ class MSPInitializer:
                 self.logger.debug("No files found for reader: %s", Reader.name)
 
         # read all proteins and receptors of interest from the config dir
-        self.logger.info("Reading proteins and receptors of interest")
+        self.logger.info("Reading pathway and GO list of interest")
         self.interesting_proteins, self.go_analysis_gene_names = self.init_interest_from_txt()
         self.update_config_file()

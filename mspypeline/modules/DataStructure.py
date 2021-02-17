@@ -176,7 +176,9 @@ class DataNode:
 
 
 class DataTree:
-    """Summary line
+    """
+    Data Structure in which the experiment is stored. Each leaf node is a
+    :class:`~mspypeline.DataNode`
 
     Attributes
     ----------

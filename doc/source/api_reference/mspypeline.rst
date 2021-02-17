@@ -6,15 +6,15 @@ import with:
 
 .. code-block:: python
 
-  from mspypeline import MSPGUI, MSPParser, UIHandler
+  from mspypeline import MSPParser, UIHandler, MSPGUI
 
 
-
-.. autoclass:: MSPGUI
-   :members:
 
 .. autoclass:: MSPParser
    :members:
 
 .. autoclass:: UIHandler
+   :members:
+
+.. autoclass:: MSPGUI
    :members:

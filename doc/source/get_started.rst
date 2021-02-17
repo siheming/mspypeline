@@ -57,7 +57,7 @@ A simple analysis might look something like this:
 
 For more code examples see the :ref:`Examples <examples>`.
 
-.. _gui-quickstart:
+.. _`gui-quickstart`:
 
 Usage with GUI
 ~~~~~~~~~~~~~~
