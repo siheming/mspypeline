@@ -29,10 +29,11 @@ the :class:`~MSPInitializer` class which creates and reads in the :ref:`configur
     # create a second plotter without collapsed technical replicates
     init = load_example_dataset(configs={"has_techrep": False, "pathways":[]})
     plotter_with_tech_reps = MaxQuantPlotter.from_MSPInitializer(init)
+    plotter.logger.debug(os.listdir(".."))
     plotter.logger.debug(os.listdir("."))
     for dir in os.listdir("."):
         if os.path.isdir(dir):
-            plotter.logger.debug(dir)
+            plotter.logger.debug(os.listdir(dir))
 
 define some helper functions
 
@@ -164,13 +165,14 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
 .. ipython:: python
 
     plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./source/savefig", fig_format=".png");
+    plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./savefig", fig_format=".png");
 
-.. image:: _images/venn_replicate_group_level_0_lfq_log2_level_0.png
+.. image:: images/venn_replicate_group_level_0_lfq_log2_level_0.png
     :width: 440
     :height: 400
     :align: left
 
-.. image:: /_images/venn_bar_group_level_0_lfq_log2_level_0.png
+.. image:: venn_bar_group_level_0_lfq_log2_level_0.png
     :width: 200
     :height: 400
     :align: right
