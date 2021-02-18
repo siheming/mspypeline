@@ -163,17 +163,61 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
 
     plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./source/savefig", fig_format=".png");
     plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./savefig", fig_format=".png");
-    os.listdir("./savefig")
+    plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./source/_static/", fig_format=".png");
+    plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./_static", fig_format=".png");
+    #os.listdir("./savefig")
+
+.. image:: /source/savefig/venn_replicate_group_level_0_lfq_log2_level_0.png
+    :width: 440
+    :height: 400
+    :align: left
+
+.. image:: /source/savefig/plots/venn_bar_group_level_0_lfq_log2_level_0.png
+    :width: 200
+    :height: 400
+    :align: right
 
 .. image:: /savefig/venn_replicate_group_level_0_lfq_log2_level_0.png
     :width: 440
     :height: 400
     :align: left
 
-.. image:: /venn_bar_group_level_0_lfq_log2_level_0.png
+.. image:: /savefig/plots/venn_bar_group_level_0_lfq_log2_level_0.png
     :width: 200
     :height: 400
     :align: right
+
+
+.. image:: /source/_static/venn_replicate_group_level_0_lfq_log2_level_0.png
+    :width: 440
+    :height: 400
+    :align: left
+
+.. image:: /source/_static/plots/venn_bar_group_level_0_lfq_log2_level_0.png
+    :width: 200
+    :height: 400
+    :align: right
+
+.. image:: /_static/venn_replicate_group_level_0_lfq_log2_level_0.png
+    :width: 440
+    :height: 400
+    :align: left
+
+.. image:: /_static/plots/venn_bar_group_level_0_lfq_log2_level_0.png
+    :width: 200
+    :height: 400
+    :align: right
+
+.. image:: /_images/venn_replicate_group_level_0_lfq_log2_level_0.png
+    :width: 440
+    :height: 400
+    :align: left
+
+.. image:: /_build/_images/plots/venn_bar_group_level_0_lfq_log2_level_0.png
+    :width: 200
+    :height: 400
+    :align: right
+
 
 
 PCA overview
