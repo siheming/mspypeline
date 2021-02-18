@@ -29,11 +29,6 @@ the :class:`~MSPInitializer` class which creates and reads in the :ref:`configur
     # create a second plotter without collapsed technical replicates
     init = load_example_dataset(configs={"has_techrep": False, "pathways":[]})
     plotter_with_tech_reps = MaxQuantPlotter.from_MSPInitializer(init)
-    plotter.logger.debug(os.listdir(".."))
-    plotter.logger.debug(os.listdir("."))
-    for dir in os.listdir("."):
-        if os.path.isdir(dir):
-            plotter.logger.debug(os.listdir(dir))
 
 define some helper functions
 
