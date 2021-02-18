@@ -150,6 +150,8 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_results`
     @savefig venn_plot2.png width=450 align=center
     select_fig(plots, 1);
 
+    os.listdir("./savefig")
+
 
 Group diagrams
 ***************
@@ -161,13 +163,14 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
 
     plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./source/savefig", fig_format=".png");
     plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./savefig", fig_format=".png");
+    os.listdir("./savefig")
 
-.. image:: images/venn_replicate_group_level_0_lfq_log2_level_0.png
+.. image:: /savefig/venn_replicate_group_level_0_lfq_log2_level_0.png
     :width: 440
     :height: 400
     :align: left
 
-.. image:: venn_bar_group_level_0_lfq_log2_level_0.png
+.. image:: /venn_bar_group_level_0_lfq_log2_level_0.png
     :width: 200
     :height: 400
     :align: right
