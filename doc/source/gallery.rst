@@ -30,9 +30,13 @@ the :class:`~MSPInitializer` class which creates and reads in the :ref:`configur
     init = load_example_dataset(configs={"has_techrep": False, "pathways":[]})
     plotter_with_tech_reps = MaxQuantPlotter.from_MSPInitializer(init)
 
-define some helper functions
+define some helper functions and configurations
 
 .. ipython:: python
+
+    on_rtd = os.environ.get('READTHEDOCS', False) == 'True'
+    static_dir = "./_static" if on_rtd else "./source/_static"
+    savefig_dir = "./savefig" if on_rtd else "./source/savefig"
 
     def select_fig(plts, idx):
         # sets active figure which can then be saved by the @savefig decorator
@@ -53,7 +57,7 @@ Created using: :meth:`~mspypeline.MaxQuantPlotter.create_report`
 
 .. ipython:: python
 
-    plotter.create_report("./_static");
+    plotter.create_report(static_dir);
     # print("skipping report")
 
 The resulting `MaxQuant Report <./_static/MaxQuantReport.pdf>`_.
@@ -76,7 +80,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_normalization_overview_all_no
 
 .. ipython:: python
 
-    plotter.plot_normalization_overview_all_normalizers("raw_log2", 0, save_path="./_static");
+    plotter.plot_normalization_overview_all_normalizers("raw_log2", 0, save_path=static_dir);
     # print("skipping norm overview")
 
 View `this normalization overview example <./_static/normalization_overview_all_normalizers_raw_log2.pdf>`_.
@@ -92,7 +96,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normaliz
 
 .. ipython:: python
 
-    plotter.plot_heatmap_overview_all_normalizers("raw_log2", 0, save_path="./_static");
+    plotter.plot_heatmap_overview_all_normalizers("raw_log2", 0, save_path=static_dir);
     # print("skipping heatmap overview")
 
 View `this heatmap overview example <./_static/heatmap_overview_all_normalizers_raw_log2.pdf>`_.
@@ -159,7 +163,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
 
 .. ipython:: python
 
-    plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path="./savefig", fig_format=".png");
+    plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/plots/venn_replicate_group_level_0_lfq_log2_level_0.png
     :width: 440
@@ -180,7 +184,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
 
 .. ipython:: python
 
-    plotter.plot_pca_overview("lfq_log2", 1, save_path="./savefig", fig_format=".png");
+    plotter.plot_pca_overview("lfq_log2", 1, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/pca_overview_lfq_log2_level_1.png
     :width: 550
@@ -219,7 +223,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
 
 .. ipython:: python
 
-    plotter.plot_scatter_replicates("lfq_log2", 1, save_path="./savefig", fig_format=".png");
+    plotter.plot_scatter_replicates("lfq_log2", 1, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/scatter_H838_unst_lfq_log2_level_1.png
     :width: 700
@@ -234,7 +238,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
 
 .. ipython:: python
 
-    plotter.plot_experiment_comparison("lfq_log2", 0, save_path="./savefig", fig_format=".png");
+    plotter.plot_experiment_comparison("lfq_log2", 0, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/scatter_comparison_H1975_vs_H838_lfq_log2_level_0.png
     :width: 650
@@ -249,7 +253,7 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_rank`
 
 .. ipython:: python
 
-    plotter.plot_rank("lfq_log2", 0, save_path="./savefig", fig_format=".png");
+    plotter.plot_rank("lfq_log2", 0, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/rank_H1975_lfq_log2_level_0.png
     :width: 700
@@ -366,11 +370,10 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_n_proteins_vs_quantile
 
-
 .. ipython:: python
     :okwarning:
 
-    plotter.plot_n_proteins_vs_quantile("lfq_log2", 3, save_path="./savefig", fig_format=".png");
+    plotter.plot_n_proteins_vs_quantile("lfq_log2", 3, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/n_proteins_vs_quantile_lfq_log2_level_3.png
 
