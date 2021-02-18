@@ -1602,9 +1602,11 @@ class BasePlotter:
             dfs = [x for x in self.all_tree_dict if x.startswith(df_to_use.replace("_log2", ""))]
             if "log2" in df_to_use:
                 dfs = [x for x in dfs if x.endswith("log2")]
+            plot_kwargs["save_path"] = None  # make sure the plots dont get saved
             df_plots = plot_function(dfs, max_depth - 1, **plot_kwargs)
             plots += df_plots
             if save_path is not None:
+                plot_kwargs.pop("save_path")  # use the other save path instead here
                 save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(
                     file_name, **plot_kwargs, df_to_use=df_to_use, save_path=save_path)
                 matplotlib_plots.collect_plots_to_pdf(os.path.join(save_path, result_name), *df_plots)
