@@ -1,5 +1,3 @@
-HALLMARK_APOPTOSIS
-> Genes mediating programmed cell death (apoptosis) by activation of caspases.
 ADD1
 AIFM3
 ANKH
@@ -86,7 +84,7 @@ GSN
 GSR
 GSTM1
 GUCY2D
-H1F0
+H1-0
 HGF
 HMGB2
 HMOX1

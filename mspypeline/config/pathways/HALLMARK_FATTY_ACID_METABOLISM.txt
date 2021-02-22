@@ -1,5 +1,3 @@
-HALLMARK_FATTY_ACID_METABOLISM
-> Genes encoding proteins involved in metabolism of fatty acids.
 AADAT
 ACAA1
 ACAA2
@@ -84,7 +82,7 @@ GPD1
 GPD2
 GRHPR
 GSTZ1
-H2AFZ
+H2AZ1
 HADH
 HADHB
 HAO2

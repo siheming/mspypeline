@@ -1,7 +1,4 @@
-HALLMARK_IL6_JAK_STAT3_SIGNALING
-> Genes up-regulated by IL6 [GeneID=3569] via STAT3 [GeneID=6774], e.g., during acute phase response.
 A2M
-AC005840.1
 ACVR1B
 ACVRL1
 BAK1
@@ -61,6 +58,7 @@ ITGB3
 JUN
 LEPR
 LTB
+LTBR
 MAP3K8
 MYD88
 OSMR
