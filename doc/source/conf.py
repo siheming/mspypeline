@@ -14,6 +14,11 @@ import os
 import sys
 from sphinx.ext import autodoc
 
+sys.path.insert(0, os.path.abspath("../source"))
+
+from create_docs_for_mspypeline_config import main as create_docs
+
+
 sys.path.insert(0, os.path.abspath("./_ext"))  # for custom extensions
 sys.path.insert(0, os.path.abspath("../.."))  # to find the package
 
@@ -70,6 +75,8 @@ napoleon_include_init_with_doc = True
 # create documentor for description only
 # from https://stackoverflow.com/questions/7825263/including-docstring-in-sphinx-documentation
 
+# create docs for mspypeline conf
+create_docs()
 
 class DescriptionOnlyDocumenter(autodoc.MethodDocumenter):
     objtype = "descriptiononly"
