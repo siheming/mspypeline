@@ -89,6 +89,9 @@ class MaxQuantPlotter(BasePlotter):
         """
         Creates a MaxQuantReport.pdf, which can be used as :ref:`quality control <plotters>`.
 
+        | Sample plot provided in :ref:`gallery <mqreport>`.
+        | Overview of analysis options: :ref:`MaxQuant report <plotters>`
+
         Parameters
         ----------
         target_dir

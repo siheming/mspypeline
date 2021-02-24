@@ -9,9 +9,9 @@ on demand.
 
 MaxQuant Reader
 ~~~~~~~~~~~~~~~~
-The MQReader preprocesses data from MaxQuant files into the internal data format to provide the correct input for the
-plotters.
-Minimum requirement to start and work with the MQReader:
+| The MQReader prepares data from MaxQuant files to match the internal data format in order to provide the correct input
+  for the plotters.
+| Minimum requirement to start and work with the MQReader:
 
 * proteinGroups.txt file.
 

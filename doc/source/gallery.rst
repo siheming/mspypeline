@@ -5,8 +5,28 @@
 Gallery
 ========
 
-In the following, each plot that can be created with the ``mspypeline`` will be shown and explained giving a minimal
-code example to create this plot when using the package as a :ref:`python module <python-quickstart>`.
+Experiment setup
+^^^^^^^^^^^^^^^^^
+| In the following section, experimental data is presented to introduce and explain the functionalities of the
+  ``mspypeline`` in a visual format and by giving a minimal code example to create the plots as would be done when
+  using the package as a :ref:`python module <python-quickstart>`. The experimental setup was specifically designed to
+  facilitate the representation of the majority of analysis options provided by the software.
+
+| Two different non-small cell lung cancer (NSCLC) **cell lines** H1975 and H838 were cultured in six culture dishes
+  each. To simulate different **stimulation** conditions, three of a cell line’s **biological replicates** were then
+  treated with tumor growth factor (TGF-β) and three replicates remained unstimulated. For each of the twelve samples
+  that were prepared for the MS analysis, two **technical replicates** were measured resulting in a total number of 24
+  probes. With this experimental arrangement, a multilayered analysis design was established.
+| For the analysis by the ``mspypeline``, where samples are organized in a tree structure and addressed via their
+  :ref:`level of analysis depth <analysis-design>`, the two cell lines correspond to the lowest **level 0**, to which
+  six samples can be assigned each. In the next higher **level 1** of the analysis design, the two groups from level 0
+  are further subdivided by their treatment condition such that there are now four different groups "H1975_unst",
+  "H1975_TGFb", "H838_unst" and "H838_TGFb", all of which contain 3 replicates. In **level 2** these four groups are
+  again subdevided now into the individual replicates. Since the measured protein intensities of
+  :ref:`technical replicates <tech-reps>` are averaged and cumulated to the next lowest level, level 2
+  becomes the highest level of analysis.
+
+
 
 Plotter creation
 ^^^^^^^^^^^^^^^^^
@@ -22,7 +42,7 @@ the :class:`~MSPInitializer` class which creates and reads in the :ref:`configur
     # load the data that is provided in a submodule
     init = load_example_dataset(configs={
         "pathways": ["BIOCARTA_EGF_PATHWAY.txt", "HALLMARK_IL2_STAT5_SIGNALING.txt"],
-        "go_terms": ["GO_POSITIVE_REGULATION_OF_CYTOKINE_PRODUCTION.txt", "GO_INFLAMMATORY_RESPONSE.txt"]
+        "go_terms": ["GO_APOPTOTIC_SIGNALING_PATHWAY.txt", "GO_INFLAMMATORY_RESPONSE.txt"]
         })
     plotter = MaxQuantPlotter.from_MSPInitializer(init)
 
@@ -43,9 +63,12 @@ define some helper functions and configurations
         plt.figure(plts[idx][0].number)
 
 
+.. _mqreport:
+
 MaxQuant Report
 ^^^^^^^^^^^^^^^^^^^^^^^
-Created using: :meth:`~mspypeline.MaxQuantPlotter.create_report`
+| Created using: :meth:`~mspypeline.MaxQuantPlotter.create_report`
+| Analysis options: :ref:`MaxQuant Report <plotters>`
 
     | The MaxQuant report was built with the intention to offer a broad insight into the different sources of information
       from a MaxQuant output. Besides the protein intensities (from the *proteinGroups.txt* file) which are the only source
@@ -66,6 +89,8 @@ The resulting `MaxQuant Report <./_static/MaxQuantReport.pdf>`_.
 Normalization Plots
 ^^^^^^^^^^^^^^^^^^^^
 
+.. _norm-plots-gallery:
+
 The helper function :meth:`~mspypeline.BasePlotter.plot_all_normalizer_overview` is used to generate the same plot
 multiple times with different normalizations methods of the base data.
 
@@ -73,8 +98,9 @@ multiple times with different normalizations methods of the base data.
 
 Normalization overview
 ***********************
-Created using: :meth:`~mspypeline.BasePlotter.plot_normalization_overview_all_normalizers` by calling
-:meth:`~mspypeline.BasePlotter.plot_normalization_overview`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_normalization_overview_all_normalizers` by calling
+  :meth:`~mspypeline.BasePlotter.plot_normalization_overview`
+| Analysis options: :ref:`Normalization overview <norm-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_normalization_overview
 
@@ -89,8 +115,9 @@ View `this normalization overview example <./_static/normalization_overview_all_
 
 Heatmap overview
 ******************
-Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` by calling
-:meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`.
+| Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` by calling
+  :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`.
+| Analysis options: :ref:`Heatmap overview <norm-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_heatmap
 
@@ -104,10 +131,12 @@ View `this heatmap overview example <./_static/heatmap_overview_all_normalizers_
 
 Outlier detection and comparison plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _detection-counts:
 
 Detection counts
 *****************
-Created using: :meth:`~mspypeline.BasePlotter.plot_detection_counts`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_detection_counts`
+| Analysis options: :ref:`Detection counts <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_detection_counts
 
@@ -116,17 +145,18 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_detection_counts`
     @savefig detection_counts.png width=400 align=center
     plotter.plot_detection_counts("lfq_log2", 0, save_path=None);
 
+.. _detected-proteins:
 
 Number of detected proteins
 ****************************
-Created using: :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replicate`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replicate`
+| Analysis options: :ref:`Number of detected proteins <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_detected_proteins_per_replicate
 
 
-    | Depending on whether :ref:`technical replicates <tech-reps>` should be recognized/averaged (top graph) or not
-      (bottom graph) the data and resulting plot will have different outcomes. The number of detected proteins in total
-      and per sample changes as 0 values are handled as missing values ("nan") and neglected when calculating the mean of
+    | Depending on whether :ref:`technical replicates <tech-reps>` should be averaged (top graph) or not
+      (bottom graph) the data and resulting plot will have different outcomes. The number of detected proteins  per sample changes as 0 values are handled as missing values ("nan") and neglected when calculating the mean of
       samples.
 
 .. ipython:: python
@@ -137,10 +167,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replica
     @savefig detected_proteins_tech_rep.png width=600 align=center
     plotter_with_tech_reps.plot_detected_proteins_per_replicate("lfq_log2", 1, save_path=None);
 
+.. _venn-rep:
 
 Venn diagrams
 **************
-Created using: :meth:`~mspypeline.BasePlotter.plot_venn_results`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_venn_results`
+| Analysis options: :ref:`Venn diagrams <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_venn_results
 
@@ -154,10 +186,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_results`
     @savefig venn_plot2.png width=450 align=center
     select_fig(plots, 1);
 
+.. _venn-group:
 
 Group diagrams
 ***************
-Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
+| Analysis options: :ref:`Group diagram <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_venn_groups
 
@@ -175,10 +209,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
     :height: 400
     :align: right
 
+.. _pca:
 
 PCA overview
 *************
-Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
+| Analysis options: :ref:`PCA overview <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_pca_overview
 
@@ -190,10 +226,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
     :width: 550
     :align: center
 
+.. _int-hist:
 
 Intensity histogram
 ********************
-Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_histograms`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_histograms`
+| Analysis options: :ref:`Intensity histogram <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_histograms
 
@@ -202,10 +240,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_histograms`
     @savefig intensity_hist.png width=600 align=center
     plotter.plot_intensity_histograms("lfq_log2", 1, save_path=None);
 
+.. _rel-std:
 
 Relative std
 *************
-Created using: :meth:`~mspypeline.BasePlotter.plot_relative_std`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_relative_std`
+| Analysis options: :ref:`Relative std <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_relative_std
 
@@ -214,10 +254,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_relative_std`
     @savefig relative_std.png width=500 align=center
     plotter.plot_relative_std("lfq_log2", 0, save_path=None);
 
+.. _scatter-rep:
 
 Scatter replicates
 *******************
-Created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
+| Analysis options: :ref:`Scatter replicates <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_scatter_replicates
 
@@ -229,10 +271,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
     :width: 700
     :align: center
 
+.. _scatter-group:
 
 Experiment comparison
 **********************
-Created using: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
+| Analysis options: :ref:`Experiment comparison <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_experiment_comparison
 
@@ -244,10 +288,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
     :width: 650
     :align: center
 
+.. _rank:
 
 Rank
 *****
-Created using: :meth:`~mspypeline.BasePlotter.plot_rank`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_rank`
+| Analysis options: :ref:`Rank <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_rank
 
@@ -262,19 +308,22 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_rank`
 
 Statistical inference plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _pathway-analysis:
 
 Pathway analysis
 *****************
-Created using: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis`
+| Analysis options: :ref:`Pathway analysis <statistic-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_pathway_analysis
 
-| Shown below are two pathway analysis figures, both plotting the protein intensities of the
-  :ref:`Biocarta EGF pathway <pathway-proteins>` but calculated for different analysis levels. Here, the choice of the
-  :ref:`analysis level <analysis-design>` or depth determines which samples are considered a *"group"*.
-| In the upper figure where the analysis was performed on the lowest level (level 0) which only consists of two groups
-  (H1975 & H838), all samples belonging to any one of them are grouped together.
-| In the lower figure, where the analysis was performed on then next higher level (level 1) the two groups of level 0
+| The effect of choosing different levels for the analysis upon the results can be appreciated in the pathway analyses
+  shown below. Both figures show the protein intensities of the :ref:`Biocarta EGF pathway <pathway-proteins>`, however
+  calculation was performed for different :ref:`analysis levels <analysis-design>`. Here, the choice of the analysis
+  depth determines which samples are considered a *"group"*.
+| In the top figure where the analysis was performed on level 0 which consists of two groups (H1975 & H838), all samples
+  belonging to any one of them are grouped together.
+| In the bottom figure, where the analysis was performed on then next higher level (level 1), the two groups of level 0
   are further subdivided into a total of four different groups to which (only) 3 samples are assigned.
 | Statistical analysis are always performed between two *"groups"* of samples and require a minimum of 3 samples to
   indicate significances.
@@ -290,10 +339,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis`
     @savefig pathway_analysis_level1.png width=700 align=center
     select_fig(plots_level1, 0);
 
+.. _go-analysis:
 
 Go analysis
 ************
-Created using: :meth:`~mspypeline.BasePlotter.plot_go_analysis`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_go_analysis`
+| Analysis options: :ref:`Go analysis <statistic-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_go_analysis
 
@@ -302,10 +353,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_go_analysis`
     @savefig go_analysis.png width=700 align=left
     plotter.plot_go_analysis("lfq_log2", 1, save_path=None);
 
+.. _volcano:
 
 Volcano plot (R)
 *****************
-Created using: :meth:`~mspypeline.BasePlotter.plot_r_volcano`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_r_volcano`
+| Analysis options: :ref:`Volcano plot (R) <statistic-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_r_volcano
 
@@ -315,26 +368,28 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_r_volcano`
 
 .. ipython:: python
 
-    print("pass")
-    # plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path="./savefig", fig_format=".png");
+    #print("pass")
+    plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path="./savefig", fig_format=".png");
 
 .. image:: savefig/plots/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
 
 
 Additionally via python
 ^^^^^^^^^^^^^^^^^^^^^^^
+.. _kde:
 
 Kernel density estimate plot
 *******************************
-Created using: :meth:`~mspypeline.BasePlotter.plot_kde`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_kde`
+| Analysis options: :ref:`Additionally via python <add-python-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_kde
 
-    | In the graphs shown below, the effect of the two different protein :ref:`intensity types <hyperparameter>`.
-      In the images below the *"raw"* and *"lfq"* intensities are shown, as well as two normalizations of the raw data,
-      *"tail robust quantile normalization"* and *"tail robust quantile normalization with missing value handling"*.
-      The KDE can thus help to understand the effect of configuring certain
-      hyperparameters and how intensity types or normalization methods may influence the data.
+    | In the figure shown below, the effect of the two different protein intensity types is presented.
+      The two top graphs show the *"raw"* and *"lfq"* intensities, while the two bottom graphs demonstrate the data preprocessed with
+      two different normalizations *"tail robust quantile normalization"* and
+      *"tail robust quantile normalization with missing value handling"*.
+    | The KDE can thus help to understand how intensity types or normalization methods may influence the data.
 
 .. ipython:: python
 
@@ -353,9 +408,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_kde`
     @savefig kde_raw_trqn_missing.png width=320 align=right
     plotter.plot_kde("raw_trqn_missing_handled_log2", 3, save_path=None);
 
+.. _boxplot:
+
 Boxplot
 ********
-Created using: :meth:`~mspypeline.BasePlotter.plot_boxplot`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_boxplot`
+| Analysis options: :ref:`Additionally via python <add-python-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_boxplot
 
@@ -364,9 +422,12 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_boxplot`
     @savefig boxplot.png width=700 align=center
     plotter.plot_boxplot("lfq_log2", 3, save_path=None);
 
+.. _proteins-vs-quantiles:
+
 Number of Proteins vs Quantiles
 ********************************
-Created using: :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile`
+| Analysis options: :ref:`Additionally via python <add-python-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_n_proteins_vs_quantile
 
@@ -377,14 +438,17 @@ Created using: :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile`
 
 .. image:: /savefig/n_proteins_vs_quantile_lfq_log2_level_3.png
 
+.. _int-heatmap:
+
 Intensity Heatmap
 ******************
-Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`
+| Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`
+| Analysis options: :ref:`Additionally via python <Plot-Options>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_heatmap
 
     | In the heatmap shown below, samples are sorted by the number of missing values and proteins are ranked by the number
-      of missing values across all samples. So depending on the defined preferences, the heatmap can, for instance, be
+      of missing values across all samples. So, depending on the defined preferences, the heatmap can, for instance, be
       used to gather information about the distribution of missing values or the influence of the normalization method by
       the appearance of patterns.
 

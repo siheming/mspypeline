@@ -6,20 +6,20 @@ Workflow
 Quality control
 ~~~~~~~~~~~~~~~
 | Ensure that the quality of the results to analyze are of sufficient quality. This can be done with the report provided
-  by the :ref:`mspypeline plotters <plotters>`.
+  by the :ref:`MaxQuant plotter <plotters>`.
 
 .. _hyperparameter:
 
-Determining Data Hyperparameter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Data Preprocessing
+~~~~~~~~~~~~~~~~~~~
 | Data may be processed in multiple ways and such modeling has the potential to shape the results of an analysis
   substantially.
-| This kind of data processing comprises the choice of protein intensities provided by MaxQuant, including raw,
-  label-free quantification (LFQ) or intensity-based absolute quantification (iBAQ) intensities, the removal of
-  erroneous samples or the normalization and standardization of the data set.
+| This kind of data preprocessing comprises the choice of protein intensities provided by MaxQuant, including raw,
+  label-free quantification (LFQ) or intensity-based absolute quantification (iBAQ) intensities, averaging technical
+  replicates, the removal of erroneous samples or the normalization and standardization of the data set.
 
 Intensity options
-^^^^^^^^^^^^^^^^^^^
+******************
 
 * LFQ Intensity ("lfq_log2")
 * raw Intensity ("raw_log2")
@@ -31,7 +31,7 @@ Intensity options
 
 
 Normalization options
-^^^^^^^^^^^^^^^^^^^^^^
+*********************
 
 * No normalization
 * Median Normalization via: :class:`~mspypeline.MedianNormalizer`
@@ -57,19 +57,28 @@ Normalization options
 Exploratory Analysis
 ~~~~~~~~~~~~~~~~~~~~~
 
-Create descriptive and comparison plots
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Create outlier detection and comparison plots
+**********************************************
 | The descriptive and comparison plots can for example help to analyze how biological replicates compare to another or
   how different conditions effect detected proteins.
 
 Create statistical inference plots
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-| The statistical inference plots show differential protein intensities between two groups or conditions. The Volcano
-  plot uses the R package limma to determine significances based on moderated t-statistics. Additional R packages might
+**********************************
+| Statistical inference plots can inform about differential protein intensities between groups of the data set.
+  The calculation of statistical significances of the protein intensity deviation of groups can help to exploit
+  biological questions by incorporation the functional profile of proteins or protein sets.
+| Statistics for each plot are calculated based on the intended proposition of the plot.
+
+* for the :meth:`~mspypeline.BasePlotter.plot_pathway_analysis` an independent t-test is applied
+* for the :meth:`~mspypeline.BasePlotter.plot_go_analysis` a fisher'S exact test is applied
+* for the :meth:`~mspypeline.BasePlotter.plot_r_volcano` plot the moderated t-statistics is applied which is
+  implemented by the R package limma. Additional R packages might
   be downloaded when this plot is created for the first time.
+
 
 Select pathways and GO-Terms of interest
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Select :ref:`pathway-proteins`. Selected pathways will have following effects:
 
 * for the :meth:`~mspypeline.BasePlotter.plot_pathway_analysis` one plot per pathway will be created
