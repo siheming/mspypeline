@@ -12,7 +12,7 @@ Experiment setup
   using the package as a :ref:`python module <python-quickstart>`. The experimental setup was specifically designed to
   facilitate the representation of the majority of analysis options provided by the software.
 
-.. figure:: _static/experiment_design.png
+.. figure:: ./_static/experiment_design.png
     :width: 400
     :align: right
 
@@ -375,7 +375,7 @@ Volcano plot (R)
     print("pass")
     # plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path=savefig_dir, fig_format=".png");
 
-.. image:: /savefig/plots/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
+.. figure:: ./_static/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
 
 
 Additionally via python
