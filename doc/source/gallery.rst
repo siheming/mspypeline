@@ -372,8 +372,8 @@ Volcano plot (R)
 
 .. ipython:: python
 
-    #print("pass")
-    plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path=savefig_dir, fig_format=".png");
+    print("pass")
+    # plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/plots/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
 
