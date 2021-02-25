@@ -12,7 +12,7 @@ Experiment setup
   using the package as a :ref:`python module <python-quickstart>`. The experimental setup was specifically designed to
   facilitate the representation of the majority of analysis options provided by the software.
 
-.. figure:: _static/experiment_design.pdf
+.. figure:: _static/experiment_design.png
     :width: 400
     :align: right
 
