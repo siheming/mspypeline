@@ -125,9 +125,12 @@ Heatmap overview
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_heatmap
 
+.. note::
+   If the heatmap seems blurred try downloading it and using a different PDF viewer
+
 .. ipython:: python
 
-    plotter.plot_heatmap_overview_all_normalizers("raw_log2", 0, save_path=static_dir);
+    plotter.plot_heatmap_overview_all_normalizers("raw_log2", 0, vim=19.5, vmax=40, save_path=static_dir);
     # print("skipping heatmap overview")
 
 View `this heatmap overview example <./_static/heatmap_overview_all_normalizers_raw_log2.pdf>`_.

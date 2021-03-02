@@ -1075,10 +1075,7 @@ def save_intensities_heatmap_result(
     else:
         if close_plots is not None:
             plt.close(close_plots)
-        if len(intensities.columns)*0.5 < 4:
-            height = 4
-        else:
-            height = len(intensities.columns)*0.5
+        height = max(len(intensities.columns) * 0.5, 4)
         fig, ax = plt.subplots(figsize=(17, height))
 
     if not isinstance(cmap, colors.Colormap):
@@ -1142,11 +1139,7 @@ def save_detected_proteins_per_replicate_results(
     if show_suptitle:
         fig.suptitle(f"Number of detected proteins from {intensity_label}")
 
-    global_max = 0
-    for key, df in all_heights.items():
-        local_max = df.max()
-        if local_max > global_max:
-            global_max = local_max
+    global_max = max((ser.max() for ser in all_heights.values()))
 
     for experiment, (pos, ax) in zip(all_heights.keys(), np.ndenumerate(axarr)):
         experiment_heights = all_heights[experiment]
