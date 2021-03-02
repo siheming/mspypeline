@@ -7,6 +7,7 @@ from typing import Optional, Iterable
 
 from mspypeline import create_app
 from mspypeline.core import MSPInitializer
+from mspypeline.helpers import get_logger
 from mspypeline.modules import default_normalizers
 from mspypeline.file_reader import BaseReader, MQReader
 
@@ -90,6 +91,7 @@ class MSPGUI(tk.Tk):
         self.selected_reader = MQReader.MQReader
         self.normalize_options = ["None"] + list(default_normalizers.keys())
         self.mspinit = MSPInitializer(file_dir, yml_file, loglevel=loglevel)
+        self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
 
         self.number_of_plots = 0
 
@@ -250,13 +252,19 @@ class MSPGUI(tk.Tk):
             self.pathway_list.select_clear(i)
         if self.mspinit.configs.get("pathways"):
             for pathway in self.mspinit.configs.get("pathways"):
-                self.pathway_list.select_set(self.mspinit.list_full_pathways.index(pathway))
+                try:
+                    self.pathway_list.select_set(self.mspinit.list_full_pathways.index(pathway))
+                except ValueError:
+                    self.logger.warning("Selected pathway file %s not found", pathway)
         # clear selection then select from configs
         for i, go in enumerate(self.mspinit.list_full_gos):
             self.go_term_list.select_clear(i)
         if self.mspinit.configs.get("go_terms"):
             for go in self.mspinit.configs.get("go_terms"):
-                self.go_term_list.select_set(self.mspinit.list_full_gos.index(go))
+                try:
+                    self.go_term_list.select_set(self.mspinit.list_full_gos.index(go))
+                except ValueError:
+                    self.logger.warning("Selected go term file %s not found", go)
 
     def yaml_path_setter(self, *args):
         self.mspinit.file_path_yaml = self.yaml_text.get()
