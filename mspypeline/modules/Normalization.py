@@ -32,7 +32,7 @@ def interpolate_data(data: pd.DataFrame) -> pd.DataFrame:
         return data
     data_arg_sort = np.argsort(data.values, axis=0)
     data_sorted = np.take_along_axis(data.values, data_arg_sort, axis=0)
-    data_index = data.index[data_arg_sort]
+    data_index = data.index.values[data_arg_sort]
 
     rows, cols = data_sorted.shape
 
