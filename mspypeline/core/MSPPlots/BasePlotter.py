@@ -435,6 +435,9 @@ class BasePlotter:
           of a set or overlapping sets. The lower graph indicates which set or sets are being compared, respectively,
           which protein count (upper graph) belongs to which comparison (lower graph).
 
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <venn-group>`
+
         .. note::
             * A venn diagram can compare a maximum of 3 samples.
             * A bar-venn diagram can compare more than 3 samples.
@@ -480,6 +483,9 @@ class BasePlotter:
           consists of two combined graphs, an upper bar diagram, tha indicates the number of unique or shared proteins
           of a set or overlapping sets. The lower graph indicates which set or sets are being compared, respectively,
           which protein count (upper graph) belongs to which comparison (lower graph).
+
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <venn-rep>`
 
         .. note::
             * A venn diagram can compare a maximum of 3 samples.
@@ -541,6 +547,9 @@ class BasePlotter:
         """
         | Bar diagram showing how often proteins were detected in a number of replicates for each group.
 
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <detection-counts>`
+
         """
         plots = []
         for level in levels:
@@ -600,6 +609,9 @@ class BasePlotter:
         | The average number of detected proteins per group is indicated as gray
           dashed line.
 
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <detected-proteins>`
+
         """
         plots = []
         for level in levels:
@@ -643,6 +655,9 @@ class BasePlotter:
           values of each sample.
         | If *"show_mean"* is set to True in the :ref:`configs <default-yaml>` the mean intensity of the plotted samples
           of a group will be shown as gray dashed line.
+
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <int-hist>`
         """
         plots = []
         for level in levels:
@@ -689,6 +704,9 @@ class BasePlotter:
           by min value of data set).
         | For a group with more than 2 replicates, each pairwise comparison of the replicates is calculated and plotted
           together in one graph. For every group of the selected level one plot will be created.
+
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <scatter-rep>`
         """
         plots = []
         for level in levels:
@@ -735,6 +753,9 @@ class BasePlotter:
           information about the median intensity or rank of pathways of interest. If a protein is part of a selected
           pathway it will be presented in color and the median rank of all proteins of a given pathway is indicated.
           Multiple pathways can be selected and will be represented in the same graph as distinct groups.
+
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <rank>`
         """
         plots = []
         for level in levels:
@@ -786,6 +807,9 @@ class BasePlotter:
           understand how much fluctuation of the measured intensities is present between the replicates. Low deviation
           indicates that measured intensities are stable over multiple samples.
         | For each group of the selected level one plot will be created.
+
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <rel-std>`
 
         .. note::
             To determine which proteins can be compared between the two samples an internal :ref:`threshold function
@@ -877,6 +901,9 @@ class BasePlotter:
           selected pathway, two figures are created, one displaying the significances and the other not displaying them.
         | For a group of multiple samples, the protein intensity is plotted for each sample (single scatter dot) which
           are jointly presented in uniform coloring.
+
+        | For overview of plots see :ref:`analysis options <statistic-plots>`
+        | For exemplary plot see :ref:`gallery <pathway-analysis>`
 
         .. note::
             To determine which proteins can be compared between two groups an internal :ref:`threshold function
@@ -990,6 +1017,9 @@ class BasePlotter:
           by min value of data set).
         | For every pairwise comparison of the groups from the selected level, one plot will be created.
 
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <scatter-group>`
+
         .. note::
             To determine which proteins can be compared between the two groups and which are unique for one group an
             internal :ref:`threshold function <thresholding>` is applied.
@@ -1096,6 +1126,9 @@ class BasePlotter:
         +------------------------+--------------------------------------+------------------------------------------+
 
         | The resulting p-value is thus, also dependent on the overall protein count of the sample/group of samples.
+
+        | For overview of plots see :ref:`analysis options <statistic-plots>`
+        | For exemplary plot see :ref:`gallery <go-analysis>`
         """
         plots = []
         for level in levels:
@@ -1211,8 +1244,11 @@ class BasePlotter:
         | Volcano plots also permit the annotation of mapped proteins. This can be achieved by labeling a number of
           the most significant proteins for each group or by selecting a
           :ref:`pathway analysis protein list <pathway-proteins>`.
-        | for every pairwise comparison of the groups of the selected level two volcano plots are created, where one
+        | For every pairwise comparison of the groups of the selected level two volcano plots are created, where one
           plot has a set of proteins annotated and the other does not.
+
+        | For overview of plots see :ref:`analysis options <statistic-plots>`
+        | For exemplary plot see :ref:`gallery <volcano>`
 
         .. note::
            * should be used with log2 intensities
@@ -1320,6 +1356,9 @@ class BasePlotter:
           colored differently.
         | Multiple different analysis options can be chosen to generate a PCA (see: :ref:`multiple option config
           <default-yaml>`).
+
+        | For overview of plots see :ref:`analysis options <detection-plots>`
+        | For exemplary plot see :ref:`gallery <pca>`
        """
         plots = []
         for level in levels:
@@ -1366,6 +1405,9 @@ class BasePlotter:
         | A standard boxplot displaying the five quantile distribution per group of the selected level and ranking the
           groups by median intensity from the bottom of the graph to the top.
         | The boxplot is part of the :ref:`Normalization overview <norm-overview>`.
+
+        | For overview of plots see :ref:`analysis options <add-python-plots>`
+        | For exemplary plot see :ref:`gallery <boxplot>`
 
         """
         plots = []
@@ -1423,6 +1465,9 @@ class BasePlotter:
         | Solid, rather vertical lines indicate a linear fit of each quantile for all the samples.
         | This plot is part of the :ref:`Normalization overview <norm-overview>`.
 
+        | For overview of plots see :ref:`analysis options <add-python-plots>`
+        | For exemplary plot see :ref:`gallery <proteins-vs-quantiles>`
+
         """
         plots = []
         for level in levels:
@@ -1467,6 +1512,9 @@ class BasePlotter:
         | The KDE is well suited to study the influence of different :ref:`normalization methods <hyperparameter>` and
           :ref:`protein intensities <hyperparameter>` on the data which is why it is part if the
           :ref:`Normalization overview <norm-overview>`.
+
+        | For overview of plots see :ref:`analysis options <add-python-plots>`
+        | For exemplary plot see :ref:`gallery <kde>`
         """
         plots = []
         for level in levels:
@@ -1495,6 +1543,9 @@ class BasePlotter:
           to find the best suitable normalization for the data.
         | The normalization overview combines the plots :meth:`~mspypeline.BasePlotter.plot_kde`,
           :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` and :meth:`~mspypeline.BasePlotter.plot_boxplot`.
+
+        | For overview of plots see :ref:`analysis options <norm-plots>`
+        | For exemplary plot see :ref:`gallery <norm-overview>`
         """
         plots = []
         for level in levels:
@@ -1565,6 +1616,8 @@ class BasePlotter:
           understand how different :ref:`intensity types <hyperparameter>` affect the data.
         | The :ref:`Heatmap overview <heatmap-overview>` is created from a series of intensity heatmap plots.
 
+        | For overview of plots see :ref:`analysis options <add-python-plots>`
+        | For exemplary plot see :ref:`gallery <int-heatmap>`
         """
         plots = []
         for df_to_use in dfs_to_use:
@@ -1581,6 +1634,9 @@ class BasePlotter:
     def plot_all_normalizer_overview(self, dfs_to_use, levels, plot_function, file_name, normalizers=None, **kwargs):
         """
         | Helper method to create a multipaged file containing one plot per normalization option.
+        
+        | For overview of plots see :ref:`analysis options <norm-plots>`
+        | For exemplary plot see :ref:`gallery <norm-plots-gallery>`
 
         Parameters
         ----------
@@ -1632,6 +1688,9 @@ class BasePlotter:
         """
         | Will create the :meth:`plot_normalization_overview` for all normalization methods.
 
+        | For overview of plots see :ref:`analysis options <norm-plots>`
+        | For exemplary plot see :ref:`gallery <norm-overview>`
+
         Parameters
         ----------
         dfs_to_use
@@ -1652,6 +1711,13 @@ class BasePlotter:
     def plot_heatmap_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
         """
         | Will create the :meth:`plot_intensity_heatmap` for all normalization methods.
+        | The intensity heatmap demonstrates protein intensities, where samples are given in rows on the y axis and
+          proteins on the x axis. Missing values are colored in gray.
+        | The heatmap can be used to spot patterns in the different :ref:`normalization methods <hyperparameter>` and to
+          understand how different :ref:`intensity types <hyperparameter>` affect the data.
+
+        | For overview of plots see :ref:`analysis options <norm-plots>`
+        | For exemplary plot see :ref:`gallery <heatmap-overview>`
 
         Parameters
         ----------

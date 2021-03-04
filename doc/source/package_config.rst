@@ -30,9 +30,9 @@ Pathway and GO analysis
       file simply has to:
     | 1. follow the *one-column-txt-format* that can be seen in the exemplary files listed below,
     | 2. store the file on one of these two locations:
-         - saved in a *pathways* and *go_terms* dir where the experiment data is stored
-         - saved in the *.../mspypeline/config/pathway or go_term* directory, where all the other files are stored.
-           (files saved here are available for all experiments)
+    |     - saved in a *pathways* and *go_terms* dir where the experiment data is stored
+    |     - saved in the *.../mspypeline/config/pathway or go_term* directory, where all the other files are stored
+           (files saved here are available for all experiments).
 
 .. attention::
     * All pathway and GO analysis protein files provided here are based on the **HUMAN** proteome.

@@ -23,40 +23,40 @@ The GUI allows for the following plots:
 
 **Normalization plots:**
 
-* Normalization overview: :meth:`~mspypeline.BasePlotter.plot_normalization_overview` :ref:`gallery <norm-overview>`
-* Heatmap overview: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` :ref:`gallery <heatmap-overview>`
+* Normalization overview: :meth:`~mspypeline.BasePlotter.plot_normalization_overview` (exemplary plot in :ref:`gallery <norm-overview>`)
+* Heatmap overview: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` (exemplary plot in :ref:`gallery <heatmap-overview>`)
 
 .. _detection-plots:
 
 **Outlier detection and comparison plots:**
 
-* Detection counts: :meth:`~mspypeline.BasePlotter.plot_detection_counts` :ref:`gallery <detection-counts>`
-* Number of detected proteins :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replicate` :ref:`gallery <detected-proteins>`
-* Venn diagrams: :meth:`~mspypeline.BasePlotter.plot_venn_results` :ref:`gallery <venn-rep>`
-* Group diagrams: :meth:`~mspypeline.BasePlotter.plot_venn_groups` :ref:`gallery <venn-group>`
-* PCA overview: :meth:`~mspypeline.BasePlotter.plot_pca_overview` :ref:`gallery <pca>`
-* Intensity histogram: :meth:`~mspypeline.BasePlotter.plot_intensity_histograms` :ref:`gallery <int-hist>`
-* Relative std: :meth:`~mspypeline.BasePlotter.plot_relative_std` :ref:`gallery <rel-std>`
-* Scatter replicates: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates` :ref:`gallery <scatter-rep>`
-* Experiment comparison: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison` :ref:`gallery <scatter-group>`
-* Rank: :meth:`~mspypeline.BasePlotter.plot_rank` :ref:`gallery <rank>`
+* Detection counts: :meth:`~mspypeline.BasePlotter.plot_detection_counts` (exemplary plot in :ref:`gallery <detection-counts>`)
+* Number of detected proteins :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replicate` (exemplary plot in :ref:`gallery <detected-proteins>`)
+* Venn diagrams: :meth:`~mspypeline.BasePlotter.plot_venn_results` (exemplary plot in :ref:`gallery <venn-rep>`)
+* Group diagrams: :meth:`~mspypeline.BasePlotter.plot_venn_groups` (exemplary plot in :ref:`gallery <venn-group>`)
+* PCA overview: :meth:`~mspypeline.BasePlotter.plot_pca_overview` (exemplary plot in :ref:`gallery <pca>`)
+* Intensity histogram: :meth:`~mspypeline.BasePlotter.plot_intensity_histograms` (exemplary plot in :ref:`gallery <int-hist>`)
+* Relative std: :meth:`~mspypeline.BasePlotter.plot_relative_std` (exemplary plot in :ref:`gallery <rel-std>`)
+* Scatter replicates: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates` (exemplary plot in :ref:`gallery <scatter-rep>`)
+* Experiment comparison: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison` (exemplary plot in :ref:`gallery <scatter-group>`)
+* Rank: :meth:`~mspypeline.BasePlotter.plot_rank` (exemplary plot in :ref:`gallery <rank>`)
 
 .. _statistic-plots:
 
 **Statistical inference plots:**
 
-* Pathway analysis: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis` :ref:`gallery <pathway-analysis>`
-* Go analysis: :meth:`~mspypeline.BasePlotter.plot_go_analysis` :ref:`gallery <go-analysis>`
-* Volcano plot (R): :meth:`~mspypeline.BasePlotter.plot_r_volcano` :ref:`gallery <volcano>`
+* Pathway analysis: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis` (exemplary plot in :ref:`gallery <pathway-analysis>`)
+* Go analysis: :meth:`~mspypeline.BasePlotter.plot_go_analysis` (exemplary plot in :ref:`gallery <go-analysis>`)
+* Volcano plot (R): :meth:`~mspypeline.BasePlotter.plot_r_volcano` (exemplary plot in :ref:`gallery <volcano>`)
 
 .. _add-python-plots:
 
 **Additionally via python:**
 
-* :meth:`~mspypeline.BasePlotter.plot_kde` :ref:`gallery <kde>`
-* :meth:`~mspypeline.BasePlotter.plot_boxplot` :ref:`gallery <boxplot>`
-* :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` :ref:`gallery <proteins-vs-quantiles>`
-* :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap` :ref:`gallery <int-heatmap>`
+* :meth:`~mspypeline.BasePlotter.plot_kde` (exemplary plot in :ref:`gallery <kde>`)
+* :meth:`~mspypeline.BasePlotter.plot_boxplot` (exemplary plot in :ref:`gallery <boxplot>`)
+* :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` (exemplary plot in :ref:`gallery <proteins-vs-quantiles>`)
+* :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap` (exemplary plot in :ref:`gallery <int-heatmap>`)
 
 
 

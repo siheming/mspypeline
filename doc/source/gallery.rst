@@ -72,7 +72,6 @@ define some helper functions and configurations
 MaxQuant Report
 ^^^^^^^^^^^^^^^^^^^^^^^
 | Created using: :meth:`~mspypeline.MaxQuantPlotter.create_report`
-| Analysis options: :ref:`MaxQuant Report <plotters>`
 
     | The MaxQuant report was built with the intention to offer a broad insight into the different sources of information
       from a MaxQuant output. Besides the protein intensities (from the *proteinGroups.txt* file) which are the only source
@@ -81,6 +80,8 @@ MaxQuant Report
     | The MaxQuant report can function as quality control of the data and will output a multi-page pdf document composed of
       a variety of information and graphics.
     | Make sure that :ref:`all MaxQuant files <file-readers>` are provided, which are used to create the report.
+
+    | For overview of plots see :ref:`analysis options <plotters>`
 
 .. ipython:: python
 
@@ -104,7 +105,6 @@ Normalization overview
 ***********************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_normalization_overview_all_normalizers` by calling
   :meth:`~mspypeline.BasePlotter.plot_normalization_overview`
-| Analysis options: :ref:`Normalization overview <norm-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_normalization_overview
 
@@ -121,9 +121,8 @@ Heatmap overview
 ******************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` by calling
   :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`.
-| Analysis options: :ref:`Heatmap overview <norm-plots>`
 
-.. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_heatmap
+.. autodescriptiononly:: mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers
 
 .. note::
    If the heatmap seems blurred try downloading it and using a different PDF viewer
@@ -143,7 +142,6 @@ Outlier detection and comparison plots
 Detection counts
 *****************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_detection_counts`
-| Analysis options: :ref:`Detection counts <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_detection_counts
 
@@ -157,7 +155,6 @@ Detection counts
 Number of detected proteins
 ****************************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replicate`
-| Analysis options: :ref:`Number of detected proteins <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_detected_proteins_per_replicate
 
@@ -179,7 +176,6 @@ Number of detected proteins
 Venn diagrams
 **************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_venn_results`
-| Analysis options: :ref:`Venn diagrams <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_venn_results
 
@@ -198,7 +194,6 @@ Venn diagrams
 Group diagrams
 ***************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
-| Analysis options: :ref:`Group diagram <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_venn_groups
 
@@ -221,7 +216,6 @@ Group diagrams
 PCA overview
 *************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
-| Analysis options: :ref:`PCA overview <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_pca_overview
 
@@ -238,7 +232,6 @@ PCA overview
 Intensity histogram
 ********************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_histograms`
-| Analysis options: :ref:`Intensity histogram <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_histograms
 
@@ -252,7 +245,6 @@ Intensity histogram
 Relative std
 *************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_relative_std`
-| Analysis options: :ref:`Relative std <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_relative_std
 
@@ -266,7 +258,6 @@ Relative std
 Scatter replicates
 *******************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
-| Analysis options: :ref:`Scatter replicates <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_scatter_replicates
 
@@ -283,7 +274,6 @@ Scatter replicates
 Experiment comparison
 **********************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
-| Analysis options: :ref:`Experiment comparison <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_experiment_comparison
 
@@ -300,7 +290,6 @@ Experiment comparison
 Rank
 *****
 | Created using: :meth:`~mspypeline.BasePlotter.plot_rank`
-| Analysis options: :ref:`Rank <detection-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_rank
 
@@ -320,7 +309,6 @@ Statistical inference plots
 Pathway analysis
 *****************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis`
-| Analysis options: :ref:`Pathway analysis <statistic-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_pathway_analysis
 
@@ -351,7 +339,6 @@ Pathway analysis
 Go analysis
 ************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_go_analysis`
-| Analysis options: :ref:`Go analysis <statistic-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_go_analysis
 
@@ -365,7 +352,6 @@ Go analysis
 Volcano plot (R)
 *****************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_r_volcano`
-| Analysis options: :ref:`Volcano plot (R) <statistic-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_r_volcano
 
@@ -388,7 +374,6 @@ Additionally via python
 Kernel density estimate plot
 *******************************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_kde`
-| Analysis options: :ref:`Additionally via python <add-python-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_kde
 
@@ -420,7 +405,6 @@ Kernel density estimate plot
 Boxplot
 ********
 | Created using: :meth:`~mspypeline.BasePlotter.plot_boxplot`
-| Analysis options: :ref:`Additionally via python <add-python-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_boxplot
 
@@ -434,7 +418,6 @@ Boxplot
 Number of Proteins vs Quantiles
 ********************************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile`
-| Analysis options: :ref:`Additionally via python <add-python-plots>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_n_proteins_vs_quantile
 
@@ -450,7 +433,6 @@ Number of Proteins vs Quantiles
 Intensity Heatmap
 ******************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`
-| Analysis options: :ref:`Additionally via python <Plot-Options>`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_intensity_heatmap
 
