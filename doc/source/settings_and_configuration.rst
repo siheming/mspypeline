@@ -190,4 +190,4 @@ The next plot shows the required **percentage** of non zero values as function o
     ax.set_xlabel("Number of samples");
     ax.set_xticks(x_values);
     @savefig plot_non_zero_values.png width=6in
-    ax.set_ylabel("Required percentage of non zero values");
+    ax.set_ylabel("Required percentage/100 of non zero values");
