@@ -31,6 +31,17 @@ __all__.extend(modules.__all__)
 __all__.extend(file_reader.__all__)
 
 
+if "R_HOME" not in os.environ:
+    r_location = os.path.split(os.path.split(path_package)[0])[0]
+    r_location = os.path.join(r_location, "R")
+    if os.path.isdir(r_location):
+        os.environ["R_HOME"] = r_location
+    else:
+        import warnings
+        warnings.warn("R_HOME environment variable is not set and location could not be inferred."
+                      "Using volcano plots will not work")
+
+
 def load_example_dataset(
         path_dataset: str = None, configs: dict = None, download: bool = False, remove_on_fail: bool = True
 ) -> MSPInitializer:

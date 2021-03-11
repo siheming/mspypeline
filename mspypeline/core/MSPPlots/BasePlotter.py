@@ -1172,17 +1172,19 @@ class BasePlotter:
             analysis, *"unique_g1"* and *"unique_g2"* to Series containing the unique protein intensities per group
 
         """
-        # import r interface package
-        from rpy2.robjects.packages import importr
-        from rpy2.robjects import pandas2ri
-        # allow conversion of pd objects to r
-        pandas2ri.activate()
-
         # install r packages
         from mspypeline.helpers.Utils import install_r_dependencies
         r_package_names = ("BiocManager", )
         r_bioconducter_package_names = ("limma", )
         install_r_dependencies(r_package_names, r_bioconducter_package_names)
+
+        # import r interface package
+        import rpy2.robjects as ro
+        from rpy2.robjects import pandas2ri
+        from rpy2.robjects.packages import importr
+        from rpy2.robjects.conversion import localconverter
+        # allow conversion of pd objects to r
+        pandas2ri.activate()
 
         # import r packages
         limma = importr("limma")
@@ -1202,11 +1204,9 @@ class BasePlotter:
         if df.empty:
             return {}
         # transform to r objects
-        r_df = pandas2ri.py2ri(df)
-        r_design = pandas2ri.py2ri(design)
-        r_rownames = pandas2ri.py2ri(df.index)
-        # add the index to the dataframe because it will be sorted
-        r_df.rownames = r_rownames
+        with localconverter(ro.default_converter + pandas2ri.converter):
+            r_df = ro.conversion.py2rpy(df)
+            r_design = ro.conversion.py2rpy(design)
         # run the r code
         fit = limma.lmFit(r_df, r_design)
         c_matrix = make_contrasts(g1, g2)
@@ -1214,13 +1214,9 @@ class BasePlotter:
         fit_bayes = limma.eBayes(contrast_fit, trend=True)
         res = limma.topTable(fit_bayes, adjust="BH", number=df.shape[0])
         # transform back to python
-        with warnings.catch_warnings():
-            # catch a warning from ri2py where DataFrame.from_items is being used
-            warnings.simplefilter("ignore", FutureWarning)
+        with localconverter(ro.default_converter + pandas2ri.converter):
             # positive is upregulated in v2 / g2
-            ress = pandas2ri.ri2py(res)
-        # extract index
-        ress.index = pd.Index([x for x in res.rownames], name="Gene_names")
+            ress = ro.conversion.rpy2py(res)
         # possible names are keys of this dict
         plot_data = ress.loc[:, ["logFC", "AveExpr", "P.Value", "adj.P.Val"]]
         plot_data = plot_data.rename({"P.Value": "pval", "adj.P.Val": "adjpval"}, axis=1)
