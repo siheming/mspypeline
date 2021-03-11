@@ -7,6 +7,7 @@ from typing import Optional, Iterable
 
 from mspypeline import create_app
 from mspypeline.core import MSPInitializer
+from mspypeline.helpers import get_logger
 from mspypeline.modules import default_normalizers
 from mspypeline.file_reader import BaseReader, MQReader
 
@@ -89,6 +90,8 @@ class MSPGUI(tk.Tk):
         self.reader_options = {reader.name: reader for reader in BaseReader.__subclasses__()}
         self.selected_reader = MQReader.MQReader
         self.normalize_options = ["None"] + list(default_normalizers.keys())
+        self.mspinit = MSPInitializer(file_dir, yml_file, loglevel=loglevel)
+        self.logger = get_logger(self.__class__.__name__, loglevel=loglevel)
 
         self.number_of_plots = 0
 
@@ -128,18 +131,18 @@ class MSPGUI(tk.Tk):
 
         design_label = tk.Label(self, text="Replicate names").grid(row=3, column=2)
 
-        self.go_proteins_list = tk.Listbox(self, selectmode="multiple", height=5,
-                                           width=len(max(MSPInitializer.possible_gos, key=len)))
-        self.go_proteins_list.configure(exportselection=False)
-        for x in MSPInitializer.possible_gos:
-            self.go_proteins_list.insert("end", x)
+        self.go_term_list = tk.Listbox(self, selectmode="multiple", height=5,
+                                       width=len(max(self.mspinit.list_full_gos, key=len)))
+        self.go_term_list.configure(exportselection=False)
+        for x in self.mspinit.list_full_gos:
+            self.go_term_list.insert("end", x)
 
-        self.go_proteins_list.grid(row=4, column=0)
+        self.go_term_list.grid(row=4, column=0)
 
         self.pathway_list = tk.Listbox(self, selectmode="multiple", height=5,
-                                       width=len(max(MSPInitializer.possible_pathways, key=len)))
+                                       width=len(max(self.mspinit.list_full_pathways, key=len)))
         self.pathway_list.configure(exportselection=False)
-        for x in MSPInitializer.possible_pathways:
+        for x in self.mspinit.list_full_pathways:
             self.pathway_list.insert("end", x)
 
         self.pathway_list.grid(row=4, column=1)
@@ -216,13 +219,8 @@ class MSPGUI(tk.Tk):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-        # here we set the configurations
-        # constructing the class reads the yaml file once
-        self.mspinit = MSPInitializer(file_dir, yml_file, loglevel=loglevel)
-        if file_dir:
-            # the dir setting reads the yaml file twice, once after setting the dir, then after setting the yaml path
-            self.dir_text.set(file_dir)
         self.mspinit.configs.update(configs)
+        self.update_yaml_options()
         self.mainloop()
 
     def dir_setter(self, *args):
@@ -250,17 +248,23 @@ class MSPGUI(tk.Tk):
         for op in self.mspinit.configs.get(self.selected_reader.name, {}).get("all_replicates", []):
             self.experiments_list.insert("end", op)
         # clear selection then select from configs
-        for i, pathway in enumerate(MSPInitializer.possible_pathways):
+        for i, pathway in enumerate(self.mspinit.list_full_pathways):
             self.pathway_list.select_clear(i)
         if self.mspinit.configs.get("pathways"):
             for pathway in self.mspinit.configs.get("pathways"):
-                self.pathway_list.select_set(MSPInitializer.possible_pathways.index(pathway))
+                try:
+                    self.pathway_list.select_set(self.mspinit.list_full_pathways.index(pathway))
+                except ValueError:
+                    self.logger.warning("Selected pathway file %s not found", pathway)
         # clear selection then select from configs
-        for i, go in enumerate(MSPInitializer.possible_gos):
-            self.go_proteins_list.select_clear(i)
+        for i, go in enumerate(self.mspinit.list_full_gos):
+            self.go_term_list.select_clear(i)
         if self.mspinit.configs.get("go_terms"):
             for go in self.mspinit.configs.get("go_terms"):
-                self.go_proteins_list.select_set(MSPInitializer.possible_gos.index(go))
+                try:
+                    self.go_term_list.select_set(self.mspinit.list_full_gos.index(go))
+                except ValueError:
+                    self.logger.warning("Selected go term file %s not found", go)
 
     def yaml_path_setter(self, *args):
         self.mspinit.file_path_yaml = self.yaml_text.get()
@@ -317,10 +321,10 @@ class MSPGUI(tk.Tk):
             selected_settings.update(additional_settings)
             for k, v in selected_settings.items():
                 self.mspinit.configs[plot_settings][k] = v
-        gos = self.go_proteins_list.curselection()
-        gos = [MSPInitializer.possible_gos[int(go)] for go in gos]
+        gos = self.go_term_list.curselection()
+        gos = [self.mspinit.list_full_gos[int(go)] for go in gos]
         pathways = self.pathway_list.curselection()
-        pathways = [MSPInitializer.possible_pathways[int(pathway)] for pathway in pathways]
+        pathways = [self.mspinit.list_full_pathways[int(pathway)] for pathway in pathways]
         self.mspinit.configs["plot_r_volcano_settings"]["adj_pval"] = bool(self.p_val_var.get())
         self.mspinit.configs["go_terms"] = gos
         self.mspinit.configs["pathways"] = pathways

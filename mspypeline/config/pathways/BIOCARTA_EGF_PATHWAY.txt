@@ -1,5 +1,3 @@
-BIOCARTA_EGF_PATHWAY
-> EGF Signaling Pathway
 CSNK2A1
 EGF
 EGFR

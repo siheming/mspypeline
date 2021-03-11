@@ -27,13 +27,13 @@ Analysis settings
 
 Analysis Design
 ~~~~~~~~~~~~~~~
-| To perform comparative data analysis, the ``mspypeline`` assumes that the data consists samples that can be arranged
-  into a tree structure that resamples the experimental setup. Different samples of an experiment are arranged
+| To perform comparative data analysis, the ``mspypeline`` assumes that data consists of samples that can be arranged
+  into a tree structure resembling the experimental setup. Different samples of an experiment are arranged
   in groups and subgroups dependent on the samples name. This naming convention is the key principal to draw comparisons
   between distinct samples of different groups/at different levels. The analysis design can be of any level of depth.
 
 .. warning::
-   * Different levels of the analysis design need to be separated by underscore (**_**)
+   * Different levels of the analysis design need to be separated by an underscore (**_**)
    * All samples must have the same number of levels (meaning same number of underscores)
 
 
@@ -56,7 +56,7 @@ Analysis Design
   and "Control_Line2" and level 2 corresponds to the technical replicates "Cancer_Line1_Rep1", ... . Here, the "Cancer"
   group has a total of 6 children, which are then split in "Line1" and "Line2". "Line1" and "Line2" both have 3 children.
 | If a comparison between the "Cancer" and "Control" groups should be performed, the lowest level (level 0) of the Data
-  Tree must be chosen in rhe analysis. The results will consequently show the comparison of both level 0 groups "Cancer"
+  Tree must be chosen for the analysis. The results will consequently show the comparison of both level 0 groups "Cancer"
   and "Control" with all their children.
 | On the other hand, if the different cancer and control cell lines should be compared, the second level (level 1) of the
   Data Tree must be selected. The results will consequently show the comparison of the four different level 1 groups
@@ -70,7 +70,8 @@ Sample Mapping
 ***************
 
 | Should the naming convention deviate from the expected standard, it is possible to subsequently correct the sample
-  naming with a provided sample mapping so that samples translate to a proper analysis design.
+  naming with a provided sample mapping so that samples translate to a proper analysis design. Some examples for
+  potential reasons for naming convention violation are given in the table below.
 | If the naming convention is violated a sample mapping can be provided manually or by using the default file.
 
 * default **sample_mapping_template.txt** file: This file is created automatically if the naming convention is
@@ -82,8 +83,8 @@ Sample Mapping
   of the ms run. The second column named *new name* should follow the naming convention.
 
 | A *sample-mapping.txt* file should have a simple structure as shown in the table below. All samples need to be mapped,
-  non-conforming sample names need to be corrected in the *new name* columns (e.g. row 1-3) and sample names that are
-  already correct simply need to be copied in the *new name* columns (e.g. row 4-5).
+  non-conforming sample names need to be corrected in the *new name* column (e.g. row 1-3) and sample names that are
+  already correct simply need to be copied in the *new name* column (e.g. row 4-5).
 | Since this example is only intended to give a small insight into the sample-mapping file, the remaining samples of the
   analysis design are not listed here, which would be necessary for a real data analysis.
 
@@ -111,7 +112,7 @@ Sample Mapping
 Technical Replicates
 ********************
 | If the :ref:`configuration setting <default-yaml>` `has_techrep` is set to True or the corresponding checkbox in the
-  GUI is ticked, the highest level of the analysis design is considered as a technical replicate.
+  GUI is ticked, the highest level of the analysis design is considered technical replicates.
 | Technical replicates are averaged and cumulated to one sample of the next lowest level in the analysis design.
   Respectively, the mean of all samples below a node is calculated and assigned to that node. The last level of the Data
   Tree is thus omitted. Values that are 0 are replaced with missing values, which are neglected when calculating the
@@ -129,9 +130,9 @@ Technical Replicates
     tree_no_agg.aggregate(None, None)
     tree_agg.aggregate(None, None)
 
-| The columns of the last output are now named "Cancer_Line1", "Cancer_Line2", etc. and the values of the replicates
-  "Rep1" to "Rep3" is averaged as mean. This can help to improve results since measurement results are noisy or proteins
-  might be missing in some of the samples by random chance.
+| Columns of the latter output are now named "Cancer_Line1", "Cancer_Line2", etc. and the values of the replicates
+  "Rep1" to "Rep3" are averaged to a mean. This procedure can help to improve data reproducibility since measurement
+  results can be quite noisy and/or protein might be missing in some of the samples by random chance.
 
 
 
@@ -164,7 +165,9 @@ Thresholds and Comparisons
     @savefig plot_non_na_samples.png width=6in
     ax.set_ylabel("Required number of non na (missing) values");
 
-The plot shows that the minimum number of non missing values is 3, then steadily increases.
+Starting with a minimum **number** of 3, the **number** of non missing values to function as threshold increases
+steadily with rising numbers of samples per group.
+
 
 An example: Group A has 7 samples, Group B has 8 Samples.
 
@@ -174,9 +177,9 @@ An example: Group A has 7 samples, Group B has 8 Samples.
   Group B has equals or more than 6 non missing values
 * Not considered: In all other cases
 
-This criterion is quite harsh, but the results will be dependable.
+This threshold criterion is quite harsh, but the results will be dependable.
 
-The next plot shows the required percentage of non zero values.
+The next plot shows the required **percentage** of non zero values as function of the sample number for a group.
 
 .. ipython:: python
 
@@ -187,4 +190,4 @@ The next plot shows the required percentage of non zero values.
     ax.set_xlabel("Number of samples");
     ax.set_xticks(x_values);
     @savefig plot_non_zero_values.png width=6in
-    ax.set_ylabel("Required percentage of non zero values");
+    ax.set_ylabel("Required percentage/100 of non zero values");

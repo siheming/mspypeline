@@ -1,12 +1,9 @@
-HALLMARK_IL2_STAT5_SIGNALING
-> Genes up-regulated by STAT5 in response to IL2 stimulation.
 ABCB1
 ADAM19
 AGER
 AHCY
 AHNAK
 AHR
-AKAP2
 ALCAM
 AMACR
 ANXA4

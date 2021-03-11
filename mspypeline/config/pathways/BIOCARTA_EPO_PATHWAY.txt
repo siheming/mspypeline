@@ -1,5 +1,3 @@
-BIOCARTA_EPO_PATHWAY
-> EPO Signaling Pathway
 CSNK2A1
 ELK1
 EPO

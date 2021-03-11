@@ -8,6 +8,8 @@ doc/build/*
 htmlcov/
 doc/source/_static
 doc/source/savefig
+doc/source/go_terms
+doc/source/pathways
 
 *.ipynb
 *.df

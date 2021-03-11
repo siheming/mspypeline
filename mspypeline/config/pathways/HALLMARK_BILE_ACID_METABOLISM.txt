@@ -1,5 +1,3 @@
-HALLMARK_BILE_ACID_METABOLISM
-> Genes involve in metabolism of bile acids and salts.
 ABCA1
 ABCA2
 ABCA3

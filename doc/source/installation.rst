@@ -15,7 +15,7 @@ Currently supported python versions are 3.7 and 3.8.
 
 Anaconda installation (recommended)
 ***********************************
-Either create a new environment and install mspyeline e.g. by running:
+Either create a new environment and install ``mspypeline`` e.g. by running:
 
 .. code-block:: bash
 

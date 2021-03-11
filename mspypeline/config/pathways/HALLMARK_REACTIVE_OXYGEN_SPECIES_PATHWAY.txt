@@ -1,5 +1,3 @@
-HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY
-> Genes up-regulated by reactive oxigen species (ROS).
 ABCC1
 ATOX1
 CAT

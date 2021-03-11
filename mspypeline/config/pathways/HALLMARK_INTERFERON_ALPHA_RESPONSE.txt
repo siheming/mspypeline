@@ -1,6 +1,3 @@
-HALLMARK_INTERFERON_ALPHA_RESPONSE
-> Genes up-regulated in response to alpha interferon proteins.
-AC004551.1
 ADAR
 B2M
 BATF2
@@ -59,6 +56,7 @@ MX1
 NCOA7
 NMI
 NUB1
+OAS1
 OASL
 OGFR
 PARP12
@@ -96,4 +94,4 @@ TXNIP
 UBA7
 UBE2L6
 USP18
-WARS
+WARS1

@@ -1,5 +1,3 @@
-HALLMARK_INFLAMMATORY_RESPONSE
-> Genes defining inflammatory response.
 ABCA1
 ABI1
 ACVR1B

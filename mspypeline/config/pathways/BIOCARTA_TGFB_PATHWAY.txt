@@ -1,5 +1,3 @@
-BIOCARTA_TGFB_PATHWAY
-> TGF beta signaling pathway
 APC
 CDH1
 CREBBP

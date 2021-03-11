@@ -60,6 +60,10 @@ class MSPInitializer:
         self._start_dir = None
         self._file_path_yaml = None
 
+        # list to store all selectable terms; custom and provided
+        self.list_full_gos = []
+        self.list_full_pathways = []
+
         # set the specified dirs
         self.start_dir = path
         if file_path_yml is not None:
@@ -83,6 +87,21 @@ class MSPInitializer:
         self.configs = {}
         self.reader_data = {}
         self.file_path_yaml = "file"
+        # see if any custom lists can be found
+        self.list_full_gos = []
+        try:
+            self.list_full_gos += [x for x in os.listdir(os.path.join(self._start_dir, "go_terms"))
+                                   if os.path.isfile(os.path.join(self._start_dir, "go_terms", x))]
+        except FileNotFoundError:
+            pass
+        self.list_full_gos += MSPInitializer.possible_gos
+        self.list_full_pathways = []
+        try:
+            self.list_full_pathways += [x for x in os.listdir(os.path.join(self._start_dir, "pathways"))
+                                        if os.path.isfile(os.path.join(self._start_dir, "pathways", x))]
+        except FileNotFoundError:
+            pass
+        self.list_full_pathways += MSPInitializer.possible_pathways
 
     @property
     def path_config(self):
@@ -142,7 +161,6 @@ class MSPInitializer:
         self.update_config_file()
 
     def has_yml_file(self) -> bool:
-
         if not os.path.isdir(self.start_dir):
             return False
         if "config" in os.listdir(self.start_dir):
@@ -162,31 +180,25 @@ class MSPInitializer:
         dict_pathway = {}
         dict_go = {}
         for pathway in self.configs.get("pathways"):
-            name, proteins = self.read_config_txt_file(MSPInitializer.pathway_path, pathway)
+            name, proteins = self.read_config_txt_file(pathway)
             dict_pathway[name] = proteins
 
         for go in self.configs.get("go_terms"):
-            name, proteins = self.read_config_txt_file(MSPInitializer.go_path, go)
+            name, proteins = self.read_config_txt_file(go, False)
             dict_go[name] = proteins
         return dict_pathway, dict_go
 
-    def read_config_txt_file(self, path, file) -> Tuple[str, list]:
-        fullpath = os.path.join(path_package_config, path, file)
-        if path == MSPInitializer.pathway_path:
-            with open(fullpath) as f:
-                name = f.readline().strip()
-                f.readline()
-                proteins = []
-                for line in f:
-                    proteins.append(line.strip())
-        elif path == MSPInitializer.go_path:
-            name = file.replace(".txt", "")
-            with open(fullpath) as f:
-                proteins = []
-                for line in f:
-                    proteins.append(line.strip())
-        else:
-            raise ValueError(f"Invalid path: {path}")
+    def read_config_txt_file(self, file, is_pathway: bool = True) -> Tuple[str, list]:
+        path_full = os.path.join(self.start_dir, "pathways" if is_pathway else "go_terms", file)
+        if not os.path.isfile(path_full):
+            path_full = os.path.join(path_package_config, "pathways" if is_pathway else "go_terms", file)
+            if not os.path.isfile(path_full):
+                raise FileNotFoundError(f"The selected file: {file} cannot be found.")
+        name = file.replace(".txt", "")
+        with open(path_full) as f:
+            proteins = []
+            for line in f:
+                proteins.append(line.strip())
         return name, proteins
 
     def update_config_file(self):

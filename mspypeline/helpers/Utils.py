@@ -5,6 +5,10 @@ from itertools import combinations
 from collections import deque
 import numpy as np
 from matplotlib.lines import Line2D
+import os
+from mspypeline.helpers import get_logger
+
+logger = get_logger(str(os.path.basename(__file__).split(".")[0]))
 
 
 def get_number_rows_cols_for_fig(obj: Union[int, Sized]) -> Tuple[int, int]:
@@ -107,6 +111,9 @@ def install_r_dependencies(r_package_names, r_bioconducter_package_names):
 
     r_packages_uninstalled = [x for x in r_package_names if not rpackages.isinstalled(x)]
     r_bioconducter_packages_uninstalled = [x for x in r_bioconducter_package_names if not rpackages.isinstalled(x)]
+
+    logger.debug("Installing remaining R packages: %s, remaining bioconductor packages: %s",
+                 r_packages_uninstalled, r_bioconducter_packages_uninstalled)
     if r_packages_uninstalled:
         utils = importr('utils')
         utils.chooseCRANmirror(ind=1)

@@ -21,7 +21,7 @@ setup(
     ],
     install_requires=[
         "numpy>=1.17.4",
-        "pandas>=0.25.3",
+        "pandas>=1.0.0",
         "scipy>=1.3.1",
         "rpy2>=2.9.4",
         "tzlocal>=2.0.0",
