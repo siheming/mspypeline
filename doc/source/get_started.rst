@@ -67,7 +67,7 @@ The GUI is divided into different parts to guide you through the general :ref:`w
 * The "Yaml file" option selects where the settings for the analysis are from. This can either be the "default"
   settings, or the "file" settings, if they are available.
 * If a Quality control report should be generated click the "Create Report" button.
-* A Normalizer can be selected, which are further explained in the :ref:`workflow`.
+* A Normalizer can be selected, which is further explained in the :ref:`workflow`.
   The plots under "Normalization plots" can help to decide for a normalizer.
 * Create a plot by toggling the checkbox for the plot. Then select all intensities and levels
   for which the plot should be created. Currently selected options are indicated by a check mark.
