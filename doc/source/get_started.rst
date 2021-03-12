@@ -64,6 +64,8 @@ Usage with GUI
 The GUI is divided into different parts to guide you through the general :ref:`workflow`.
 
 * Start by selecting a directory at the top under the "Dir to analyze" option.
+.. warning::
+    All files to be analyzed need to be in a directory called txt
 * The "Yaml file" option selects where the settings for the analysis are from. This can either be the "default"
   settings, or the "file" settings, if they are available.
 * If a Quality control report should be generated click the "Create Report" button.
