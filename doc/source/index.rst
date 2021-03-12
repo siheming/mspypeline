@@ -12,13 +12,13 @@ The source code is available on `github <https://github.com/siheming/mspypeline/
 Usage
 =====
 | The ``mspypeline`` was developed to consolidate the proteomics data analysis workflow while providing both simplicity
-  and flexibility for the user.
+  and flexibility to the user.
 | Designed with an intuitive and concise graphical user interface (GUI), the ``mspypeline`` offers researchers,
   unfamiliar with programming or data analysis, the opportunity to explore and visualize their data independently and in
   a time-effective manner. Simultaneously, the more experienced user may interact closer with the ``mspypeline`` to
   perform advanced analysis leveraging the plethora of customization options.
-| Thus, the ``mspypeline`` provides a platform that supports users with their proteomics data analysis by giving insight
-  into the data, offering parameter adaptation when needed, generating custom figures and by reaching biological
+| Thus, the ``mspypeline`` provides a platform that supports users in their proteomics data analysis by giving insight
+  into the data, offering parameter adaptation when needed, generating custom figures and by reaching biologically
   relevant conclusions through differential expression analysis and hypothesis testing.
 | Please refer to the other parts of the documentation for :ref:`installation <installation>`,
   :ref:`how to get started <get-started>`, or use the search.
