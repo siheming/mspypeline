@@ -3,10 +3,10 @@
 Installing mspypeline
 =====================
 
-An installation of python is required to use this package. Python can be installed either
+An installation of python is required to use this package. Python can be installed as part of the
+`Anaconda <https://www.anaconda.com/products/individual>`__ distribution, which is recommended, or
 via `python <https://www.python.org/downloads/>`__
-(`python 3.7 <https://www.python.org/downloads/release/python-375/>`__), or as part of the
-`Anaconda <https://www.anaconda.com/products/individual>`__ distribution, which is recommended. Then ``mspypeline``
+(`python 3.7 <https://www.python.org/downloads/release/python-375/>`__). Then ``mspypeline``
 needs to be installed using a terminal (e.g. the provided terminal by anaconda).
 
 Python support
