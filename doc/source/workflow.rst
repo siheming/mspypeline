@@ -5,18 +5,19 @@ Workflow
 
 Quality control
 ~~~~~~~~~~~~~~~
-| Ensure that the quality of the results to analyze are of sufficient quality. This can be done with the report provided
+| Ensure that the results to analyze are of sufficient quality. This can be done with the report provided
   by the :ref:`MaxQuant plotter <plotters>`.
 
 .. _hyperparameter:
 
 Data Preprocessing
 ~~~~~~~~~~~~~~~~~~~
-| Data may be processed in multiple ways and such modeling has the potential to shape the results of an analysis
-  substantially.
-| This kind of data preprocessing comprises the choice of protein intensities provided by MaxQuant, including raw,
-  label-free quantification (LFQ) or intensity-based absolute quantification (iBAQ) intensities, averaging technical
-  replicates, the removal of erroneous samples or the normalization and standardization of the data set.
+| Data may be processed in multiple ways and this can substantially alter the results of your analysis.
+| Data preprocessing available in mspypeline comprises:
+  * the choice of protein intensities provided by MaxQuant: raw, label-free quantification (LFQ) or intensity-based absolute quantification (iBAQ) intensities 
+  * averaging technical replicates 
+  * removal of erroneous samples
+  * normalization and standardization of the data set.
 
 Intensity options
 ******************
@@ -25,8 +26,8 @@ Intensity options
 * raw Intensity ("raw_log2")
 * iBAQ Intensity ("ibaq_log2")
 
-| Despite the choice of protein intensity, the GUI handles all data in log2 format. However, it is possible to analyze
-  the data without log2 scale ("lfq", "raw", "ibaq") if advanced data analysis is performed by interacting rather direct
+| Regardless of the choice of protein intensity, the GUI handles all data in log2 format. However, it is possible to analyze
+  the data without log2 scale ("lfq", "raw", "ibaq") if advanced data analysis is performed in the command line rather than directly
   with the plotters.
 
 
@@ -49,7 +50,7 @@ Normalization options
 | These methods will output a multipage PDF file in which the data is plotted repeatedly after applying the different
   normalization options. Thereby it is possible to get a better understanding of the effect of each normalization method
   on the data.
-| Please read the function description explaining what normalized data should look like. Once a normalization method is
+| Please read the function description explaining how should the normalized data look like. Once a normalization method is
   chosen, it is highly recommended to perform all further analysis with the same normalized data.
 
 
@@ -59,15 +60,15 @@ Exploratory Analysis
 
 Create outlier detection and comparison plots
 **********************************************
-| The descriptive and comparison plots can for example help to analyze how biological replicates compare to another or
-  how different conditions effect detected proteins.
+| The descriptive plots and comparison plots can for example help to analyze how do biological replicates compare to each other or
+  how do different conditions effect detected proteins.
 
 Create statistical inference plots
 **********************************
 | Statistical inference plots can inform about differential protein intensities between groups of the data set.
   The calculation of statistical significances of the protein intensity deviation of groups can help to exploit
   biological questions by incorporation the functional profile of proteins or protein sets.
-| Statistics for each plot are calculated based on the intended proposition of the plot.
+| Statistics for each plot are calculated based on the intended usage of the plot.
 
 * for the :meth:`~mspypeline.BasePlotter.plot_pathway_analysis` an independent t-test is applied
 * for the :meth:`~mspypeline.BasePlotter.plot_go_analysis` a fisher'S exact test is applied
