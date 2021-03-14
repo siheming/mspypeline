@@ -7,7 +7,7 @@ An installation of python is required to use this package. Python can be install
 `Anaconda <https://www.anaconda.com/products/individual>`__ distribution, which is recommended, or
 via `python <https://www.python.org/downloads/>`__
 (`python 3.7 <https://www.python.org/downloads/release/python-375/>`__). Then ``mspypeline``
-needs to be installed using a terminal (e.g. the provided terminal by anaconda).
+needs to be installed using a terminal (e.g. the terminal provided by anaconda - anaconda prompt).
 
 Python support
 **************
