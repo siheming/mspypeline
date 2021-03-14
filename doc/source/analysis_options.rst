@@ -82,7 +82,7 @@ MaxQuant Report
   for a description of the output and the ref:`gallery <mqreport>` for an example of such a report.
 | This quality control report is specifically designed to process supplementary MaxQuant output tables available and generate a
   multi-page pdf document. Here, the quality of the mass spectrometry sample acquisition can be assessed, for instance the shape of a chromatogram or retention time and
-  retention lenght of peptides. Additionally, information on sample quality such as missed cleavages, number of peptides measured and sequenced and the proportion
-  of contaminants among protein intensities is provided
+  retention lenght of peptides. Additionally, information on sample quality such as missed cleavages, number of peptides measured and sequenced, and the proportion
+  of contaminants among protein intensities is provided.
   
  
