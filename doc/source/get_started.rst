@@ -63,18 +63,20 @@ Usage with GUI
 ~~~~~~~~~~~~~~
 The GUI is divided into different parts to guide you through the general :ref:`workflow`.
 
+insert picture of a GUI here!
+
 * Start by selecting a directory at the top under the "Dir to analyze" option.
 .. warning::
     All files to be analyzed need to be in a directory called txt
 * The "Yaml file" option selects where the settings for the analysis are from. This can either be the "default"
   settings, or the "file" settings, if they are available.
-* If a Quality control report should be generated click the "Create Report" button.
+* If a Quality control report should be generated, click the "Create Report" button.
 * A Normalizer can be selected, which is further explained in the :ref:`workflow`.
   The plots under "Normalization plots" can help to decide for a normalizer.
 * Create a plot by toggling the checkbox for the plot. Then select all intensities and levels
   for which the plot should be created. Currently selected options are indicated by a check mark.
 * The "Update" button writes the selected options to a configuration file, the "Start" button additionally creates
-  all plots that were selected. Also if the naming convention was not followed a file will be created as described in
+  all plots that were selected. If the naming convention was not followed an additional file will be created as described in
   the :ref:`analysis-design`.
 
 .. _cli-quickstart:
