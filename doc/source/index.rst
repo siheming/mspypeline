@@ -6,7 +6,7 @@
 Welcome to MSPypeline's documentation!
 ======================================
 
-``mspypeline`` is a package for analysing mass spec results.
+``mspypeline`` is a package for analysing proteomic data.
 The source code is available on `github <https://github.com/siheming/mspypeline/>`__.
 
 Usage
