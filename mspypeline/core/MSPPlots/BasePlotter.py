@@ -1148,8 +1148,12 @@ class BasePlotter:
         | Gets the protein intensities for all samples of the two given groups, then calculates the proteins that can be
           compared between groups and those unique for each group (see :ref:`thresholding`).
         | Hands over the protein intensities to be compared to the R package ``limma`` that outputs the logFC, p-value,
-          adjusted p value and other data which is calculated based on a `moderated t-statistic
-          <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__.
+          adjusted p value (`Benjamini + Hochberg
+          <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/p.adjust>`__) and other data which is
+          calculated based on a `moderated t-statistic
+          <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__. P-value
+          calculations are corrected for the `intensity-variance relationship
+          <https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-7-538#citeas>`__.
         | Results are converted back to python format afterwards.
 
         .. note::
@@ -1232,8 +1236,12 @@ class BasePlotter:
         """
         | A volcano plot illustrates the statistical inferences from a pairwise comparison of the two groups.
         | The plot shows the log2 fold change between two different conditions against the -log10(p-value)
-          (based on protein intensities). The p-value is determined using the R limma package (`moderated t-statistic
-          <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__).
+          (based on protein intensities). The p-value and adjusted p-value ((`Benjamini + Hochberg
+          <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/p.adjust>`__) is determined using the R
+          limma package (`moderated t-statistic
+          <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__). Additionally,
+          calculations are corrected for the `intensity-variance relationship
+          <https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-7-538#citeas>`__.
         | Dashed lines indicate the fold change cutoff (default = log2(2) and p-value cutoff (default = p < 0.05) by
           which proteins are considered significant (blue and red) or non significant (gray). Measured intensities of
           unique proteins are indicated at the sides of the volcano plot for each groups (light blue and orange).

@@ -7,69 +7,84 @@ An installation of python is required to use this package. Python can be install
 via `python <https://www.python.org/downloads/>`__
 (`python 3.7 <https://www.python.org/downloads/release/python-375/>`__), or as part of the
 `Anaconda <https://www.anaconda.com/products/individual>`__ distribution, which is recommended. Then ``mspypeline``
-needs to be installed using a terminal (e.g. the provided terminal by anaconda).
+python package needs to be installed using a terminal (e.g. the provided terminal by anaconda).
 
-Python support
-**************
-Currently supported python versions are 3.7 and 3.8.
+.. _conda-installation:
 
 Anaconda installation (recommended)
 ***********************************
-Either create a new environment and install ``mspypeline`` e.g. by running:
+When installing ``mspypeline`` via Anaconda, one can choose two possible options to do so.
+
+1. Either a new virtual `conda environment <https://conda.io/projects/conda/en/latest/user-guide/concepts/environments.html>`__
+   is created and ``mspypeline`` is installed therein. This can be achieved e.g. by running the following code in a terminal:
 
 .. code-block:: bash
 
+    # create new environment called mspypeline and install mspypeline package
+    # + all required packages
     conda create --name mspypeline python=3.7 mspypeline -c conda-forge -c siheming
 
-This will create a new virtual environment called mspypeline with python 3.7 and install the mspypeline package.
+    # activate the newly created environment
+    conda activate mspypeline
 
-Or install mspypeline in the base installation:
+    # in the activated environment the python package mspypeline can be called, the GUI
+    # can be started or the package can be imported
+
+With a new virtual environment in which python 3.7, ``mspypeline`` and all other required packages are
+installed, it is necessary to activate this environment before an analysis from the terminal in order to use
+``mspypeline``. Once the installation is performed and the environment is activated an analysis can be started
+following :ref:`the next steps <get-started>`.
+
+2. Otherwise, ``mspypeline`` can be installed into the base conda environment. This can be achieved e.g. by running the
+   following code in a terminal:
 
 .. code-block:: bash
 
     conda install -c conda-forge -c siheming mspypeline
 
+With this base installation of ``mspypeline`` and all required packages it is possible to immediately start an analysis
+following :ref:`the next steps <get-started>`.
+
+
+.. _pip-installation:
 
 pip(PyPI) installation
 **********************
-Either create a virtual environment and install mspypeline (this might differ based on your OS system).
-Since the python version cannot be changed by pip make sure that the correct python version ist installed.
+The ``mspypeline`` python package can optionally also be installed from PyPI and one can choose two possible
+installation options.
+
+1. Either a new virtual `python environment <https://docs.python.org/3.7/tutorial/venv.html>`__ is created and
+   ``mspypeline`` is installed therein. Since the python version cannot be changed by pip make sure that the correct
+   python version ist installed. This can be achieved e.g. by running the following code in a terminal (might differ
+   based on your OS system):
 
 .. code-block:: bash
 
+    # create new environment called mspypeline
     python3 -m venv mypypeline
+
+    # activate the newly created environment
     source activate mspypeline
+
+    # install the mspypeline package + all required package within the environment
     pip install mspypeline
 
-Or install into the base installation:
+With a new virtual environment in which python, ``mspypeline`` and all other required packages are
+installed, it is necessary to activate this environment before an analysis from the terminal in order to use
+``mspypeline``. Once the installation is performed and the environment is activated an analysis can be started
+following :ref:`the next steps <get-started>`.
+
+2. Otherwise, ``mspypeline`` can be installed into the base environment. This can be achieved e.g. by running the
+   following code in a terminal:
 
 .. code-block:: bash
 
     pip install mspypeline
 
+With this base installation of ``mspypeline`` and all required packages it is possible to immediately start an analysis
+following :ref:`the next steps <get-started>`.
 
 .. _activate-venv:
-
-Activating virtual environment
-******************************
-The commands might differ based on OS systems and versions (e.g. python, pip or conda).
-
-Anaconda
-^^^^^^^^
-New conda versions allow to run:
-
-.. code-block:: bash
-
-    conda activate [env-name]
-    # activate the conda env called mspypeline
-    conda activate mspypeline
-
-pip
-^^^
-
-.. code-block:: bash
-
-    source activate mspypeline
 
 
 
@@ -85,6 +100,10 @@ Download Sources from `PyPI <https://pypi.org/project/mspypeline/>`__.
 
 Download Sources from `conda <https://anaconda.org/siheming/mspypeline>`__.
 
+
+Python support
+**************
+Currently supported python versions are 3.7 and 3.8.
 
 Dependencies
 ************

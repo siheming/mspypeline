@@ -9,8 +9,13 @@ Welcome to MSPypeline's documentation!
 ``mspypeline`` is a package for analysing mass spec results.
 The source code is available on `github <https://github.com/siheming/mspypeline/>`__.
 
+.. figure:: ./_static/flow_chart_final_docu.pdf
+    :width: 300
+    :align: right
+
 Usage
 =====
+
 | The ``mspypeline`` was developed to consolidate the proteomics data analysis workflow while providing both simplicity
   and flexibility for the user.
 | Designed with an intuitive and concise graphical user interface (GUI), the ``mspypeline`` offers researchers,
