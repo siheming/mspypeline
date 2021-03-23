@@ -125,11 +125,11 @@ class MSPGUI(tk.Tk):
         replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?",
                                           variable=self.replicate_var).grid(row=2, column=0)
 
-        go_proteins_label = tk.Label(self, text="Go analysis proteins").grid(row=3, column=0)
+        go_proteins_label = tk.Label(self, text="Go analysis lists").grid(row=3, column=0)
 
-        experiments_label = tk.Label(self, text="Pathway analysis").grid(row=3, column=1)
+        experiments_label = tk.Label(self, text="Pathway analysis lists").grid(row=3, column=1)
 
-        design_label = tk.Label(self, text="Replicate names").grid(row=3, column=2)
+        design_label = tk.Label(self, text="Sample names").grid(row=3, column=2)
 
         self.go_term_list = tk.Listbox(self, selectmode="multiple", height=5,
                                        width=len(max(self.mspinit.list_full_gos, key=len)))
