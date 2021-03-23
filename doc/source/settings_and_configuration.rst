@@ -8,7 +8,7 @@ The configuration YAML file
 | To specify the settings for the analysis a config.yml YAML file has to be provided. The YAML file stores the main
   configurations that determine which results will be created. This configuration file also offers the specification of
   multiple optional analysis options.
-| If no custom YAML file is generated, the :ref:`default YAML file <default-yaml>` provided by the ``mspypeline`` at the
+| If no custom YAML file is generated, the :ref:`default YAML file <default-yaml>` provided by ``mspypeline`` at the
   start of the analysis may be used containing the default analysis settings. If the data analysis is performed via the
   GUI, no further interaction with the YAML file is necessary.
 | Plots can be easily reproduced by reusing the same settings/YAML file.
@@ -27,7 +27,7 @@ Analysis settings
 
 Analysis Design
 ~~~~~~~~~~~~~~~
-| To perform comparative data analysis, the ``mspypeline`` assumes that data consists of samples that can be arranged
+| To perform comparative data analysis, ``mspypeline`` assumes that data consists of samples that can be arranged
   into a tree structure resembling the experimental setup. Different samples of an experiment are arranged
   in groups and subgroups dependent on the samples name. This naming convention is the key principal to draw comparisons
   between distinct samples of different groups/at different levels. The analysis design can be of any level of depth.

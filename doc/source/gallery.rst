@@ -7,7 +7,7 @@ Gallery
 
 Experiment setup
 ^^^^^^^^^^^^^^^^^
-| In the following section, experimental data is presented to introduce and explain the functionalities of the
+| In the following section, experimental data is presented to introduce and explain the functionalities of
   ``mspypeline`` in a visual format and by giving a minimal code example to create the plots as would be done when
   using the package as a :ref:`python module <python-quickstart>`. The experimental setup was specifically designed to
   facilitate the representation of the majority of analysis options provided by the software.
@@ -21,7 +21,7 @@ Experiment setup
   treated with tumor growth factor (TGF-β) and three replicates remained unstimulated. For each of the twelve samples
   that were prepared for the MS analysis, two **technical replicates** were measured resulting in a total number of 24
   probes. With this experimental arrangement, a multilayered analysis design was established.
-| For the analysis by the ``mspypeline``, where samples are organized in a tree structure and addressed via their
+| For the analysis by ``mspypeline``, where samples are organized in a tree structure and addressed via their
   :ref:`level of analysis depth <analysis-design>`, the two cell lines correspond to the lowest **level 0**, to which
   six samples can be assigned each. In the next higher **level 1** of the analysis design, the two groups from level 0
   are further subdivided by their treatment condition such that there are now four different groups "H1975_unst",

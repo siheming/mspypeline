@@ -16,13 +16,20 @@ The source code is available on `github <https://github.com/siheming/mspypeline/
 Usage
 =====
 
-| The ``mspypeline`` was developed to consolidate the proteomics data analysis workflow while providing both simplicity
-  and flexibility for the user.
-| Designed with an intuitive and concise graphical user interface (GUI), the ``mspypeline`` offers researchers,
+| ``mspypeline`` was developed to consolidate the proteomics data analysis of **MaxQuant output tables** by providing a
+  tool to analyze complex datasets in a standardized manner with minimal effort and to eliminate the chance of human
+  error or obscuring variability during data analysis.
+| Designed with an intuitive and concise graphical user interface (GUI), ``mspypeline`` offers researchers,
   unfamiliar with programming or data analysis, the opportunity to explore and visualize their data independently and in
-  a time-effective manner. Simultaneously, the more experienced user may interact closer with the ``mspypeline`` to
-  perform advanced analysis leveraging the plethora of customization options.
-| Thus, the ``mspypeline`` provides a platform that supports users with their proteomics data analysis by giving insight
+  a time-effective manner. A precisely structured workflow (see figure to the left) is prescribed following logical and
+  systematic steps of analysis that starts with a quality control of the data, followed by the assessment and choice of
+  data pre-processing operations to finally allow optimal exploratory analysis. By automizing the calculation and
+  generation of versatile figures ``mspypeline`` can create a comprehensive and conclusive data analysis within minutes.
+  Simultaneously, the more experienced user may interact closer with the ``mspypeline`` package to perform advanced
+  analysis leveraging the plethora of customization options.
+| At the same time, the software aims to establish a standardized and reproducable analysis procedure, which is
+  supported by automated logging of all analysis settings and saving them to a seperate configuration file.
+| Thus, ``mspypeline`` provides a platform that supports users with their proteomics data analysis by giving insight
   into the data, offering parameter adaptation when needed, generating custom figures and by reaching biological
   relevant conclusions through differential expression analysis and hypothesis testing.
 | Please refer to the other parts of the documentation for :ref:`installation <installation>`,

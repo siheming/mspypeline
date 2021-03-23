@@ -17,7 +17,11 @@ it first (:ref:`conda env activation <conda-installation>`,
 
    .. code-block:: bash
 
-      python -m mspypeline --gui
+        # either: call the python module mspypeline and start the GUI
+        python -m mspypeline --gui
+
+        # or: call the python module mspypeline, start the GUI and receive information from the logger
+        python -m mspypeline --gui --loglevel DEBUG
 
 
 #. | using it in python by importing:

@@ -1545,8 +1545,10 @@ class BasePlotter:
           the resulting pdf file starting with the raw or not normalized data. That way it is possible to get a better
           understanding of the effects of the normalization methods on the data, to inspect the different approaches and
           to find the best suitable normalization for the data.
-        | The normalization overview combines the plots :meth:`~mspypeline.BasePlotter.plot_kde`,
-          :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` and :meth:`~mspypeline.BasePlotter.plot_boxplot`.
+        | The normalization overview combines the plots :meth:`~mspypeline.BasePlotter.plot_kde` (see :ref:`KDE <kde>`
+          example), :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` (see
+          :ref:`proteins vs quantiles <proteins-vs-quantiles>` example) and :meth:`~mspypeline.BasePlotter.plot_boxplot`
+          (see :ref:`boxplot <boxplot>` example).
 
         | For overview of plots see :ref:`analysis options <norm-plots>`
         | For exemplary plot see :ref:`gallery <norm-overview>`
