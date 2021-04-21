@@ -1368,6 +1368,7 @@ def save_rank_results(
     # TODO apply filter for rare proteins before here?
     # protein ranks vs intensity
     # create dict to map each protein its respective rank and mean intensity
+    rank_data = rank_data.dropna()
     dic = {idx: (i, value) for i, (idx, value) in enumerate(rank_data.items())}
 
     found_proteins = set(rank_data.index)
