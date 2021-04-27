@@ -309,10 +309,14 @@ class MQReader(BaseReader):
         file_dir = os.path.join(self.data_dir, MQReader.peptides_txt)
         df_peptides = pd.read_csv(file_dir, sep="\t")
         df_peptides.columns = self.rename_df_columns(df_peptides.columns)
-        not_contaminants = (df_peptides[["Reverse", "Potential contaminant"]] == "+").sum(axis=1) == 0
-        df_peptides = df_peptides[not_contaminants]
-        self.logger.debug("Removing %s rows from %s because they are marked as contaminant",
-                          (~not_contaminants).sum(), MQReader.peptides_txt)
+        try:
+            not_contaminants = (df_peptides[["Reverse", "Potential contaminant"]] == "+").sum(axis=1) == 0
+            df_peptides = df_peptides[not_contaminants]
+            self.logger.debug("Removing %s rows from %s because they are marked as contaminant",
+                              (~not_contaminants).sum(), MQReader.peptides_txt)
+        except KeyError:
+            # if the columns "Reverse", "Potential contaminant" are not present
+            pass
 
         return df_peptides
 
