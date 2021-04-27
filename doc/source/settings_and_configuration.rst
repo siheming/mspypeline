@@ -5,12 +5,11 @@ Settings and Configurations
 
 The configuration YAML file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| To specify the settings for the analysis a config.yml YAML file has to be provided. The YAML file stores the main
-  configurations that determine which results will be created. This configuration file also offers the specification of
-  multiple optional analysis options.
-| If no custom YAML file is generated, the :ref:`default YAML file <default-yaml>` provided by ``mspypeline`` at the
-  start of the analysis may be used containing the default analysis settings. If the data analysis is performed via the
-  GUI, no further interaction with the YAML file is necessary.
+| The YAML file stores the main configurations that determine which results will be created. This configuration file
+  also offers the specification of multiple optional analysis options.
+| A :ref:`default YAML file <default-yaml>`, containing the default analysis settings, is provided by ``mspypeline``
+  at the start of the analysis. This file can be edited to further individualize the results.
+  If the data analysis is performed via the GUI, no further interaction with the YAML file is necessary.
 | Plots can be easily reproduced by reusing the same settings/YAML file.
 
 .. _default-yaml:
@@ -29,7 +28,7 @@ Analysis Design
 ~~~~~~~~~~~~~~~
 | To perform comparative data analysis, ``mspypeline`` assumes that data consists of samples that can be arranged
   into a tree structure resembling the experimental setup. Different samples of an experiment are arranged
-  in groups and subgroups dependent on the samples name. This naming convention is the key principal to draw comparisons
+  in groups and subgroups dependent on the sample's name. This naming convention is the key principle to draw comparisons
   between distinct samples of different groups/at different levels. The analysis design can be of any level of depth.
 
 .. warning::
@@ -60,7 +59,7 @@ Analysis Design
   and "Control" with all their children.
 | On the other hand, if the different cancer and control cell lines should be compared, the second level (level 1) of the
   Data Tree must be selected. The results will consequently show the comparison of the four different level 1 groups
-  "Cancer_Line1", "Cancer_Line2", "Control_Line1 and "Control_Line2" each with their 3 replicates.
+  "Cancer_Line1", "Cancer_Line2", "Control_Line1 and "Control_Line2", each with their 3 replicates.
 | If all the 12 replicates should be compared to each other, the last level (level 2) must be selected in the analysis.
 
 
@@ -70,7 +69,7 @@ Sample Mapping
 ***************
 
 | Should the naming convention deviate from the expected standard, it is possible to subsequently correct the sample
-  naming with a provided sample mapping so that samples translate to a proper analysis design. Some examples for
+  naming with a provided sample mapping file so that samples translate to a proper analysis design. Some examples for
   potential reasons for naming convention violation are given in the table below.
 | If the naming convention is violated a sample mapping can be provided manually or by using the default file.
 
@@ -113,11 +112,11 @@ Technical Replicates
 ********************
 | If the :ref:`configuration setting <default-yaml>` `has_techrep` is set to True or the corresponding checkbox in the
   GUI is ticked, the highest level of the analysis design is considered technical replicates.
-| Technical replicates are averaged and cumulated to one sample of the next lowest level in the analysis design.
+| Technical replicates are averaged and averaged to one sample of the next highest level in the analysis design.
   Respectively, the mean of all samples below a node is calculated and assigned to that node. The last level of the Data
   Tree is thus omitted. Values that are 0 are replaced with missing values, which are neglected when calculating the
   mean of samples (e.g. the average of the three values 32, 30, 0 would be replaced with 32, 30 and NaN resulting in an
-  average of 30).
+  average of 31).
 
 .. ipython:: python
 
@@ -177,9 +176,9 @@ An example: Group A has 7 samples, Group B has 8 Samples.
   Group B has equals or more than 6 non missing values
 * Not considered: In all other cases
 
-This threshold criterion is quite harsh, but the results will be dependable.
+This threshold criterion is quite harsh, but the results will be reliable.
 
-The next plot shows the required **percentage** of non zero values as function of the sample number for a group.
+The next plot shows the required **percentage** of non zero values as a function of the number of samples in a group.
 
 .. ipython:: python
 

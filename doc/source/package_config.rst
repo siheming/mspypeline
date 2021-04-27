@@ -5,10 +5,10 @@ Pathway and GO analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | Pathway and GO analysis gene set files are lists of genes that are somewhat associated with the respective pathway
-  or GO term. Upon data preparation by the :class:`MQReader` measured proteins are indexed by their **gene name**
+  or GO term. Upon data preparation by the :class:`MQReader`, measured proteins are indexed by their **gene name**
   originating from the FASTA file (header) to which the protein was mapped. Thus, measured protein intensities can be
   analysed using functional gene sets like those that are incorporated by the ``mspypeline`` package.
-| Since some analysis methods deploy such pathway and GO term lists the provided files can be used to get an idea and
+| Since some analysis methods deploy such pathway and GO term lists, the provided files can be used to get an idea and
   generate an example for a potential analysis (see :ref:`gallery`).
 
   * GO lists are required for the GO analysis plot using :meth:`~mspypeline.BasePlotter.plot_go_analysis`, in

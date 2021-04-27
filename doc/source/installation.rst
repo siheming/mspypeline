@@ -3,11 +3,11 @@
 Installing mspypeline
 =====================
 
-An installation of python is required to use this package. Python can be installed either
+An installation of python is required to use this package. Python can be installed as part of the
+`Anaconda <https://www.anaconda.com/products/individual>`__ distribution, which is recommended, or
 via `python <https://www.python.org/downloads/>`__
-(`python 3.7 <https://www.python.org/downloads/release/python-375/>`__), or as part of the
-`Anaconda <https://www.anaconda.com/products/individual>`__ distribution, which is recommended. Then ``mspypeline``
-python package needs to be installed using a terminal (e.g. the provided terminal by anaconda).
+(`python 3.7 <https://www.python.org/downloads/release/python-375/>`__). Then ``mspypeline``
+needs to be installed using a terminal (e.g. the terminal provided by anaconda - anaconda prompt).
 
 .. _conda-installation:
 
@@ -86,8 +86,6 @@ following :ref:`the next steps <get-started>`.
 
 .. _activate-venv:
 
-
-
 Obtaining Sources
 *****************
 Get the source code by cloning the github project:
@@ -108,7 +106,7 @@ Currently supported python versions are 3.7 and 3.8.
 Dependencies
 ************
 - `numpy <https://numpy.org/>`__ >= 1.17.4
-- `pandas <https://pandas.pydata.org/>`__ >= 0.25.3
+- `pandas <https://pandas.pydata.org/>`__ >= 1.0.0
 - `scipy <https://www.scipy.org/>`__ >= 1.3.1
 - `matplotlib <https://matplotlib.org/>`__ >= 3.1.1
 - `scikit-learn <https://scikit-learn.org/stable/>`__ >= 0.22.1
@@ -123,5 +121,4 @@ Optional Dependencies for R packages
 some plots might require additional R packages to be installed. Because of that additional dependencies are required for
 those plots.
 
-
-- rpy2=2.9.4
+- rpy2 >= 3.0.0

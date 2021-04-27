@@ -43,6 +43,8 @@ it first (:ref:`conda env activation <conda-installation>`,
 
 Usage with GUI
 ~~~~~~~~~~~~~~
+.. warning::
+    All files to be analyzed need to be in a directory called txt (as originally created by MaxQuant)
 The GUI is divided into different parts to guide you through the general :ref:`workflow`.
 
 #. Start by selecting a directory at the top under the **"Dir to analyze"** option.
@@ -50,7 +52,7 @@ The GUI is divided into different parts to guide you through the general :ref:`w
 #. The **"Yaml file"** option selects where the :ref:`settings` for the analysis are from. This can either be the
    :ref:`"default" settings <default-yaml>`, or the :ref:`"file" settings <default-yaml>`, if they are available.
 
-#. If a :ref:`quality control report <max-quant-report>` should be generated click the **"Create Report"** button.
+#. If a :ref:`quality control report <max-quant-report>` should be generated, click the **"Create Report"** button.
 
 #. A :ref:`normalization method <hyperparameter>` can be selected that will be applied to the data. Plot options below
    the **"Normalization plots"** can help to decide for a normalizer.
