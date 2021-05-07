@@ -14,12 +14,12 @@ Data import
 | Currently the ``mspypeline`` package supports the analysis of label-free shotgun proteomics analyzed by the
   `MaxQuant software <https://www.maxquant.org>`__. For a complete analysis, the ``mspypeline`` package deploys several
   MaxQuant output tables, however, the
-  **minimal requirement to perform exploratory analysis is only the proteinGroups text file** that contains aggregated
+  **minimal requirement to perform exploratory analysis is only the proteinGroups.txt file** that contains aggregated
   protein intensities.
 
-| Since MS techniques are versatile and other software programs like MaxQuant are applied a number of different file
-  formats containing MS data exist. So far, analysis of files with other formats is not supported as ``mspypeline``
-  requires a strictly followed internal data format.
+| Since several different mass spectrometry techniques exist and other software programs like MaxQuant are applied a
+  number of different file formats containing mass spectrometry data exist. So far, analysis of files with other formats is not
+  supported as ``mspypeline`` requires a strictly followed internal data format.
 | For this purpose, :ref:`FileReaders <file-readers>` are involved that translate the particular format of each file
   into the internal file format. Until now, only a :class:`~MQReader` is provided.
 | The :class:`~MQReader` can reformat several output tables provided by MaxQuant including the following text files:
@@ -138,8 +138,8 @@ Create outlier detection and comparison plots
 Create statistical inference plots
 **********************************
 | Statistical inference plots can inform about differential protein intensities between groups of the data set.
-  The calculation of statistical significances of the protein intensity deviation of groups can help to exploit
-  biological questions by incorporation the functional profile of proteins or protein sets.
+  The calculation of statistical significances of the variation of protein intensities between groups can help to
+  exploit biological questions by incorporation the functional profile of proteins or protein sets.
 | Statistics for each plot are calculated based on the intended usage of the plot.
 
 * for the :meth:`~mspypeline.BasePlotter.plot_pathway_analysis` an independent t-test is applied
@@ -152,15 +152,15 @@ Create statistical inference plots
 Select pathways and GO-Terms of interest
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Select :ref:`pathway-proteins`. Selected pathways will have following effects:
+Select :ref:`pathway-proteins`. Selected pathways has following effects:
 
-* for the :meth:`~mspypeline.BasePlotter.plot_pathway_analysis` one plot per pathway will be created
-* in the :meth:`~mspypeline.BasePlotter.plot_rank`, if a protein is found it will be marked on the plot
+* for the :meth:`~mspypeline.BasePlotter.plot_pathway_analysis` one plot per pathway is created
+* in the :meth:`~mspypeline.BasePlotter.plot_rank`, if a protein is found it is marked on the plot
   and colored by the pathway
-* in the :meth:`~mspypeline.BasePlotter.plot_r_volcano`, if a pathway is selected, proteins of that pathway will be
+* in the :meth:`~mspypeline.BasePlotter.plot_r_volcano`, if a pathway is selected, proteins of that pathway are
   annotated in the plot instead of the most significant proteins that are annotated by default
 
-Select :ref:`go-term-proteins`. Selected GO-Terms will have following effects:
+Select :ref:`go-term-proteins`. Selected GO-Terms has following effects:
 
 * for the :meth:`~mspypeline.BasePlotter.plot_go_analysis` one additional barplot is added per GO term
 

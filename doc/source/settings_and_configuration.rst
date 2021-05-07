@@ -5,7 +5,7 @@ Settings and Configurations
 
 The configuration YAML file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| The YAML file stores the main configurations that determine which results will be created. This configuration file
+| The YAML file stores the main configurations that determine which results are created. This configuration file
   also offers the specification of multiple optional analysis options.
 | A :ref:`default YAML file <default-yaml>`, containing the default analysis settings, is provided by ``mspypeline``
   at the start of the analysis. This file can be edited to further individualize the results.
@@ -55,7 +55,7 @@ Analysis Design
   and "Control_Line2" and level 2 corresponds to the technical replicates "Cancer_Line1_Rep1", ... . Here, the "Cancer"
   group has a total of 6 children, which are then split in "Line1" and "Line2". "Line1" and "Line2" both have 3 children.
 | If a comparison between the "Cancer" and "Control" groups should be performed, the lowest level (level 0) of the Data
-  Tree must be chosen for the analysis. The results will consequently show the comparison of both level 0 groups "Cancer"
+  Tree must be chosen for the analysis. Consequently, the results show the comparison of both level 0 groups "Cancer"
   and "Control" with all their children.
 | On the other hand, if the different cancer and control cell lines should be compared, the second level (level 1) of the
   Data Tree must be selected. The results will consequently show the comparison of the four different level 1 groups
@@ -131,7 +131,7 @@ Technical Replicates
 
 | Columns of the latter output are now named "Cancer_Line1", "Cancer_Line2", etc. and the values of the replicates
   "Rep1" to "Rep3" are averaged to a mean. This procedure can help to improve data reproducibility since measurement
-  results can be quite noisy and/or protein might be missing in some of the samples by random chance.
+  results can be quite noisy and/or proteins might be missing in some of the samples by random chance.
 
 
 
@@ -139,16 +139,23 @@ Technical Replicates
 
 Thresholds and Comparisons
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-| Some plots need to determine whether a protein can be compared between two different groups.
-| Four different results are possible when comparing a protein between group A and group B.
+| Several analysis methods require the determination whether a detected protein can be compared between two groups A and B.
+| For group comparisons, the protein counts or intensities for all samples of a group are cumulated and averaged whereby
+  missing values are omitted in the calculation. In mass spectrometry data, missing values are frequently observed and
+  can be found in multiple samples for one protein. To ensure appropriate data analysis a sufficient number of samples
+  with non-missing values per group must be provided. The required number of samples per group, the threshold, is
+  thereby individually determined per group and dynamically controlled based on the number of samples in the group. The
+  MSPypeline provides an internal thresholding function (Fig. 2.6), however any other desired function may be applied.
+| Besides the determination of comparable proteins, several parts of the data analysis further distinguish proteins that
+  are unique for/ exlusively found in a group. There are four potential scenarios of categorizing the protein:
 
 * Unique in A: above threshold in A and completely absent in B
 * Unique in B: above threshold in B and completely absent in A
 * Can be compared: above threshold in A and B
 * Otherwise: not considered
 
-| The threshold is determined dynamically based on the number of samples in a group. The next two plots show the
-  thresholding for different numbers of samples.
+| Thresholding is important for the venn group diagrams, the relative standard deviation graph, the group comparison
+  scatter plot and for the volcano plot.
 
 .. ipython:: python
 

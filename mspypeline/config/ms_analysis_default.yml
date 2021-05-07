@@ -4,7 +4,7 @@
 selected_reader: mqreader  # which file reader should be used
 selected_normalizer: None  # which normalizer should be used
 
-has_techrep: true  # does the file have technical replicates (can be "true" or "false")
+has_techrep: false  # does the file have technical replicates (can be "true" or "false")
 
 use_protein_id: false   # should the protein id be used (can be "true" or "false"), or TODO
 

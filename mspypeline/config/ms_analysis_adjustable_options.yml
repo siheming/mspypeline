@@ -4,7 +4,7 @@
 selected_reader: mqreader       # which file reader should be used
 selected_normalizer: null       # which normalizer should be used
 
-has_techrep: true               # does the file have technical replicates (can be "true" or "false")
+has_techrep: false               # does the file have technical replicates (can be "true" or "false")
 
 use_protein_id: false           # should the protein id be used (can be "true" or "false"), or TODO
 
@@ -14,9 +14,9 @@ pathways: []                    # list of pathways which should be analyzed
 go_terms: []                    # list of go_terms which should be analyzed
 
 mqreader:
-  index_col: "Gene name"        # default and so far only option that works stabely
+  index_col: "Gene name"        # default and so far only option that works stably
   duplicate_handling: "sum"     # how should proteins with duplicate index_col be treated ? can be sum or drop
-  drop_columns: []              # string or list of samples taht should be dropped
+  drop_columns: []              # string or list of samples that should be dropped
   all_replicates: []            # list of all replicates
   analysis_design: null         # mapping of the analysis design organized ad tree structure
   levels: null                  # int giving the number of levels
@@ -29,7 +29,7 @@ plot_normalization_overview_all_normalizers_settings:
   create_plot: false
   dfs_to_use: []
   levels: []
-  quantile_range: null          # Optional[np.array] e.g.: np.arange(0.05, 1, 0.05)
+  quantile_range: null          # Optional[np.array] e.g.: np.arrange(0.05, 1, 0.05)
   height: 15                    # height if the figure
   intensity_label: "Intensity"  # name of the experiment
 
@@ -167,8 +167,8 @@ plot_r_volcano_settings:
   dfs_to_use: []
   levels: []
   adj_pval: false               # should the adjusted p-val be used? (can be "true" or "false")
-  sample1: null                 # string of the sample that should be analysed (left side/ downregulated)
-  sample2: null                 # string of the sample that should be analysed (right side/ upregulated)
+  sample1: null                 # string of the sample that should be analysed (left side/ down regulated)
+  sample2: null                 # string of the sample that should be analysed (right side/ up regulated)
   intensity_label: "Intensity"  # name of the experiment
   show_suptitle: true           # should a figure title be shown
   pval_threshold: 0.05          # float: maximum p value indicating significance

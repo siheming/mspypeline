@@ -8,8 +8,8 @@
 Getting started
 ===============
 
-``mspypeline`` can be used in three ways. If ``mspypeline`` was installed in a virtual environment make sure to activate
-it first (:ref:`conda env activation <conda-installation>`,
+``mspypeline`` can be used in three ways. If ``mspypeline`` was installed in a virtual environment make sure to first
+activate the virtual environment (:ref:`conda env activation <conda-installation>`,
 :ref:`pip env activation <pip-installation>`).
 
 #. | starting the GUI via the command-line:
@@ -75,8 +75,8 @@ The GUI is divided into different parts to guide you through the general :ref:`w
 
 Usage with Python
 ~~~~~~~~~~~~~~~~~
-| For the usage of ``mspypeline`` in a python script, the package or modules of the package have to be imported first. An
-  analysis can be created in different ways.
+| For the usage of ``mspypeline`` in a python script, the package or modules of the package have to be first imported.
+  An analysis can be created in different ways.
 | A simple analysis in which the :class:`~MSPInitializer` is called to read in the data and settings and to create a
   :class:`~MaxQuantPlotter` which enables the calculation and plotting of the data might look something like this:
 
@@ -104,3 +104,4 @@ Usage with command-line
 It is recommended to provide a :ref:`yaml file <settings>`, where most settings are already configured. It is **not**
 possible at the moment to specify all arguments via the command-line, and will only be implemented if there is any
 demand.
+

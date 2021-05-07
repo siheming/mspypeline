@@ -8,7 +8,7 @@ Gallery
 Experiment setup
 ^^^^^^^^^^^^^^^^^
 | In the following section, experimental data is presented to introduce and explain the functionalities of
-  ``mspypeline`` in a visual format. Additionally it gvies a minimal code example to create the plots as would be done when
+  ``mspypeline`` in a visual format. Additionally it gives a minimal code example to create the plots as would be done when
   using the package as a :ref:`python module <python-quickstart>`. The experimental setup was specifically designed to
   facilitate the representation of the majority of analysis options provided by the software.
 
@@ -16,8 +16,8 @@ Experiment setup
     :width: 400
     :align: right
 
-| Two different non-small cell lung cancer (NSCLC) **cell lines** H1975 and H838 were cultured in six cell culture dishes
-  each. To create different **stimulation** conditions, three of a cell line’s **biological replicates** were then
+| Two different non-small cell lung cancer (NSCLC) **cell lines** H1975 and H838 were cultured in six culture dishes
+  each. To create different **stimulation** conditions, three of a cell line’s **biological replicates** were
   treated with transforming growth factor beta (TGF-β) and three replicates remained unstimulated. For each of the twelve samples
   that were prepared for the MS analysis, two **technical replicates** were measured resulting in a total number of 24
   mass spectrometry runs. With this experimental arrangement, a multi-layered analysis design was established.
@@ -77,7 +77,7 @@ MaxQuant Report
       from a MaxQuant output tables. Besides the protein intensities (from the *proteinGroups.txt* file) which are the only source
       of data for all other parts of the analysis with the :ref:`MaxQuant Plotter <plotters>`, further information
       about experimental and technical parameters of the experiment are taken into account.
-    | The MaxQuant report can function as a data quality control tool and will output a multi-page pdf document composed of
+    | The MaxQuant report can function as a data quality control tool and outputs a multi-page pdf document composed of
       a variety of information and graphics.
     | Make sure that :ref:`all MaxQuant files <file-readers>` which are used to create the report are provided.
 

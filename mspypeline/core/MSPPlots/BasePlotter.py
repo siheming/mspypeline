@@ -27,7 +27,7 @@ def validate_input(f):
     Parameters
     ----------
     f
-        method that will be decorated
+        method that is decorated
     """
     @functools.wraps(f)
     def wrapper(self, *args, **kwargs):
@@ -441,8 +441,8 @@ class BasePlotter:
         .. note::
             * A venn diagram can compare a maximum of 3 samples.
             * A bar-venn diagram can compare more than 3 samples.
-            * If the selected level has more than 3 groups, only the bar-venn diagram will be created.
-            * If the selected level has more than 6 groups no diagram will be created
+            * If the selected level has more than 3 groups, only the bar-venn diagram is created.
+            * If the selected level has more than 6 groups no diagram is created
 
         .. note::
             To determine which proteins can be compared between the groups and which are unique for one group an
@@ -490,8 +490,8 @@ class BasePlotter:
         .. note::
             * A venn diagram can compare a maximum of 3 samples.
             * A bar-venn diagram can compare more than 3 samples.
-            * If a group of the selected level has more than 3 replicates, only the bar-venn diagram will be created.
-            * If the selected level has more than 6 groups no diagram will be created
+            * If a group of the selected level has more than 3 replicates, only the bar-venn diagram is created.
+            * If the selected level has more than 6 groups no diagram is created
         """
         plots = []
         for level in levels:
@@ -511,7 +511,7 @@ class BasePlotter:
 
     def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """
-        | Counts the number of intensity values greater than 0 per protein (number of samples that the protein was
+        | Counts the number of intensity values greater than 0 per protein (number of samples that the protein is
           detected in) per group of the selected level.
 
         Parameters
@@ -545,7 +545,7 @@ class BasePlotter:
     @validate_input
     def plot_detection_counts(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
-        | Bar diagram showing how often proteins were detected in a number of replicates for each group.
+        | Bar diagram showing how often proteins are detected in a number of replicates for each group.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <detection-counts>`
@@ -654,7 +654,7 @@ class BasePlotter:
         | For each group of the selected level a histogram is created that counts the occurrence of the binned intensity
           values of each sample.
         | If *"show_mean"* is set to True in the :ref:`configs <default-yaml>` the mean intensity of the plotted samples
-          of a group will be shown as gray dashed line.
+          of a group is shown as gray dashed line.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <int-hist>`
@@ -703,7 +703,7 @@ class BasePlotter:
         | Unique proteins per replicate are shown at the bottom and right side of the graph (substitution of na values
           by min value of data set).
         | For a group with more than 2 replicates, each pairwise comparison of the replicates is calculated and plotted
-          together in one graph. For every group of the selected level one plot will be created.
+          together in one graph. For every group of the selected level one plot is created.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <scatter-rep>`
@@ -751,8 +751,8 @@ class BasePlotter:
           proteins with missing values are neglected. The median intensity of all proteins is given in the legend.
         | :ref:`Pathway analysis protein lists <pathway-proteins>` can be applied to the rank plot to provide
           information about the median intensity or rank of pathways of interest. If a protein is part of a selected
-          pathway it will be presented in color and the median rank of all proteins of a given pathway is indicated.
-          Multiple pathways can be selected and will be represented in the same graph as distinct groups.
+          pathway it is presented in color and the median rank of all proteins of a given pathway is indicated.
+          Multiple pathways can be selected and and are consequently represented in the same graph as distinct groups.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <rank>`
@@ -806,7 +806,7 @@ class BasePlotter:
         | Illustrates the relative standard deviation of the proteins between samples of a group which can help to
           understand how much fluctuation of the measured intensities is present between the replicates. Low deviation
           indicates that measured intensities are stable over multiple samples.
-        | For each group of the selected level one plot will be created.
+        | For each group of the selected level one plot is created.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <rel-std>`
@@ -1015,7 +1015,7 @@ class BasePlotter:
           plotted and their correlation, calculated with the the Pearson’s correlation coefficient r2, is indicated.
         | Unique proteins per group are shown at the bottom and right side of the graph (substitution of na values
           by min value of data set).
-        | For every pairwise comparison of the groups from the selected level, one plot will be created.
+        | For every pairwise comparison of the groups from the selected level, one plot is created.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <scatter-group>`
@@ -1157,8 +1157,8 @@ class BasePlotter:
         | Results are converted back to python format afterwards.
 
         .. note::
-            This function uses the R package limma which will be automatically downloaded the first time this analysis
-            is performed
+            This function uses the R package limma which is automatically downloaded the first time this analysis
+            is performed.
 
         Parameters
         ----------
@@ -1541,7 +1541,7 @@ class BasePlotter:
     ) -> List[Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]]:
         """
         | The Normalization overview offers the opportunity to examine different aspects of the data in three distinct
-          plots. For each :ref:`normalization method <hyperparameter>` provided an additional page will be attached to
+          plots. For each :ref:`normalization method <hyperparameter>` provided an additional page is attached to
           the resulting pdf file starting with the raw or not normalized data. That way it is possible to get a better
           understanding of the effects of the normalization methods on the data, to inspect the different approaches and
           to find the best suitable normalization for the data.
@@ -1653,7 +1653,7 @@ class BasePlotter:
         plot_function
             which plot should be created
         file_name
-            name of the file that will be crated and saved
+            name of the file that is crated and saved
         normalizers
             normalizers either derived from :class:`~mspypeline.module.Normalization.BaseNormalizer` or a class with a
             :func:`fit_transform`
@@ -1692,7 +1692,7 @@ class BasePlotter:
     @validate_input
     def plot_normalization_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
         """
-        | Will create the :meth:`plot_normalization_overview` for all normalization methods.
+        | Creates the :meth:`plot_normalization_overview` for all normalization methods.
 
         | For overview of plots see :ref:`analysis options <norm-plots>`
         | For exemplary plot see :ref:`gallery <norm-overview>`
@@ -1716,7 +1716,7 @@ class BasePlotter:
     @validate_input
     def plot_heatmap_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
         """
-        | Will create the :meth:`plot_intensity_heatmap` for all normalization methods.
+        | Creates the :meth:`plot_intensity_heatmap` for all normalization methods.
         | The intensity heatmap demonstrates protein intensities, where samples are given in rows on the y axis and
           proteins on the x axis. Missing values are colored in gray.
         | The heatmap can be used to spot patterns in the different :ref:`normalization methods <hyperparameter>` and to
