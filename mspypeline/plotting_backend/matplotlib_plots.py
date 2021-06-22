@@ -1378,10 +1378,11 @@ def save_rank_results(
 
     # plot the non pathway proteins
     x = [dic[protein][0] for protein in non_pathway_proteins]  # rank
+    x_percentage = [xi / len(rank_data) * 100 for xi in x]     # rank as percentage
     y = [dic[protein][1] for protein in non_pathway_proteins]  # intensity
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-    ax.scatter(x, y, c="darkgray", s=30, alpha=0.2, marker=".", label="no pathway", edgecolors="none")
+    ax.scatter(x_percentage, y, c="darkgray", s=30, alpha=0.2, marker=".", label="no pathway", edgecolors="none")
 
     # plot all proteins of a specific pathway
     legend_text = []
@@ -1390,26 +1391,30 @@ def save_rank_results(
         proteins = set(proteins) & found_proteins
         if proteins:
             x = [dic[protein][0] for protein in proteins]  # the rank of each protein
+            x_percentage_pathway = [xi / len(rank_data) * 100 for xi in x]  # rank as percentage
             y = [dic[protein][1] for protein in proteins]  # the intensity of each protein
-            ax.scatter(x, y, c=f"C{i}", s=120, alpha=0.7, marker=".", edgecolors="none",
+            ax.scatter(x_percentage_pathway, y, c=f"C{i}", s=120, alpha=0.7, marker=".", edgecolors="none",
                        label=pathway.replace("_", " "))
 
             median_pathway_rank = int(np.median(x))
+            median_pathway_rank_percentage = median_pathway_rank / len(rank_data) * 100
             median_intensity = rank_data.iloc[median_pathway_rank]
-            xmin, xmax = ax.get_xbound()
-            xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
+            #xmin, xmax = ax.get_xbound()
+            #xm = (median_pathway_rank + abs(xmin)) / (abs(xmax) + abs(xmin))
+            xmin, xmax = 0, 100
+            xm = (median_pathway_rank_percentage + abs(xmin)) / (abs(xmax) + abs(xmin))
             ymin, ymax = ax.get_ybound()
             ym = (median_intensity - ymin) / (ymax - ymin)
             # plot the median rank and intensity at that rank
-            ax.axvline(median_pathway_rank, ymax=ym, linestyle="--", color=f"C{i}", alpha=0.6)
+            ax.axvline(median_pathway_rank_percentage, ymax=ym, linestyle="--", color=f"C{i}", alpha=0.6)
             ax.axhline(median_intensity, xmax=xm, linestyle="--", color=f"C{i}", alpha=0.6)
             pathway_label = pathway.replace("_", " ")
-            text = f"{pathway_label} : median rank: {median_pathway_rank / len(rank_data.dropna()) * 100 :.1f}% "
+            text = f"{pathway_label} : median rank: {median_pathway_rank / len(rank_data) * 100 :.1f}% ({len(x)})"
             legend_text.append(text)
             handle = mlines.Line2D([], [], color=f"C{i}", marker='.', markersize=10, label=text, linewidth=0)
             handles.append(handle)
 
-    median_int_total = rank_data.dropna().median()
+    median_int_total = rank_data.median()
     legend_text.append(f"Median intensity: {median_int_total :.1f} {intensity_label}")
     handle = mlines.Line2D([], [], color="lightgray", marker='.', markersize=10, label=legend_text[-1], linewidth=0)
     handles.append(handle)
@@ -1417,13 +1422,12 @@ def save_rank_results(
     exp_name = full_name.replace("_", " ")
     if "Log_2" not in intensity_label:
         ax.set_yscale("log")
-    ax.set_xlabel("Protein rank", size=10, labelpad=10)
-    # ax.set_ylabel(f"{exp_name} mean Log_2 intensity")
+    ax.set_xlabel("Protein rank [%]", size=10, labelpad=10)
     ax.set_ylabel(intensity_label, size=10, labelpad=10)
     ax.set_title(f"{exp_name} mean", weight="bold", size="14", pad=10)
-    # legend_text = [pathway for pathway in interesting_proteins.keys()]
     fig.legend(labels=legend_text, handles=handles, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+
     return fig, ax
 
 
