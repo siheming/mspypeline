@@ -5,7 +5,7 @@ Analysis options
 
 Data Analysis
 ~~~~~~~~~~~~~
-| The ``mspypeline`` package was developed to consolidate the proteomics data analysis workflow while providing both
+| The ``mspypeline`` package was developed to support the proteomics data analysis workflow while providing both
   simplicity and flexibility.
 | The :ref:`usage of the GUI <gui-quickstart>` provides the opportunity to explore and visualize data in a straightforward manner,
   without demanding any interaction with the code. The GUI offers the majority of plotting options currently available

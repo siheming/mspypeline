@@ -700,7 +700,7 @@ class BasePlotter:
         """
         | For all replicates per group of the selected level, pairwise comparisons of the protein intensities are
           plotted and their correlation, calculated with the the Pearson’s correlation coefficient r2, is indicated.
-        | Unique proteins per replicate are shown at the bottom and right side of the graph (substitution of na values
+        | Unique proteins per replicate are shown at the bottom and right side of the graph (replacement of NA values
           by min value of data set).
         | For a group with more than 2 replicates, each pairwise comparison of the replicates is calculated and plotted
           together in one graph. For every group of the selected level one plot is created.
@@ -807,6 +807,8 @@ class BasePlotter:
           understand how much fluctuation of the measured intensities is present between the replicates. Low deviation
           indicates that measured intensities are stable over multiple samples.
         | For each group of the selected level one plot is created.
+        | Lines drawn in different shades of blue indicate arbitrary chosen thresholds of 10%, 20% and 30% of the
+          relative std and the number of proteins with a relative std below these values.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <rel-std>`

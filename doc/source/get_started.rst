@@ -45,9 +45,11 @@ Usage with GUI
 ~~~~~~~~~~~~~~
 .. warning::
     All files to be analyzed need to be in a directory called txt (as originally created by MaxQuant)
+
 The GUI is divided into different parts to guide you through the general :ref:`workflow`.
 
-#. Start by selecting a directory at the top under the **"Dir to analyze"** option.
+#. Start by selecting a directory at the top under the **"Dir to analyze"** option. The directory must be or contain the
+   *txt* output directory from MaxQuant, in which all :ref:`required txt files <required-files>` are saved.
 
 #. The **"Yaml file"** option selects where the :ref:`settings` for the analysis are from. This can either be the
    :ref:`"default" settings <default-yaml>`, or the :ref:`"file" settings <default-yaml>`, if they are available.
@@ -104,4 +106,5 @@ Usage with command-line
 It is recommended to provide a :ref:`yaml file <settings>`, where most settings are already configured. It is **not**
 possible at the moment to specify all arguments via the command-line, and will only be implemented if there is any
 demand.
+
 

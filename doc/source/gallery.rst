@@ -5,30 +5,13 @@
 Gallery
 ========
 
-Experiment setup
-^^^^^^^^^^^^^^^^^
-| In the following section, experimental data is presented to introduce and explain the functionalities of
-  ``mspypeline`` in a visual format. Additionally it gives a minimal code example to create the plots as would be done when
-  using the package as a :ref:`python module <python-quickstart>`. The experimental setup was specifically designed to
-  facilitate the representation of the majority of analysis options provided by the software.
-
-.. figure:: ./_static/experiment_design.png
-    :width: 400
-    :align: right
-
-| Two different non-small cell lung cancer (NSCLC) **cell lines** H1975 and H838 were cultured in six culture dishes
-  each. To create different **stimulation** conditions, three of a cell line’s **biological replicates** were
-  treated with transforming growth factor beta (TGF-β) and three replicates remained unstimulated. For each of the twelve samples
-  that were prepared for the MS analysis, two **technical replicates** were measured resulting in a total number of 24
-  mass spectrometry runs. With this experimental arrangement, a multi-layered analysis design was established.
-| For the analysis by ``mspypeline``, where samples are organized in a tree structure and addressed via their
-  :ref:`level of analysis depth <analysis-design>`, the two cell lines correspond to the lowest **level 0**, to which
-  six samples can be assigned each. In the next higher **level 1** of the analysis design, the two groups from level 0
-  are further subdivided by their treatment condition such that there are now four different groups "H1975_unst",
-  "H1975_TGFb", "H838_unst" and "H838_TGFb", all of which contain 3 replicates. In **level 2** these four groups are
-  again subdivided now into the individual replicates. Since the measured protein intensities of
-  :ref:`technical replicates <tech-reps>` are averaged and cumulated to the next lowest level, level 2
-  becomes the highest level of analysis.
+| In the following, all available :ref:`visualization options <Plot-Options>` are presented. Additionally, a minimal
+  code example on how to create a :class:`~MaxQuantPlotter` using python is given, that is deployed to subsequently generate
+  all following plots.
+| For every generated graphic, a short description is provided that may be used to understand the underlaying calculations.
+  A rather detailed, biological analysis is provided in :ref:`benchmark dataset analysis <bio_analysis>`, where the
+  data structure and :ref:`analysis design <analysis-design>` of the :ref:`experimental samples <bio_analysis>` can be
+  understood as well as possible evaluation approaches for the different plots.
 
 
 
@@ -45,6 +28,7 @@ the :class:`~MSPInitializer` class which creates and reads in the :ref:`configur
     from mspypeline import load_example_dataset, MaxQuantPlotter
     # load the data that is provided in a submodule
     init = load_example_dataset(configs={
+        "has_techrep": True,
         "pathways": ["BIOCARTA_EGF_PATHWAY.txt", "HALLMARK_IL2_STAT5_SIGNALING.txt"],
         "go_terms": ["GO_APOPTOTIC_SIGNALING_PATHWAY.txt", "GO_INFLAMMATORY_RESPONSE.txt"]
         })
@@ -213,8 +197,8 @@ Group diagrams
 
 .. _pca:
 
-PCA overview
-*************
+Principal Component analysis (PCA) overview
+********************************************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_pca_overview
@@ -242,8 +226,8 @@ Intensity histogram
 
 .. _rel-std:
 
-Relative std
-*************
+Relative standard deviation (std)
+**********************************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_relative_std`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_relative_std
@@ -443,5 +427,10 @@ Intensity Heatmap
 
 .. ipython:: python
 
-    @savefig intensity_heatmap.png width=700 align=center
-    plotter.plot_intensity_heatmap("lfq_log2", 3, sort_index_by_missing=True, sort_columns_by_missing=True, save_path=None);
+    @savefig intensity_heatmap_lfq_log2.png width=700 align=center
+    plotter.plot_intensity_heatmap("lfq_log2", 2, sort_index_by_missing=True, sort_columns_by_missing=True, save_path=None);
+
+    @savefig intensity_heatmap_raw_log2.png width=700 align=center
+    plotter.plot_intensity_heatmap("raw_log2", 2, sort_index_by_missing=True, sort_columns_by_missing=True, save_path=None);
+
+

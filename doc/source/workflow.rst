@@ -6,7 +6,7 @@ Workflow
 Data import
 ~~~~~~~~~~~
 
-.. figure:: ./_static/single_bubbles1.pdf
+.. figure:: ./_static/single_bubble_1.pdf
     :width: 400
     :align: right
 
@@ -61,7 +61,7 @@ Data import
 Quality control
 ~~~~~~~~~~~~~~~
 
-.. figure:: ./_static/single_bubbles2.pdf
+.. figure:: ./_static/single_bubble_2.pdf
     :width: 400
     :align: right
 
@@ -76,7 +76,7 @@ Quality control
 
 Data Preprocessing
 ~~~~~~~~~~~~~~~~~~~
-.. figure:: ./_static/single_bubbles3.pdf
+.. figure:: ./_static/single_bubble_3.pdf
     :width: 400
     :align: right
 
@@ -128,7 +128,7 @@ Exploratory Analysis
 Create outlier detection and comparison plots
 **********************************************
 
-.. figure:: ./_static/single_bubbles4.pdf
+.. figure:: ./_static/single_bubble_4.pdf
     :width: 400
     :align: right
 
