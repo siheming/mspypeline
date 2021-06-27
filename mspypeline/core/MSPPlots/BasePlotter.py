@@ -136,6 +136,7 @@ class BasePlotter:
         self.normalizers = deepcopy(default_normalizers)
         self.selected_normalizer_name = self.configs.get("selected_normalizer", "None")
         self.selected_normalizer = self.normalizers.get(self.selected_normalizer_name, None)
+        self.experiment_has_techrep = self.configs.get("has_techrep", False)
         self.intensity_df = None
         if required_reader is not None:
             try:
@@ -315,10 +316,10 @@ class BasePlotter:
 
         self.all_tree_dict.update({
             f"{option_name}": DataTree.from_analysis_design(
-                self.analysis_design, intensities, self.configs.get("has_techrep", False)
+                self.analysis_design, intensities, self.experiment_has_techrep
             ),
             f"{option_name}_log2": DataTree.from_analysis_design(
-                self.analysis_design, intensities_log2, self.configs.get("has_techrep", False)
+                self.analysis_design, intensities_log2, self.experiment_has_techrep
             )
         })
 
@@ -453,7 +454,8 @@ class BasePlotter:
             for df_to_use in dfs_to_use:
                 plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
                                    ex=f"group_level_{level}", split_files=True,
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
+                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_venn,
+                                   exp_has_techrep=self.experiment_has_techrep)
                 plot_kwargs.update(**kwargs)
                 # create venn diagrams comparing all replicates within an experiment
                 named_sets = self.get_venn_group_data(df_to_use, level)
@@ -498,7 +500,8 @@ class BasePlotter:
             for df_to_use in dfs_to_use:
                 for key in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], ex=key,
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_venn,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     named_sets = self.get_venn_data_per_key(df_to_use, key)
                     # save the resulting venn diagram
@@ -557,7 +560,8 @@ class BasePlotter:
                 data = self.get_detection_counts_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_detection_counts_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -619,7 +623,8 @@ class BasePlotter:
                 data = self.get_detected_proteins_per_replicate_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_detected_proteins_per_replicate_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -665,7 +670,8 @@ class BasePlotter:
                 data = self.get_intensity_histograms_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_intensity_histogram_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -715,7 +721,8 @@ class BasePlotter:
                     data = self.get_scatter_replicates_data(df_to_use=df_to_use, full_name=full_name)
                     if data:
                         plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=full_name,
-                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_scatter_replicates_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -765,7 +772,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=level_key,
                                            df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
-                                           interesting_proteins=self.interesting_proteins)
+                                           interesting_proteins=self.interesting_proteins,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_rank_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -827,7 +835,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
                                            experiment_name=full_name, df_to_use=df_to_use, level=level,
-                                           save_path=self.file_dir_descriptive)
+                                           save_path=self.file_dir_descriptive,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_relative_std_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -918,7 +927,8 @@ class BasePlotter:
                     data = self.get_pathway_analysis_data(level=level, df_to_use=df_to_use, pathway=pathway, **kwargs)
                     if data:
                         plot_kwargs = dict(pathway=pathway, save_path=self.file_dir_pathway, df_to_use=df_to_use,
-                                           level=level, intensity_label=self.intensity_label_names[df_to_use])
+                                           level=level, intensity_label=self.intensity_label_names[df_to_use],
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_pathway_analysis_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -1034,7 +1044,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], sample1=ex1,
                                            sample2=ex2, df_to_use=df_to_use, level=level,
-                                           save_path=self.file_dir_descriptive)
+                                           save_path=self.file_dir_descriptive,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_experiment_comparison_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -1139,7 +1150,8 @@ class BasePlotter:
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
                                        go_analysis_gene_names=self.go_analysis_gene_names,
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_go_analysis)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_go_analysis,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_go_analysis_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1295,7 +1307,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use,
                                            intensity_label=self.intensity_label_names[df_to_use],
-                                           interesting_proteins=self.interesting_proteins, split_files=True)
+                                           interesting_proteins=self.interesting_proteins, split_files=True,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -1372,7 +1385,8 @@ class BasePlotter:
                 data = self.get_pca_data(level=level, df_to_use=df_to_use, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_pca_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1422,7 +1436,8 @@ class BasePlotter:
                 data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(level=level, df_to_use=df_to_use, save_path=self.file_dir_descriptive,
-                                       intensity_label=self.intensity_label_names[df_to_use])
+                                       intensity_label=self.intensity_label_names[df_to_use],
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_boxplot_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1481,7 +1496,8 @@ class BasePlotter:
                 data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_n_proteins_vs_quantile_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1528,7 +1544,8 @@ class BasePlotter:
                 data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_kde_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1564,7 +1581,8 @@ class BasePlotter:
 
                 if n_prot_data and kde_data and boxplot_data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_normalization_overview_results(
                         **n_prot_data, **kde_data, **boxplot_data, **plot_kwargs
@@ -1633,7 +1651,8 @@ class BasePlotter:
                 data = self.get_intensity_heatmap_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_normalization)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_normalization,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1667,7 +1686,7 @@ class BasePlotter:
             A list of all created plots
         """
         max_depth = dict_depth(self.analysis_design)
-        if self.configs.get("has_techrep", False):
+        if self.experiment_has_techrep:
             max_depth -= 1
         plots = []
         normalizers = normalizers if normalizers is not None else {}
@@ -1687,7 +1706,8 @@ class BasePlotter:
             if save_path is not None:
                 plot_kwargs.pop("save_path")  # use the other save path instead here
                 save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(
-                    file_name, **plot_kwargs, df_to_use=df_to_use, save_path=save_path)
+                    file_name, **plot_kwargs, df_to_use=df_to_use, save_path=save_path,
+                    exp_has_techrep=self.experiment_has_techrep)
                 matplotlib_plots.collect_plots_to_pdf(os.path.join(save_path, result_name), *df_plots)
         return plots
 

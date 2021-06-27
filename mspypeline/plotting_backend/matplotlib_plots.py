@@ -29,6 +29,8 @@ FIG_FORMAT = ".pdf"
 rcParams["pdf.fonttype"] = 42
 rcParams["ps.fonttype"] = 42
 
+TECHREP_SUFFIX = ", technical replicates aggregated"
+
 
 def linear(x, m, b):
     return m * x + b
@@ -272,7 +274,7 @@ def save_volcano_results(
         unique_g2: pd.Series = None, g1: str = "group1", g2: str = "group2", adj_pval: bool = False,
         intensity_label: str = "Intensity", show_suptitle: bool = True, pval_threshold: float = 0.05,
         fchange_threshold: float = 2, scatter_size: float = 20, n_labelled_proteins: int = 10, close_plots: str = "all",
-        **kwargs
+        exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes]]:
     """
     Saves multiple csv files and images containing the information of the volcano plot
@@ -308,6 +310,8 @@ def save_volcano_results(
         number of points that will be annotated in th plot
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -416,7 +420,7 @@ def save_volcano_results(
 
     # figure stuff
     if show_suptitle:
-        fig.suptitle(f"{g1_name} vs {g2_name}")
+        fig.suptitle(f"{g1_name} vs {g2_name}" + (TECHREP_SUFFIX if exp_has_techrep else ""))
     ax.set_xlabel(f"{intensity_label} Fold Change")
     ax.set_ylabel(r"-$Log_{10}$" + f" {col_mapping[col]}")
     ax_unique_down.set_ylabel(intensity_label)
@@ -466,7 +470,7 @@ def save_volcano_results(
 def save_pca_results(
         pca_data: pd.DataFrame, pca_fit: PCA = None, normalize: bool = True, intensity_label: str = "Intensity",
         color_map: Optional[dict] = None, show_suptitle: bool = True, marker_size: int = 150,
-        legend_marker_size: int = 12, close_plots: str = "all", **kwargs
+        legend_marker_size: int = 12, close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Saves image containing the pca results with prefix: {{name}}
@@ -491,6 +495,8 @@ def save_pca_results(
         size of the legend marker
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -542,7 +548,7 @@ def save_pca_results(
                     ax.tick_params(axis="both", labelsize=18)
 
     if show_suptitle:
-        fig.suptitle(intensity_label, fontsize=30)
+        fig.suptitle(intensity_label + (TECHREP_SUFFIX if exp_has_techrep else ""), fontsize=30)
     legend_elements = get_legend_elements(labels=pca_data.columns.get_level_values(0).unique(),
                                           color_map=base_color_map, marker_size=legend_marker_size)
     fig.legend(handles=legend_elements, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False, fontsize=20)
@@ -556,7 +562,7 @@ def save_pca_results(
 def save_pathway_analysis_results(
         protein_intensities: pd.DataFrame, significances: pd.DataFrame = None, pathway: str = "",
         show_suptitle: bool = True, threshold: float = 0.05, intensity_label: str = "Intensity",
-        color_map: Optional[dict] = None, close_plots: str = "all", **kwargs
+        color_map: Optional[dict] = None, close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Saves plots into the pathway_analysis dir.
@@ -579,6 +585,8 @@ def save_pathway_analysis_results(
         a mapping from the column names to a color
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -596,7 +604,7 @@ def save_pathway_analysis_results(
     result_color_map = {value: f"C{i}" for i, value in enumerate(level_keys)}
     result_color_map.update(color_map if color_map is not None else {})
     if show_suptitle:
-        fig.suptitle(pathway.replace("_", " "), size=26)
+        fig.suptitle(pathway.replace("_", " ") + (TECHREP_SUFFIX if exp_has_techrep else ""), size=26)
     for protein, (pos, ax) in zip(protein_intensities.index, np.ndenumerate(axarr)):
         ax.scatter(protein_intensities.loc[protein],
                    [level_keys.index(c) for c in protein_intensities.columns.get_level_values(0)],
@@ -692,7 +700,8 @@ def save_boxplot_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_relative_std_results(
         intensities: pd.DataFrame, experiment_name: str, intensity_label: str = "Intensity",
-        show_suptitle: bool = True, bins=(10, 20, 30), cmap: dict = None, close_plots: str = "all", **kwargs
+        show_suptitle: bool = True, bins=(10, 20, 30), cmap: dict = None, close_plots: str = "all",
+        exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Relative standard deviations of passed intensities with color marking based on the specified bins and color map.
@@ -714,6 +723,8 @@ def save_relative_std_results(
         mapping for the digitized labels to a color
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -745,7 +756,7 @@ def save_relative_std_results(
 
     experiment_name = experiment_name.replace("_", "  ")
     if show_suptitle:
-        fig.suptitle(experiment_name)
+        fig.suptitle(experiment_name + (TECHREP_SUFFIX if exp_has_techrep else ""))
     ax.set_xlabel(f"Mean {intensity_label}")
     ax.set_ylabel("Relative Standard deviation [%]")
     if "Log_2" not in intensity_label:
@@ -765,7 +776,7 @@ def save_relative_std_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_detection_counts_results(
         counts: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True, close_plots: str = "all",
-        **kwargs
+        exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Saves the plot with prefix: {{name}}
@@ -780,6 +791,8 @@ def save_detection_counts_results(
         should the figure title be shown
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -794,7 +807,7 @@ def save_detection_counts_results(
         axarr[n_rows_experiment - 1, n_cols_experiment - 1 - i].remove()
 
     if show_suptitle:
-        fig.suptitle(f"Detection counts from {intensity_label}")
+        fig.suptitle(f"Detection counts from {intensity_label}" + (TECHREP_SUFFIX if exp_has_techrep else ""))
 
     global_max = counts.max().max()
     for (pos, ax), col in zip(np.ndenumerate(axarr), counts.columns):
@@ -979,8 +992,8 @@ def save_n_proteins_vs_quantile_results(
 @save_plot("normalization_overview")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_normalization_overview_results(
-        quantiles, n_proteins, intensities, protein_intensities,
-        height: int = 15, intensity_label: str = "Intensity", close_plots: str = "all", **kwargs
+        quantiles, n_proteins, intensities, protein_intensities, height: int = 15, intensity_label: str = "Intensity",
+        close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]:
     """
     saves plot with prefix: {{name}}
@@ -1001,6 +1014,8 @@ def save_normalization_overview_results(
         name of the experiment
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1014,7 +1029,7 @@ def save_normalization_overview_results(
     ax_colorbar = fig.add_subplot(gs[height - 1, 0])
     ax_boxplot = fig.add_subplot(gs[0:height, 1])
 
-    fig.suptitle(f"{intensity_label} overview", size=28)
+    fig.suptitle(f"{intensity_label} overview" + (TECHREP_SUFFIX if exp_has_techrep else ""), size=28)
     # order the boxplot data after the number of identified peptides
     boxplot_data = protein_intensities.loc[:, n_proteins.sort_values(ascending=False).index[::-1]]
 
@@ -1039,8 +1054,8 @@ def save_normalization_overview_results(
 def save_intensities_heatmap_result(
         intensities: pd.DataFrame, cmap: Union[str, colors.Colormap] = "autumn_r", cmap_bad: str = "dimgray",
         cax: plt.Axes = None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, vmax: Optional[float] = None,
-        vmin: Optional[float] = None,
-        intensity_label: str = "Intensity", show_suptitle: bool = True, close_plots: str = "all", **kwargs
+        vmin: Optional[float] = None, intensity_label: str = "Intensity", show_suptitle: bool = True,
+        close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
     """
     saves plot with prefix: {{name}}
@@ -1067,6 +1082,8 @@ def save_intensities_heatmap_result(
         should figure title be shown
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
     """
@@ -1090,7 +1107,8 @@ def save_intensities_heatmap_result(
         cbar = ax.figure.colorbar(im, cax=cax)
 
     if show_suptitle:
-        fig.suptitle(f"Proteins detected or missing in {intensity_label}", fontsize=16)
+        fig.suptitle(f"Proteins detected or missing in {intensity_label}" + (TECHREP_SUFFIX if exp_has_techrep else ""),
+                     fontsize=16)
     ax.set_xlabel("Total proteins detected", fontsize=12)
 
     y_lim = ax.get_ylim()
@@ -1108,7 +1126,7 @@ def save_intensities_heatmap_result(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_detected_proteins_per_replicate_results(
         all_heights: Dict[str, pd.Series], intensity_label: str = "Intensity", show_suptitle: bool = True,
-        close_plots: str = "all", **kwargs
+        close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
 ):
     """
     saves plot with prefix: {{name}}
@@ -1123,6 +1141,8 @@ def save_detected_proteins_per_replicate_results(
         should the figure title be shown
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1137,7 +1157,8 @@ def save_detected_proteins_per_replicate_results(
         axarr[n_rows_experiment - 1, n_cols_experiment - 1 - i].remove()
 
     if show_suptitle:
-        fig.suptitle(f"Number of detected proteins from {intensity_label}")
+        fig.suptitle(f"Number of detected proteins from {intensity_label}" + (
+                     TECHREP_SUFFIX if exp_has_techrep else ""))
 
     global_max = max((ser.max() for ser in all_heights.values()))
 
@@ -1177,7 +1198,7 @@ def save_intensity_histogram_results(
         hist_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = False,
         compare_to_remaining: bool = False, legend: bool = True, n_bins: int = 25, show_mean: bool = True,
         histtype="bar", color=None, plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, close_plots: str = "all",
-        **kwargs
+        exp_has_techrep: bool = False, **kwargs
 ):
     """
     saves plot with prefix: {{name}}
@@ -1206,6 +1227,8 @@ def save_intensity_histogram_results(
         figure to put plot
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1221,7 +1244,7 @@ def save_intensity_histogram_results(
             axarr[n_rows - 1, n_cols - 1 - i].remove()
 
     if show_suptitle:
-        fig.suptitle(f"{intensity_label} histograms")
+        fig.suptitle(f"{intensity_label} histograms" + (TECHREP_SUFFIX if exp_has_techrep else ""))
 
     counts = []
     for col in hist_data.columns:
@@ -1282,7 +1305,7 @@ def save_intensity_histogram_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_scatter_replicates_results(
         scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True,
-        close_plots: str = "all", **kwargs
+        close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1297,6 +1320,8 @@ def save_scatter_replicates_results(
         should the figure title be shown
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1304,6 +1329,10 @@ def save_scatter_replicates_results(
     if close_plots is not None:
         plt.close(close_plots)
     fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+
+    if show_suptitle:
+        ax.set_title(f"Scatter comparison of replicates using {intensity_label}" + (
+                     TECHREP_SUFFIX if exp_has_techrep else ""))
 
     min_counts = scatter_data.min().min()
 
@@ -1321,8 +1350,6 @@ def save_scatter_replicates_results(
                    alpha=0.5, s=40,  marker=".", edgecolors="none")
         ax.set_xlabel(f"{intensity_label} of x1")
         ax.set_ylabel(f"{intensity_label} of x2")
-        if show_suptitle:
-            ax.set_title(f"Scatter comparison of replicates using {intensity_label}")
 
     fig.legend(frameon=False, bbox_to_anchor=(1.02, 0.5), loc="center left", title=r"$\bf{Sample\ x1\ vs\ Sample\ x2}$")
     if "Log_2" not in intensity_label:
@@ -1337,7 +1364,7 @@ def save_scatter_replicates_results(
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_rank_results(
         rank_data: pd.Series, interesting_proteins, intensity_label: str = "Intensity", full_name="Experiment",
-        close_plots: str = "all", **kwargs
+        close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1354,6 +1381,8 @@ def save_rank_results(
         name of the sample/group plotted
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1424,7 +1453,7 @@ def save_rank_results(
         ax.set_yscale("log")
     ax.set_xlabel("Protein rank [%]", size=10, labelpad=10)
     ax.set_ylabel(intensity_label, size=10, labelpad=10)
-    ax.set_title(f"{exp_name} mean", weight="bold", size="14", pad=10)
+    fig.suptitle(f"{exp_name} mean" + (TECHREP_SUFFIX if exp_has_techrep else ""), weight="bold", size="14", pad=10)
     fig.legend(labels=legend_text, handles=handles, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -1437,7 +1466,8 @@ def save_experiment_comparison_results(
         protein_intensities_sample1: pd.Series, protein_intensities_sample2: pd.Series,
         exclusive_sample1: pd.Series, exclusive_sample2: pd.Series, sample1: str, sample2: str,
         intensity_label: str = "Intensity", show_suptitle: bool = True,
-        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, close_plots: str = "all", **kwargs
+        plot: Optional[Tuple[plt.Figure, plt.Axes]] = None, close_plots: str = "all", exp_has_techrep: bool = False,
+        **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1464,6 +1494,8 @@ def save_experiment_comparison_results(
         figure to put plot
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1501,7 +1533,8 @@ def save_experiment_comparison_results(
         ax.set_xscale("log")
         ax.set_yscale("log")
     if show_suptitle:
-        ax.set_title(f"Scatter comparison of groups using {intensity_label}")
+        fig.suptitle(f"Scatter comparison of groups using {intensity_label}" + (
+                     TECHREP_SUFFIX if exp_has_techrep else ""))
 
     xmin, xmax = ax.get_xbound()
     ymin, ymax = ax.get_ybound()
@@ -1517,7 +1550,7 @@ def save_experiment_comparison_results(
 def save_go_analysis_results(
         heights: Dict[str, list], test_results: Dict[str, list], go_length: Dict[str, list],
         go_analysis_gene_names: list, show_suptitle: bool = True, intensity_label="Intensity", close_plots: str = "all",
-        **kwargs
+        exp_has_techrep: bool = False, **kwargs
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     saves plot with prefix: {{name}}
@@ -1538,6 +1571,8 @@ def save_go_analysis_results(
         name of the experiment
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1583,7 +1618,7 @@ def save_go_analysis_results(
                     verticalalignment="center", annotation_clip=False)
 
     if show_suptitle:
-        ax.set_title(f"GO based analysis from {intensity_label}", pad=10)
+        fig.suptitle(f"GO based analysis from {intensity_label}" + (TECHREP_SUFFIX if exp_has_techrep else ""), pad=10)
     ax.set_yticks(sorted(list(tick_y_pos)))
     labels = [label.replace("_", " ") for label in heights_df.columns]
     ax.set_yticklabels(labels * len(heights_df))
@@ -1592,7 +1627,6 @@ def save_go_analysis_results(
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     return fig, ax
-
 
 
 @save_plot("pathway_timecourse_{pathway}")
@@ -1635,7 +1669,8 @@ def save_pathway_timecourse_results():
 @save_venn_to_txt({"named_sets": "txts/set_bar"})
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_bar_venn(
-        named_sets: Dict[str, set], ex: str, show_suptitle: bool = True, close_plots: str = "all", **kwargs
+        named_sets: Dict[str, set], ex: str, show_suptitle: bool = True, close_plots: str = "all",
+        exp_has_techrep: bool = False, **kwargs
 ) -> Optional[Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]]:
     """
     saves plot with prefix: {{name}}
@@ -1650,6 +1685,8 @@ def save_bar_venn(
         should the figure title be shown
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1674,7 +1711,7 @@ def save_bar_venn(
     # initial figure setup
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(1 * len(heights), 7))
     if show_suptitle:
-        fig.suptitle(ex.replace("_", " "), fontsize=17, weight="bold")
+        fig.suptitle(ex.replace("_", " ") + (TECHREP_SUFFIX if exp_has_techrep else ""), fontsize=17, weight="bold")
     # create the bar plot
     ax1.bar(x, heights, color="skyblue")
     # add text to the bar plot
@@ -1703,8 +1740,8 @@ def save_bar_venn(
 @save_venn_to_txt({"named_sets": "txts/set"})
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_venn(
-        named_sets: Dict[str, set], ex: str, show_suptitle: bool = True,
-        title_font_size=20, set_label_font_size=16, subset_label_font_size=14, close_plots: str = "all", **kwargs
+        named_sets: Dict[str, set], ex: str, show_suptitle: bool = True, title_font_size=20, set_label_font_size=16,
+        subset_label_font_size=14, close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
 ) -> Optional[Tuple[plt.Figure, plt.Axes]]:
     """
     Creates Venn Diagrams from passed data. saves plot with prefix: {{name}}
@@ -1725,6 +1762,8 @@ def save_venn(
         font size of subsets
     close_plots
         which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
     kwargs
         {kwargs}
 
@@ -1733,7 +1772,8 @@ def save_venn(
         plt.close(close_plots)
     fig, ax = plt.subplots(1, 1, figsize=(14, 7))
     if show_suptitle:
-        plt.title(ex.replace("_", " "), fontsize=title_font_size, weight="bold")
+        fig.suptitle(ex.replace("_", " ") + (TECHREP_SUFFIX if exp_has_techrep else ""),
+                     fontsize=title_font_size, weight="bold")
 
     # create venn diagram based on size of set
     sets = named_sets.values()
@@ -1773,6 +1813,6 @@ def save_venn(
             text.set_fontsize(subset_label_font_size)
         except AttributeError:
             pass
-    plt.legend(handles, labels, bbox_to_anchor=(1.02, 0.5), loc="center left")
+    fig.legend(handles, labels, bbox_to_anchor=(1.02, 0.5), loc="center left")
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return fig, ax
