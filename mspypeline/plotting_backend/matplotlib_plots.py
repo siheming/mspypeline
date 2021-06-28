@@ -1453,7 +1453,7 @@ def save_rank_results(
         ax.set_yscale("log")
     ax.set_xlabel("Protein rank [%]", size=10, labelpad=10)
     ax.set_ylabel(intensity_label, size=10, labelpad=10)
-    fig.suptitle(f"{exp_name} mean" + (TECHREP_SUFFIX if exp_has_techrep else ""), weight="bold", size="14", pad=10)
+    fig.suptitle(f"{exp_name} mean" + (TECHREP_SUFFIX if exp_has_techrep else ""), weight="bold", size="14")
     fig.legend(labels=legend_text, handles=handles, bbox_to_anchor=(1.02, 0.5), loc="center left", frameon=False)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -1618,7 +1618,7 @@ def save_go_analysis_results(
                     verticalalignment="center", annotation_clip=False)
 
     if show_suptitle:
-        fig.suptitle(f"GO based analysis from {intensity_label}" + (TECHREP_SUFFIX if exp_has_techrep else ""), pad=10)
+        fig.suptitle(f"GO based analysis from {intensity_label}" + (TECHREP_SUFFIX if exp_has_techrep else ""))
     ax.set_yticks(sorted(list(tick_y_pos)))
     labels = [label.replace("_", " ") for label in heights_df.columns]
     ax.set_yticklabels(labels * len(heights_df))

@@ -257,22 +257,22 @@ Venn diagrams: comparing replicates vs. groups
 
 
 .. figure:: ./savefig/venn_plot1.png
-    :width: 415
+    :width: 335
     :height: 202
     :align: left
 
 .. figure:: /savefig/plots/venn_replicate_group_level_0_lfq_log2_level_0.png
-    :width: 230
+    :width: 305
     :height: 202
     :align: right
 
 .. figure:: ./savefig/venn_plot2.png
-    :width: 455
+    :width: 335
     :height: 450
     :align: left
 
 .. figure:: /savefig/plots/venn_bar_group_level_0_lfq_log2_level_0.png
-    :width: 190
+    :width: 305
     :height: 450
     :align: right
 

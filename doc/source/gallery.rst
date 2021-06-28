@@ -186,14 +186,10 @@ Group diagrams
     plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/plots/venn_replicate_group_level_0_lfq_log2_level_0.png
-    :width: 440
-    :height: 400
-    :align: left
+
 
 .. image:: /savefig/plots/venn_bar_group_level_0_lfq_log2_level_0.png
-    :width: 200
-    :height: 400
-    :align: right
+
 
 .. _pca:
 
