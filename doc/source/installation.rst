@@ -111,7 +111,7 @@ Dependencies
 - `matplotlib <https://matplotlib.org/>`__ >= 3.1.1
 - `scikit-learn <https://scikit-learn.org/stable/>`__ >= 0.22.1
 - tzlocal >= 2.0.0
-- ruamel_yaml >= 0.15.46
+- ruamel_yaml >= 3.4.2
 - matplotlib-venn >= 0.11.5
 - adjusttext >= 0.7.3.1
 - plotly >= 4.6.0
@@ -121,4 +121,4 @@ Optional Dependencies for R packages
 some plots might require additional R packages to be installed. Because of that additional dependencies are required for
 those plots.
 
-- rpy2 >= 3.0.0
+- rpy2 >= 3.4.2
