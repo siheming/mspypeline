@@ -256,7 +256,7 @@ Venn diagrams: comparing replicates vs. groups
   example, be studied which proteins are unique to each cell line and which are detected in both of them (group diagram).
 
 
-.. figure:: ./savefig/venn_plot1.png
+.. figure:: /savefig/venn_plot1.png
     :width: 335
     :height: 202
     :align: left
@@ -266,7 +266,7 @@ Venn diagrams: comparing replicates vs. groups
     :height: 202
     :align: right
 
-.. figure:: ./savefig/venn_plot2.png
+.. figure:: /savefig/venn_plot2.png
     :width: 335
     :height: 450
     :align: left
