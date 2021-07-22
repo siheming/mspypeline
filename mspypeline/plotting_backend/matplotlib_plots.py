@@ -29,7 +29,7 @@ FIG_FORMAT = ".pdf"
 rcParams["pdf.fonttype"] = 42
 rcParams["ps.fonttype"] = 42
 
-TECHREP_SUFFIX = ", technical replicates aggregated"
+TECHREP_SUFFIX = ", \n technical replicates aggregated"
 
 
 def linear(x, m, b):

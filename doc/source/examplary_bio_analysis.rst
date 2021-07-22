@@ -9,493 +9,103 @@ Benchmark dataset analysis
 | *version: 0.9.0*
 
 
-Experiment setup
-^^^^^^^^^^^^^^^^^
-| In the following section, experimental data is presented to introduce and explain the functionalities of
-  ``mspypeline`` in a visual format. Additionally it gives a minimal code example to create the plots as would be done when
-  using the package as a :ref:`python module <python-quickstart>`. The experimental setup was specifically designed to
-  facilitate the representation of the majority of analysis options provided by the software.
+| In the following section, a label-free whole proteome benchmark experiment is presented to introduce and exemplify the functionalities of ``mspypeline``. To demonstrate the analytical steps and statistical capabilities of our software, an experimental setup involving the stimulation of two lung cancer cell lines was designed.
 
+
+
+**Label-free proteome comparison of two Non-small cell lung cancer (NSCLC) cell lines stimulated with transforming growth factor-beta (TGFβ).**
+
+1. Introduction
+****************
+
+Non-small cell lung cancer (NSCLC) accounts for most lung cancer cases and is characterized by early metastasis and a high mortality rate. The multifunctional cytokine TGFβ is known for orchestrating tumor progression in NSCLC by activating its downstream pathway. However, the alterations behind TGFβ mediated tumor growth is not yet well understood. Thus, in this benchmark experiment, we examined the impact of TGFβ stimulation on the whole proteome of two different adenocarcinoma NSCLC cell lines, H1975 and H838. All acquired mass spectrometry-based proteomics data was analyzed exclusively with ``mspypeline``. As a result, we characterize the proteome of the two cell lines under two conditions, unstimulated and TGFβ stimulated for 24 hours. We also report on the possible molecular differences between the two cell lines and how these differences might lead to variable responses to TGFβ stimulation.
+
+.. _setup:
 .. figure:: ./_static/experiment_design.png
     :width: 400
-    :align: right
+    :align: center
 
-| Two different non-small cell lung cancer (NSCLC) **cell lines** H1975 and H838 were cultured in six culture dishes
-  each. To create different **stimulation** conditions, three of a cell line’s **biological replicates** were
-  treated with transforming growth factor beta (TGF-β) and three replicates remained unstimulated. For each of the twelve samples
-  that were prepared for the MS analysis, two **technical replicates** were measured resulting in a total number of 24
-  mass spectrometry runs. With this experimental arrangement, a multi-layered analysis design was established.
-| For the analysis by ``mspypeline``, where samples are organized in a tree structure and addressed via their
-  :ref:`level of analysis depth <analysis-design>`, the two cell lines correspond to the lowest **level 0**, to which
-  six samples can be assigned each. In the next higher **level 1** of the analysis design, the two groups from level 0
-  are further subdivided by their treatment condition such that there are now four different groups "H1975_unst",
-  "H1975_TGFb", "H838_unst" and "H838_TGFb", all of which contain 3 replicates. In **level 2** these four groups are
-  again subdivided now into the individual replicates. Since the measured protein intensities of
-  :ref:`technical replicates <tech-reps>` are averaged and cumulated to the next lowest level, level 2
-  becomes the highest level of analysis.
+    **Figure1. Experimental setup.** To recapture the experimental setup, the ``mspypeline`` package organizes the data in an internal tree-structure. In total, 24 LC-MS runs were acquired, allowing samples to be assigned to four different analytical levels, (i) level 0 corresponds to the two NSCLC cell lines (H1975 and H838), (ii) level 1 corresponds to the stimulation conditions (Unstimulated, TGFβ stimulated), (iii) level 3 corresponds to biological replicates, and (iv) level 4 corresponds to three :ref:`technical replicates <tech-reps>`. Thus, we made use of this versatility to perform comparisons between the cell lines, stimulation conditions and biological replicates.
 
-.. _maxquant-report-bio:
 
-MaxQuant Report
-^^^^^^^^^^^^^^^^^^^^^^^
-| Created using: :meth:`~mspypeline.MaxQuantPlotter.create_report`
+2. Materials and Methods
+*************************
+The human NSCLC cell lines H1975 and H838 (ATCC) were grown in a humidified atmosphere with 5% CO2 at 37°C. Both cell lines were cultivated in DMEM (Lonza) supplemented with 10% FCS (Gibco) and 1% penicillin/streptomycin (Gibco). Moreover, cells were kept for 24 h in the presence or absence of transforming growth factor-beta (TGFβ). In total, three biological replicates per condition were prepared. After TGFβ stimulation, cells were lysed in a two-step process. Initially, RIPA buffer (containing 4% SDSm AP, AEBSF) was added, cells were centrifuged, and the supernatant was collected. The remaining pellet was suspended in Urea buffer (8 M, 2% SDS in TEAB) and centrifuged. Both fractions of the lysate were combined in a 1:1 ratio, and total protein concentration was assessed by the Bicinchoninic acid (BCA) assay. Further, samples were prepared to contain 20 µg of protein each and processed using the single-pot, solid-phase-enhanced sample preparation protocol (sp3), as previously described (Hughes et al. Nat Protoc, 2019). Briefly, protein disulfide bonds were reduced with 40 mM Tris (2-Carboxyethyl) Phosphine (TCEP), alkylated with 160 mM chloroacetamide at 95C for 5 min, and digested overnight (trypsin to protein ratio 1:25). The digested samples were dried down by vacuum centrifugation, and the resulting peptides were suspended in loading buffer (0.1% formic acid (FA), 2% ACN in H2O). Each biological replicate was prepared in duplicates to generate technical replicates. The Nano-flow LC-MS/MS analysis was performed by coupling an EASY-nLC 1000 to a Q Exactive Plus Orbitrap MS (both Thermo Scientific). Peptides were delivered to an analytical column (75 μm × 30 cm, packed in-house with Reprosil-Pur 120 C18-AQ, 1.9 μm resin, Dr. Maisch) at a flow rate of 3 μL/min in 100% buffer A (0.1% FA in H2O). After loading, peptides were separated using a 120 min gradient from 2% to 98% of solvent B (0.1% FA, 80% ACN in MS-compatible H2O; solvent A: 0.1% FA in MS-compatible H2O) at 350 nL/min flow rate. The Q Exactive Plus was operated in data-dependent mode (DDA), automatically switching between MS and MS2. Raw MS spectra were processed by MaxQuant (version 1.5.2.8), and the MS/MS spectra were searched against the Uniprot human reference proteome database (downloaded on November 6th, 2015) by Andromeda search engine, enabling contaminants and the reversed versions of all sequences with the following search parameters: Carbamidomethylation of cysteine residues as fixed modification and Acetyl (Protein N-term), Oxidation (M) as variable modifications. Trypsin/P was specified as the proteolytic enzyme with up to 2 missed cleavages allowed. The maximum false discovery rate for proteins and peptides was 0.01, and a minimum peptide length of six amino acids was required. Quantification mode with LFQ intensities was enabled. Downstream data analyses were performed using the python module of ``mspypeline``.
 
-| The MaxQuant report offers a broad insight into the different sources of information from a MaxQuant output tables and
-  it is specifically tailored to view aspects of mass spectrometry proteomic analysis.
-| Besides the protein intensities (from the *proteinGroups.txt* file) which are the only source
-  of data for all other parts of the analysis with the :ref:`MaxQuant Plotter <plotters>`, further information
-  about experimental and technical parameters of the experiment are taken into account.
-| The MaxQuant report can function as a data quality control tool and outputs a multi-page pdf document composed of
-  a variety of information and graphics. Make sure that :ref:`all MaxQuant files <file-readers>` which are used to
-  create the report are provided. In the following graphic, a gallery of selected plots is presented. To view the
-  complete MaxQuant report, please view `this document <./_static/MaxQuantReport.pdf>`_.
+3. Results and Discussion
+**************************
+To recapture the experimental setup, the ``mspypeline`` package organizes the data in an internal tree-structured :ref:`analysis design <analysis-design>` (:ref:`Fig. 1 <setup>`).
 
+**Quality Control Report** – quality assessment and quality control are crucial when dealing with mass spectrometry-based proteomics data. To detect measurement bias, verify consistency, and avoid error propagation in our downstream analysis, as a first step, the MaxQuant report was generated (view complete MaxQuant report here: `this document <./_static/MaxQuantReport.pdf>`_). It was observed that the total number of identified proteins and peptides (:ref:`Fig. 2A <report>`) was uniform, validating the reproducibility of our replicates. The degree of contamination of the individual samples can be observed in (:ref:`Fig. 2B <report>`). Interestingly, all replicates of the H1975 cell line have substantially higher contamination levels than samples of the other cell line. Notably, two samples (technical replicate 1 and 2 of H1975 unstimulated replicate 1) exceeded the suggested maximum of 5% contaminated protein intensities and thus were handled with caution during subsequent analytical steps. Other important parameters to be considered during the dataset quality assessment include peptide m/z-distribution, number of missed cleavages, last amino acid, amino acid before cleavage, and peptide charges (:ref:`Fig. 2C <report>`). In the plots created by ``mspypeline``, the properties are shown for each sample separately and average distribution across all samples, denoted by a black line, was additionally provided to facilitate sample cross-comparison within the dataset. Furthermore, intensity and retention time distribution (:ref:`Fig. 2D, 2E <report>`), peptide counts and retention length vs. retention time (:ref:`Fig. 2F <report>`), and the total ion chromatogram (:ref:`Fig. 2G <report>`) were available and can be explored for all samples. Altogether, the results obtained indicated a high quality of our benchmark dataset.
+
+.. _report:
 .. figure:: ./_static/MaxQuantReport_example.pdf
     :width: 700
     :align: center
 
-    **Gallery of exemplary plots from the MaxQuant report created with the benchmark dataset. **A)** Number of detected
-    peptides and proteins for each sample presented together. **B)** Percentage of protein intensities labeled as
-    contamination from the total protein intensities for each sample presented together. **C)** Overview of the
-    technical parameters peptide m/z, number of missed cleavages, last amino acid, peptide charges and amino acid before
-    cleavage for sample H838_TGF-β_Rep2_1. **D)** Intensity histogram for sample H838_unst_Rep1_1. **E)** Retention time
-    histogram for sample H1975_TGF-β_Rep2_1. Black outlines in **C)**, **D)** and **E)** show the overall sample mean.
-    **F)** Heatmap and corresponding histograms of the retention time against the retention length for all samples
-    combined. **G)** Chromatogram of the *"MS scan"* and *"MSMS scan"* for sample H1975_unst_Rep1_1.
+    **Figure2. MaxQuant reports exemplary plots.** (A) The number of detected peptides and proteins displayed for each sample part of the benchmark dataset. (B) Percentage of protein intensities labeled as contamination from the total protein intensities for each sample in the benchmark dataset. (C) Overview of technical parameters inherent to sample processing (peptide m/z, number of missed cleavages, last amino acid, peptide charges, and amino acid before cleavage). These overview plots are generated for each sample included in the benchmark dataset; as an example sample, H838 TGFβ Rep2 1 is displayed. (D) Intensity histogram. Sample H838 unst Rep 1 1 is used as example. (E) Retention time histogram. Sample H1975 TGFβ Rep2 1 is used as example. The black outlines observed in plots (C), (D), (E) represent the dataset mean. (F) Heatmap and corresponding histogram of peptide retention time against the peptide retention length for all samples included in the dataset. (G) Graphic representation of MS and MS/MS spectra. Sample H1975 usnt Rep1 1 is used as example.
 
 
 
-The resulting `MaxQuant Report <./_static/MaxQuantReport.pdf>`_.
+**Normalization Methods** – the raw proteomics data obtained in our dataset can be normalized to produce more precise estimates of the underlying effects of the TGFβ stimulation on the proteome of NSCLC cell lines. Normalization strategies are typically applied to remove noise resulting from experimental and technical variations inherent to sample processing and mass spectrometry analysis. The ``mspypeline`` package offers different :ref:`normalization strategies <hyperparameter>`, and the opportunity to examine different aspects of the normalized dataset before proceeding with statistical analysis (:ref:`Fig. 3A<normalization>`). For example, in the Kernel density estimate (KDE) plot, one density graph per sample was created and indicates intensity on the x-axis and the density on the y-axis. By comparing the KDE plot of LFQ intensities (:ref:`Fig. 3B<normalization>`) and raw intensities (:ref:`Fig. 3C<normalization>`), the effect of the LFQ algorithm of MaxQuant (Cox et al. Mol Cell Proteomics, 2014) was evident; raw intensities showed a broader distribution than the LFQ intensities, especially in the low-intensity range. Furthermore, other normalization strategies applied to LFQ intensities were investigated. The quantile normalization appeared to be very rigorous, resulting in no variance among the samples due to the minimization of technical and biological variabilities. The median normalization, which is often applied when a constant shift of the intensity distributions between samples is be observed, did not affect the LFQ data.
 
-
-Normalization Plots
-^^^^^^^^^^^^^^^^^^^^
-
-The helper function :meth:`~mspypeline.BasePlotter.plot_all_normalizer_overview` is used to generate the same plot
-multiple times with different normalizations methods of the base data.
-
-
-Normalization overview
-***********************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_normalization_overview_all_normalizers` by calling
-  :meth:`~mspypeline.BasePlotter.plot_normalization_overview`
-
-| In the following, the three types of plots (:ref:`KDE <kde>`, :ref:`boxplot <boxplot>` and
-  :ref:`proteins vs quantiles <proteins-vs-quantiles>`) that are used to create a normalization overview are shown
-  separately and an exemplary analysis of each plot is given in the caption below. To view a full normalization
-  overview, which is a multipaged pdf document combining all selected :ref:`normalization methods <hyperparameter>` for
-  a chosen :ref:`intensity option <hyperparameter>` please see
- `this normalization overview example <./_static/normalization_overview_all_normalizers_raw_log2.pdf>`_.
-
-
-.. figure:: /savefig/kde_raw_plot.png
-    :width: 320
-    :align: left
-
-.. figure:: /savefig/kde_lfq_plot.png
-    :width: 320
-    :align: right
-
-.. figure:: /savefig/kde_raw_trqn.png
-    :width: 320
-    :align: left
-
-.. figure:: /savefig/kde_raw_trqn_missing.png
-    :width: 320
-    :align: right
-
-**Exemplary kernel density estimate (KDE) plots showing the effect of different hyperparameter configurations.** In
-every KDE plot, one density graph for each of the 24 technical replicates is plotted indicating the intensity on the
-x-axis and the density on the y-axis. **Top left)** Log2 raw intensity without further normalization. **Top right)** Log2
-LFQ intensity without further normalization. **Bottom left)** Log2 LFQ intensity with tail robust quantile normalization
-applied. **Bottom right)** Log2 LFQ intensity with tail robust quantile normalization applied that handles missing values.
-Comparing raw intensities (top left) and LFQ intensities (top right), the effect of the LFQ algorithm becomes evident,
-which incorporates a normalization method to eliminate fractionation biases and a preliminary filter mechanism to
-exclude outliers and proteins not reliable to ensure valid protein quantification. This is also reflected by the
-broader distribution of raw intensity samples than the samples plotted with LFQ intensity, especially in the
-low-intensity range. In the normalization overview KDE plots based on different normalization methods are generated
-and saved in one pdf file which allows the comparison between the normalizers (e.g. as in the two bottom plots)
-and enhances understanding about their effect on the data.
-
-
-.. figure:: ./savefig/n_proteins_vs_quantile_lfq_log2_level_3.png
-    :width: 500
+.. _normalization:
+.. figure:: ./_static/normalization_total.pdf
+    :width: 700
     :align: center
 
-    **Graph plotting the quantile proteins intensities against the number of detected proteins in log2 LFQ intensities**
-    **for all 24 technical replicates.** Every sample is indicated as a horizontal line of scatter dots where the color
-    and x position of a dot point to the intensity value of the respective quantile. The y-position of the dots of a
-    sample indicates the total number of detected proteins in that sample. Solid lines present a linear fit of each
-    quantile for all the samples. Although the line orientation for the data presented here is primarily vertical, a
-    shift to the left (samples with higher total protein count have a larger share of proteins with low intensities) can
-    be observed for the lower quantiles. This correlation of relatively little protein counts and few low
-    intensity-range proteins is frequently apparent in mass spectrometry data and reflects the effect of a detection
-    limit which missing values increasingly arise for proteins of sparse intensity.
+    **Figure 3. Normalization overview for intensities.** (A) Normalization overview for log2 LFQ intensities for all 24 technical replicates. The normalization overview consists of three different plots, a kernel density estimate (KDE) diagram, a boxplot and a graph representing the quantile proteins intensities against the number of detected proteins. (B) KDE plot of log2 LFQ intensities. (C) KDE plot of log2 raw intensities. (D) KDE plot of log2 LFQ intensities with median normalization applied. (E) KDE plot of log2 LFQ intensities with quantile normalization applied. For all KDE plots, technical replicates were averaged.
 
 
-.. figure:: ./savefig/boxplot.png
-    :width: 500
+Another method to evaluate the applicability and improvements brought to the dataset by a normalization strategy is through an intensity heatmap (:ref:`Fig.4<heatmaps>`). The heatmap overview can be beneficial in understanding and spotting patterns that arise from biases introduced by data normalization. An obvious difference between the raw and LFQ intensities in our dataset was the distribution of missing values. The raw data contained substantially fewer missing values compared to the LFQ data. This observation was expected, because the LFQ algorithm not only normalizes the data but also removes values with low confidence.
+
+After considering all aspects of data normalization, for further exploratory analysis of our dataset, the log2 LFQ intensity was chosen, and no additional normalization method was applied.
+
+
+.. _heatmaps:
+.. figure:: /savefig/intensity_heatmap_raw_log2.png
+    :width: 700
     :align: center
-
-    **Boxplot displaying the five quantile distribution in log2 LFQ intensities for all 24 technical replicates and**
-    **ranking the samples by median intensity from the bottom of the graph to the top.** Given the results from the
-    counts vs quantiles plot which point towards a detection limit bias, the boxplot results have to be considered
-    substantially influenced by high numbers of missing values in the low intensity-range which entails conversely high
-    median values for these samples. Boxplot results from the experiment indicate such an effect. With respect to the
-    detection limit, the boxplot results may give an indication of its source. Here, clustering of the technical
-    replicates of a sample or the biological replicates of a group could point towards a decreased detection due to poor
-    peptide concentration or adverse composition of the peptide matrix and ranking of the samples by their time of
-    measurement could indicate increased detection limitation throughout the measurement runs as it can result from
-    instrument pollution and wear-off. The experiment results presented show no signs of specific clustering or sorting
-    of the samples and indicate rather random variability in the number and intensity of the detected proteins.
-
-
-
-Heatmap overview
-******************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_heatmap_overview_all_normalizers` by calling
-  :meth:`~mspypeline.BasePlotter.plot_intensity_heatmap`.
-
-| In the following, two seperate :ref:`intensity heatmaps <int-heatmap>` are presented that demonstrate how a potential
-  analysis of the heatmap overview can be approached. To view a full heatmap overview, which is a multipaged pdf
-  document combining all selected :ref:`normalization methods <hyperparameter>` for a chosen
-  :ref:`intensity option <hyperparameter>` please see
-  `this heatmap overview example <./_static/heatmap_overview_all_normalizers_raw_log2.pdf>`_.
-
-.. note::
-   If the heatmap seems blurred try downloading it and using a different PDF viewer
 
 .. figure:: /savefig/intensity_heatmap_lfq_log2.png
     :width: 700
     :align: center
 
-.. figure:: /savefig/intensity_heatmap_raw_log2.png
+    **Figure 4. Intensity heatmap.** (A)Heatmap representing log2 raw protein intensities with missing values shown in gray. It can be observed that replicates 1 and 3 of sample H1975 unstimulated and replicate 3of sample H838 unstimulated have fewer missing values than the other samples. (B)Heatmap representing log2 LFQ protein intensities with missing values shown in gray. Note the decrease in variability of the protein intensities across samples as well as the increase in missing values due to the LFQ algorithm.
+
+
+
+**Exploratory Analysis** - In total, three biological replicates per cell line (H1975 and H838) were generated for two different stimulation conditions (unstimulated and TGFβ stimulated for 24 hours) and analyzed in technical duplicates, summing up to 24 samples. A total of 3846 proteins were quantified (LFQ intensity greater than 0) in H1975 cells, while 4160 proteins were quantified in H838 cells, considering all analyzed replicates (technical replicates not averaged) (:ref:`Fig.5A<outliers>`). The total number of proteins per replicate and their distribution within each group can be observed in :ref:`figure 5A<outliers>`. Considering the number of proteins identified in 6 out of 6 replicates, the proteomes of H1975 cells (2442 proteins) and H838 cells (2646 proteins) were observed to be different. A comparison of two cell lines is shown in :ref:`figure 5A<outliers>`. The Venn diagram shows 2302 proteins common to both cell lines. Further, around 300 proteins were uniquely detected in H1975 cells, whereas 500 proteins were uniquely detected in H838 cells. Even though both cell lines are NSCLC, a difference in their proteome composition was expected since their morphology is known to differ. Moreover, the versatility of the ``mspypeline`` package also made it possible to observe the number of identified proteins per stimulation condition, showing that the TGFβ stimulation leads to a slight decrease in the total number of identified proteins in both groups (12.2% and 13.6% less identification in H1975 and H838, respectively) (:ref:`Fig.5B<outliers>`).
+
+To analyze cell type-specific and stimulated-induced differences in the abundance of proteins detected in both cell lines, a principal component analysis (PCA) was performed (:ref:`Fig.5C<outliers>`). The first principal component (PC) accounting for the most considerable variance (62, 1%) across samples was driven by the differential protein expression between the two cell lines. Spreading along PC2, the treatment conditions of the two cell lines separated the samples into two distinct groups, unstimulated and TGFβ stimulated. Moreover, biological replicates replicates of H838 cells cluster closer together than replicates of H1975 cells. In line with this result, a lower variance in the H838 samples than in the H1975 samples was already observed in the MaxQuant report (figure 2). The reproducibility among the unstimulated biological replicates were investigated and is shown in figure 5D. The scatter plot depicts a pairwise comparison of protein intensities, and the Pearson correlation coefficient is given. The reproducibility of the unstimulated biological replicates is demonstrated for H1975 (average r2=0.97) (:ref:`Fig.5D<outliers>`) and for H838 (average r2=0.99) (:ref:`Fig.5E<outliers>`), in line with the PCA results.  Additionally, to unravel the impacts of TGFβ stimulation on the proteome of the two NSCLC cell lines, a list of curated proteins belonging to the canonical TGFβ pathway were analyzed (:ref:`see list of available pathways <pathway-proteins>`). As implemented in ``mspypeline``, pathway analysis is an optimal approach to gain an overview and better understanding of the expression patterns of proteins associated with a particular pathway or biological process. An intensity plot was created for each protein, and significances were calculated (pairwise t-test). A comparison of TGFβ pathway proteins in H1975 cells vs. H838 cells revealed a significant differential expression of MAP kinase proteins (MAP2K1, MAPK3) and SMAD2, an essential intracellular signaling component of the TGFβ pathway (:ref:`Fig.6A<pathways>`), when both H1975 and H838 cells were compared. Interestingly, when the pathway analysis was performed at the stimulation level, it was evident that TGFβ stimulation does not affect the expression of either MAP2K1 or MAPK3. The expression of SMAD2, however, was increased upon TGFβ stimulation in H1975 cells, but not in H838 cells (:ref:`Fig.6B<pathways>`). Moreover, to perform enrichment analysis and to retrieve additional functionality of our protein dataset, a gene ontology (GO) analysis was performed. An input list of categorized gene sets was given to ``mspypeline``, and statistical significances were calculated (one-tailed `Fisher exact test <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html>`__). Since TGFβ is known for fostering tumor growth, the biological function term “growth” (GO: 0040007)(:ref:`see list of available GO terms <go-term-proteins>`), defined as the increase in size or mass of a cell, was investigated. This particular GO term is composed by 983 genes, from which 279 were observed in our data set (:ref:`Fig.6C<pathways>`). At the stimulation level, the enrichment of this GO term was not statistically significant in any of our samples.
+
+
+.. _outliers:
+.. figure:: ./_static/outlier_detection.pdf
     :width: 700
     :align: center
 
-    **Intensity heatmaps exposing the effect of different hyperparameter configurations in terms of protein intensities.**
-    Intensity heatmaps depict protein intensities, whereby samples are given in rows on the y-axis and proteins on the x-axis.
-    **Top)** Heatmap representing LFQ protein intensities with missing values shown in gray. Replicate 1 and 3 of sample
-    unstimulated H1975 and replicate 3 of unstimulated H838 have notably fewer missing values than the other samples.
-    Generally, samples of cell line H1975 appear to have more missing values compared to H838 samples. **Bottom)**
-    Heatmap representing raw protein intensities and considerable less abundant missing values as found in LFQ
-    intensities. Especially proteins with lower intensity are less abundant in the LFQ data. Sample H1975_unst_Rep1
-    alone appears to have higher numbers of non missing values. Patterns of intensity value given in orange shades are
-    detectable.
-
-
-Outlier detection and comparison plots
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Detection counts
-*****************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_detection_counts`
-
-.. figure:: ./savefig/detection_counts.png
-    :width: 400
-    :align: center
-
-    **Sample counts per detected protein using LFQ log2 intensities on level 0.** For both cell lines, i.e. groups of level
-    0 (see :ref:`experimental setup <bio_analysis>`), the distribution appears similar. However, more proteins are found
-    in one replicate of cell line H838, which is probably attributable to the H838_unst_Rep3, which has previously
-    attracted attention due to a low number of missing values. Generally, high numbers of proteins present in all
-    replicates (here six samples) are desirable. These results are an indication of the reproducibility of the
-    individual samples of our data, which was already visible in the :ref:`MaxQuant report <maxquant-report-bio>`.
+    **Figure 5. Outlier detection and comparison plots.** (A) Sample count (LFQ intensities greater than 0) on level 0 of the analysis (cell line comparison). Considering the number of proteins identified in 6 out of 6 replicates, the proteomes of H1975 cells (2442 proteins) and H838 cells (2646 proteins) differ. (B) Venn diagram comparing the detected proteins of H1975 and H838 cells. In total, 2302 proteins are common to both cell lines and 350 and 567 unique proteins to the H1975 cells and H838 cells, respectively. (C) PCA plot based on log2 LFQ intensities, performed at level 1 of the analysis comparing different stimulation conditions. PC1 (62.1%) is driven by the differential protein expression between the two cell lines, while PC2 is determined by stimulation conditions. D) Pairwise scatter comparison plot showing the correlation (r2) between log2 LFQ protein intensities of H1975 unstimulated biological replicates. Unique proteins for each sample are indicated as a vertical (left) and horizontal (bottom) line and are not included taken into account or the calculation of r2. The reproducibility of the biological replicates is demonstrated (average r2=0.97), ensuring reproducibility.
 
 
 
-Number of detected proteins
-****************************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_detected_proteins_per_replicate`
-
-| The term "detected proteins" refers to the number of protein intensities greater than zero.
-| Depending on whether :ref:`technical replicates <tech-reps>` should be averaged (top graph) or not (bottom graph) the
-  data and resulting plot will have different outcomes. The number of detected proteins  per sample changes as 0 values
-  are handled as missing values ("nan") and neglected when calculating the mean of samples.
-
-.. figure:: ./savefig/detected_proteins.png
-    :width: 600
-    :align: center
-
-.. figure:: ./savefig/detected_proteins_tech_rep.png
-    :width: 600
-    :align: center
-
-    **Bar diagrams of the number of detected proteins per sample, using LFQ log2 intensities.** Presented are the results
-    from the four groups of level 1 (see :ref:`experimental setup <bio_analysis>`) and a comparison is drawn
-    between the analysis method handling technical replicates as individual samples (top) or averaging them to a single
-    one (bottom). With the latter, protein counts per sample increase, but the total number of detected proteins is
-    consistent.
-
-
-
-Venn diagrams: comparing replicates vs. groups
-***********************************************
-| Venn diagram: created using: :meth:`~mspypeline.BasePlotter.plot_venn_results`
-| Group diagram: created using: :meth:`~mspypeline.BasePlotter.plot_venn_groups`
-
-| Venn diagrams conduce the graphical illustration of set theory. In ``mspypeline`` protein counts (greater than zero)
-  constitute the sets and set relationships indicate the number of proteins that are shared between two or more sets.
-  Thus, the similarity of detected proteins of a set can be assessed.
-| The software distinguishes between two types of Venn diagrams:
-
-* **Venn diagrams**, which compare the **group replicates of the selected level (here level 1) among one another** (plots on
-  left side). For a level that has more than one group, a corresponding number of Venn diagrams are drawn.
-* **Group diagrams**, where the **distinct groups of a level** are compared, aggregating the replicates of a group and
-  applying a :ref:`threshold function <thresholding>` to the data. This function then determines which proteins are
-  admissible for the group comparison and those that must be discarded.
-
-| In addition to the ordinary Venn diagram (plots at the top), which is supporting a **maximum of three sets**, a
-  bar-Venn diagram is created for every comparison (plots at the bottom). These hold the advantage of allowing an
-  unlimited number of sets. The figure consists of two graphs, an upper bar diagram, that indicates the number of
-  unique or shared proteins of a set or overlapping sets while the bottom graph points towards the sets that are being
-  compared.
-| Venn diagrams offer a means to vividly map the similarity of replicates and groups. Furthermore, this type of analysis
-  is offering the chance to investigate the detected proteins per set and between sets in more detail. The corresponding
-  information is displayed in tabular form and saved as a CSV file in addition to the Venn/group diagrams.It could, for
-  example, be studied which proteins are unique to each cell line and which are detected in both of them (group diagram).
-
-
-.. figure:: /savefig/venn_plot1.png
-    :width: 335
-    :height: 202
-    :align: left
-
-.. figure:: /savefig/plots/venn_replicate_group_level_0_lfq_log2_level_0.png
-    :width: 305
-    :height: 202
-    :align: right
-
-.. figure:: /savefig/venn_plot2.png
-    :width: 335
-    :height: 450
-    :align: left
-
-.. figure:: /savefig/plots/venn_bar_group_level_0_lfq_log2_level_0.png
-    :width: 305
-    :height: 450
-    :align: right
-
-**Venn diagrams comparing the detected proteins of replicates and groups using LFQ log2 intensities. Left top)**
-Ordinary Venn diagram and **bottom)** bar-Venn diagram, comparing the three replicates from the unstimulated condition
-of cell line H1975 (level 1). **Right top)** Ordinary Venn diagram and **bottom)** bar-Venn diagram comparing the two
-cell lines (level 0) by aggregating the detected proteins of each sample per group and applying a threshold function.
-
-Principal Component analysis (PCA) overview
-********************************************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
-
-| With the option to perform PCA, ``mspypeline`` allows data to be studied for its variance and in doing so, determine
-  such parameters that have most strongly affected the variability between samples. Conversely, this implies, that using
-  PCA, parameters can be identified which distinguish the samples from each other and it can be visualized which samples
-  perform most similar.
-
-.. figure:: /savefig/pca_overview_lfq_log2_level_1.png
-    :width: 550
-    :align: center
-
-    **PCA scatter plot of log2 LFQ intensities performed at level 1 of the analysis comparing different treatment cell**
-    **line combinations.** The calculation was performed without missing values and by normalizing with z-score
-    transformation across all genes (see calculation adjustment options :ref:`here <default-yaml>`). The first principal
-    component (PC) accounting for the largest variance across samples (62,1 %) is evidently driven by the differential
-    protein expression between the two cell lines. The treatment conditions of the replicates from the two cell lines
-    separate the data/samples further into unstimulated and TGF-β treated groups as indicated by a spread along the
-    second PC.
-
-
-Intensity histogram
-********************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_intensity_histograms`
-
-.. figure:: /savefig/intensity_hist.png
-    :width: 550
-    :align: center
-
-    **Intensity histograms for each group of the selected level 1 displaying the distribution of binned intensity values**
-    **for each replicate.** The mean intensity of the replicates of a group is shown as a gray dashed line. TGF-β treated
-    replicates have a slightly higher mean intensity compared to unstimulated replicates. Sample H1975_unst_Rep1 and
-    H838_unst_Rep3 stand out for having higher counts in low range intensities than the other replicates.
-
-
-
-Relative standard deviation (std)
-*********************************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_relative_std`
-
-
-.. figure:: /savefig/relative_std.png
-    :width: 500
-    :align: center
-
-    **The relative standard deviation of the 6 samples from level 0 group H838, plotted against the mean log2 LFQ**
-    **intensity of a protein.** The relative standard deviation of the group demonstrates strong reproducibility
-    of the 6 replicates as the values for all compared proteins are below the first threshold boundary of 10 %. Low
-    deviation, as observed in our benchmark dataset for samples of the cell line H838, indicates that measured protein
-    intensities are stable over multiple samples, thus supporting the reliability of and confidence in the data.
-    Increasing variance among the proteins in the low-intensity range is commonly observed and demonstrates
-    intensity-dependent biases. It is also visible that the inter-group variance is driven by generally similar values
-    for most proteins, rather than by few proteins with extremely high relative standard deviation. To determine which
-    proteins can be incorporated into the calculation of the mean intensity and relative standard deviation, an internal
-    :ref:`threshold function <thresholding>` is applied which sorts out those proteins that have too many missing values
-    across the compared samples.
-
-
-
-Scatter comparison of replicates and groups
-********************************************
-| Scatter plot: created using: :meth:`~mspypeline.BasePlotter.plot_scatter_replicates`
-| Experiment comparison: created using: :meth:`~mspypeline.BasePlotter.plot_experiment_comparison`
-
-The software offers two types of scatter plots.
-
-* **Scatter replicates plot**, which is calculating and plotting all pairwise comparisons between the replicates for each
-  group of the selected level.
-* **Group comparison plot**, which outlines how the different groups of the selected level compare with each other. For
-  this purpose, protein intensities of the individual replicates of a group are combined and an internal :ref:`threshold
-  function <thresholding>` is used to evaluate which of the proteins are assimilable and which are unique to the
-  respective group.
-
-
-.. figure:: /savefig/scatter_H838_unst_lfq_log2_level_1.png
-    :width: 700
-    :align: left
-
-.. figure:: /savefig/scatter_comparison_H1975_vs_H838_lfq_log2_level_0.png
-    :width: 570
-    :align: left
-
-    **Pairwise scatter comparison plots showing the correlation (r2) between log2 LFQ protein intensities of different
-    sets of two samples.** Unique proteins for each sample are indicated as vertical (left) and horizontal (bottom) line
-    of scatter dots and are not included in the calculation of r2. **Top)** Scatter replicates graph plotting the protein
-    intensities for each combination of the three replicates from the unstimulated group H838. **Bottom)** Group comparison of the
-    pairwise comparison of the two groups H838 and H1975 from level 0 by cumulating all samples of each group. The
-    biological replicates of the unstimulated H838 group (top) correlate well (r2 values above 0.98 for all three
-    pairwise comparisons) and substantially stronger, than the two cell lines (bottom). This effect can largely be
-    explained by the different protein expression of the two NSCLC lines alone.
-
-Rank
-*****
-| Created using: :meth:`~mspypeline.BasePlotter.plot_rank`
-
-| For more precise addressing of the biological questions, it is usually helpful to group detected proteins into
-  meaningful, expressive categories that are tailored to the respective issue. In the rank plot, where all proteins are
-  sorted by intensity value and plotted against their rank, such lists of categorized proteins can be employed. Thus,
-  statements can be made about the median intensity or rank of such classes of proteins. ``mspypeline`` provides a
-  selection of pathway protein lists, however any desired :ref:`protein list <pathway-proteins>` may be integrated and
-  used for the analysis.
-| In the rank plot, the highest intensity accounts for rank zero the lowest intensity for the number of proteins - 1
-  whereby proteins with missing values are neglected.
-
-.. figure:: /savefig/rank_H1975_lfq_log2_level_0.png
+.. _pathways:
+.. figure:: ./_static/statistical_inference_plots.pdf
     :width: 700
     :align: center
 
-    **Rank plot of the mean log2 LFQ protein intensities of the H1975 group from level 0.** Annotated in the graph are
-    ranked proteins from the "BioCarta EGF pathway" (blue, lower median rank) and the "HALLMARK IL2 STAT5 SIGNALING" pathway
-    (orange, higher median rank). The median intensity of all proteins detected amounts to 28.2 log2LFQ intensity.
+    **Figure 6. Statistical inference plots.** In total, eight proteins described as belonging to the canonical TGF-β pathway (Biocarta) were identified (LFQ intensities greater than 0) in at least one sample. The log2 LFQ intensities of each of the eight proteins are plotted, and significances are calculated between the pairwise comparisons of all groups from the selected level, given that at least three replicates per group have non-missing values for a particular protein. A) Pathway analysis performed on level 0, contrasting cell lines, grouping the six replicates. B) Pathway analysis performed on level 1, contrasting cell line-treatment conditions, grouping the three replicates. One star indicates p-value <0.05, two stars indicate p-value <0.01, and three stars indicate p-value <0.001. (C) GO analysis of the biological process term "growth" (GO: 0040007). Protein count for the analysis was performed using LFQ intensities. The number of detected proteins from a GO term found in each group/sample of level 1 of the ``mspypeline`` package analysis design is illustrated as the length of the corresponding bar. No significant enrichment was observed.
 
 
 
-Statistical inference plots
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Differential Expression Analysis** – LFQ intensities were used for the differential expression analysis. Average fold changes between the cell lines were calculated and statistical significance was assessed using the limma R package, which contains functionality specifically designed to handle high-dimensional biological data, implemented into ``mspypeline``. Thus, a volcano plot (:ref:`Fig. 7<volcanoplot>`) illustrates the significantly differentially expressed proteins between H1975 and H838 cells. A p-value (p<0.05) and a fold change (2-fold) cutoffs were specified, and all proteins below these values were considered as non-significant (1886 proteins). In total, 197 proteins were more abundant in H1975 cells, and whist 219 proteins were more abundant in H838 cells. Among the differentially regulated proteins, we observed mitochondria-related proteins such as PRDX2, OAT, TRAP1 in H1975 cells, and DNM1L in H838 cells. Furthermore, the higher expression in H1975 cells of G6PD and PYGB, two key enzymes involved in energy metabolism, suggests that both cell lines are metabolically distinct. Interestingly, in H838 cells BLMH, a peptidase responsible for the metabolic inactivation of the glycopeptide bleomycin, a molecule commonly used in chemotherapy (:ref:`Fig. 7<volcanoplot>`), is more abundant than in H1975 cells. Additionally, the intensities of unique proteins of a group are shown at the side of the volcano plot sorted according to their intensity (:ref:`Fig. 7<volcanoplot>`). Both H1975 and H838 cells present similar numbers of unique proteins, 197 and 229, respectively. Among the unique proteins expressed in H1975 cells, NES and TJP2 are the most intense and are implicated in proliferation and adherents junctions. The two most intense unique proteins expressed in H838 cells are UCHL1, involved in processing ubiquitin precursors and ubiquitinated proteins, and CES1, involved in the detoxification of xenobiotics.
 
-Pathway analysis
-*****************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_pathway_analysis`
+In conclusion, in this benchmark dataset, we characterized the proteome of two commonly used NSCLC cell lines, H1975 and H838, under two different conditions, unstimulated and TGFβ stimulated for 24 hours. Our data showed that even though both cell lines are described as NSCLC, they differ in their proteome composition. This intrinsic proteomic discrepancy might determine how the two cell lines respond to TGFβ stimulation. The use of the ``mspypeline`` package and its functionalities made it possible to analyze the label-free mass spectrometry-based proteomics data seamlessly, thus, reaching meaningful biological conclusions swiftly. Most importantly, all used analytical parameters were stored, ensuring reproducibility if the analysis needed to be repeated.
 
-| Pathway analysis, of the kind implemented in ``mspypeline``, is an optimal approach to gain a better understanding of
-  the measured intensities of proteins associated with a certain :ref:`pathway <pathway-proteins>` and can thus be used
-  to conduct a quantitative comparison.
-| For a group (H1975) of multiple samples (6 replicates), the protein intensity is plotted for each sample (single
-  scatter dot) which are jointly presented in uniform coloring (orange). The effect of choosing different levels for the
-  analysis on the results can be appreciated in the pathway analyses shown below. Both figures show the protein
-  intensities of the :ref:`Biocarta EGF pathway <pathway-proteins>`, however calculation was performed for different
-  :ref:`analysis levels <analysis-design>`. Here, the choice of the analysis depth determines which samples are
-  considered a *"group"*.
-| In the top figure where the analysis was performed on level 0 which consists of two groups (H1975 & H838), all samples
-  belonging to any one of them are grouped together. In the bottom figure, where the analysis was performed on then next
-  higher level (level 1), the two groups of level 0 are further subdivided into a total of four different groups to
-  which (only) 3 samples are assigned.
-| Statistical analysis are always performed between two *"groups"* of samples and require a minimum of 3 samples to
-  indicate significances.
-
-.. figure:: /savefig/pathway_analysis_level0.png
-    :width: 700
-    :align: center
-
-.. figure:: /savefig/pathway_analysis_level1.png
-    :width: 700
-    :align: center
-
-    **Analysis of the BioCarta EGF pathway performed on log2 LFQ protein intensities.** The intensities for each of the
-    eight proteins of the pathway are plotted in groups. Significances are calculated between the pairwise comparison of
-    all groups from the selected level, given that at least three replicates per group have non missing values for the
-    protein. **Top)** Pathway analysis performed on level 0, contrasting cell lines, grouping the six replicates.
-    **Bottom)** Pathway analysis performed on level 1, contrasting cell line-treatment conditions, grouping the three
-    replicates.
-
-
-
-GO analysis
-************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_go_analysis`
-
-| The GO enrichment analysis in ``mspypeline`` is calculated by extracting the number of proteins from a
-  :ref:`GO term <go-term-proteins>` present in the total detected proteins of the experiment and in each group of the
-  selected level. These counts are illustrated in a bar diagram (see below). To yield information on whether a protein
-  count of a group may be of biological interest, a one-tailed
-  `Fisher exact test <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html>`__ is
-  calculated to retrieve statistical significance. Importantly, the Fisher exact test includes information about the
-  total number of detected proteins per sample, resulting in events of often unexpected significance for certain
-  analysis groups.
-| With the GO analysis targeted enrichment analysis is supported which is specifically well suited for making statements
-  about selected :ref:`GO term <go-term-proteins>` of interest.
-
-.. figure:: /savefig/go_analysis.png
-    :width: 700
-    :align: center
-
-    **GO analysis of the terms "GO inflammatory response" and "GO apoptotic signaling pathway" based on protein counts**
-    **of log2 LFQ intensities.** The number of detected proteins from a GO term found in each group of level 1 of the analysis
-    design is illustrated as the length of the corresponding bar. P-values shown at the end of a bar indicate the
-    calculated significance. Samples referred to as "Total" represent the complete data set and numbers at the top of
-    the graph accord to the count of detected proteins in all samples over the total number of proteins in the GO term.
-    Sample H1975_TGF-ß has a significant count of proteins from the "GO apoptotic signaling pathway" given the total
-    number of proteins detected within the replicates of that sample.
-
-
-Volcano plot (R)
-*****************
-| Created using: :meth:`~mspypeline.BasePlotter.plot_r_volcano`
-
-| In proteomics, the volcano plot is commonly applied to demonstrate the differential protein expression of two groups.
-| Here, the log2 fold change of the protein intensities is calculated and plotted against the −log10(p−value). A p-value
-  and fold change cutoff is specified and all proteins below the cutoff are considered non-significant and colored in
-  gray. Thereby, a straight-forward visual representation of the differential protein intensity measurements between the
-  two contrasted groups can be obtained. Additionally, the intensities of unique proteins of a group are shown at the
-  side of the volcano plot. Besides the most significant proteins or those characterized by large magnitude fold change,
-  proteins unique to a group can reveal important details about protein expression or the composition of the peptide mix
-  that was measured.
-| To determine which proteins can be compared between the two groups and which are unique an internal
-  :ref:`threshold function <thresholding>` is applied.
-| Volcano charts permit the annotation of mapped proteins. This can either be achieved by labeling a number of the most
-  significant proteins for each group (as for the example presented below) or by selecting a
-  :ref:`pathway analysis list <pathway-proteins>`. The latter results in the exclusive annotation of proteins from the
-  selected pathways. Given the information provided by the volcano plot a more in-depth analysis of pathways of interest
-  or significantly high expressed and unique proteins per group can follow. By visualizing statistical inferences and
-  highlighting relevant distinctions between two groups in combination with the integration of functional protein sets,
-  the volcano plot thus provides a powerful tool to approach the biological objective.
-
+.. _volcanoplot:
 .. figure:: ./_static/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
     :align: center
 
-    **Volcano plot illustrating the statistical inferences from the pairwise comparison of the two cell lines H1975 and**
-    **H838.** The log2 fold change of LFQ intensities is plotted against the unadjusted −log10(p−value). Dashed lines
-    indicate the fold change cutoff (log2(2) and p-value cutoff (p < 0.05) by which proteins are considered significant
-    (blue = H1975 and red = H838) or non significant (gray). Here, the ten most significant proteins of each group are
-    annotated in the graph. Measured intensities of unique proteins are indicated at the sides of the volcano plot for
-    both groups (light blue = H1975 and orange = H838).
-
-
+    **Figure 7. Volcano plot showing unique and differentially regulated proteins based on the pairwise comparison of the two cell lines H1975 and H838.** The log2 fold change of LFQ intensities was plotted against the adjusted −log10 (p-value). Dashed lines indicate the fold change cutoff (2 fold-change, and p < 0.05 by which proteins are considered significant (blue= H1975 and red = H838) or non-significant (gray). The ten most significant proteins of each group are annotated in the graph. Measured intensities of unique proteins are indicated at the sides of the volcano plot for both groups (light blue = H1975 and orange = H838).
 
 

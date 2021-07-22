@@ -121,4 +121,4 @@ Optional Dependencies for R packages
 some plots might require additional R packages to be installed. Because of that additional dependencies are required for
 those plots.
 
-- rpy2 >= 3.4.2
+- rpy2 >= 3.4.5
