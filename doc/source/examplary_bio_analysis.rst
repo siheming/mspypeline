@@ -21,7 +21,7 @@ Benchmark dataset analysis
 Non-small cell lung cancer (NSCLC) accounts for most lung cancer cases and is characterized by early metastasis and a high mortality rate. The multifunctional cytokine TGFβ is known for orchestrating tumor progression in NSCLC by activating its downstream pathway. However, the alterations behind TGFβ mediated tumor growth are not yet well understood. Thus, in this benchmark experiment, we examined the impact of TGFβ stimulation on the whole proteome of two different adenocarcinoma NSCLC cell lines, H1975 and H838. All acquired mass spectrometry-based proteomics data were analyzed exclusively with ``mspypeline``. As a result, we characterize the proteome of the two cell lines under two conditions, unstimulated and TGFβ stimulated for 24 hours. We also report on the possible molecular differences between the two cell lines and how these differences might lead to variable responses to TGFβ stimulation.
 
 .. _setup:
-.. figure:: ./_static/experiment_design.png
+.. figure:: ./_static/experiment_design.pdf
     :width: 400
     :align: center
 
