@@ -12,7 +12,7 @@ The source code is available on `github <https://github.com/siheming/mspypeline/
 Usage
 =====
 
-.. figure:: ./_static/flow_chart_final.pdf
+.. figure:: ./_static/flow_chart_final.png
     :width: 350
     :align: right
 

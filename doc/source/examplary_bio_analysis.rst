@@ -21,7 +21,7 @@ Benchmark dataset analysis
 Non-small cell lung cancer (NSCLC) accounts for most lung cancer cases and is characterized by early metastasis and a high mortality rate. The multifunctional cytokine TGFβ is known for orchestrating tumor progression in NSCLC by activating its downstream pathway. However, the alterations behind TGFβ mediated tumor growth are not yet well understood. Thus, in this benchmark experiment, we examined the impact of TGFβ stimulation on the whole proteome of two different adenocarcinoma NSCLC cell lines, H1975 and H838. All acquired mass spectrometry-based proteomics data were analyzed exclusively with ``mspypeline``. As a result, we characterize the proteome of the two cell lines under two conditions, unstimulated and TGFβ stimulated for 24 hours. We also report on the possible molecular differences between the two cell lines and how these differences might lead to variable responses to TGFβ stimulation.
 
 .. _setup:
-.. figure:: ./_static/experiment_design.pdf
+.. figure:: ./_static/experiment_design_final.png
     :width: 400
     :align: center
 
@@ -41,7 +41,7 @@ Quality Control Report
 Quality assessment and quality control are crucial when dealing with mass spectrometry-based proteomics data. To detect measurement bias, verify consistency, and avoid error propagation in our downstream analysis, as a first step, the MaxQuant report was generated (view complete MaxQuant report here: `this document <./_static/MaxQuantReport.pdf>`_). It was observed that the total number of identified proteins and peptides (:ref:`Fig. 2A <report>`) was uniform, validating the reproducibility of our replicates. The degree of contamination of the individual samples can be observed in (:ref:`Fig. 2B <report>`). Interestingly, all the H1975 cell line replicates have substantially higher contamination levels than samples of the other cell line. Notably, two samples (technical replicate 1 and 2 of H1975 unstimulated replicate 1) exceeded the suggested maximum of 5% contaminated protein intensities and thus were handled with caution during subsequent analytical steps. Other important parameters to be considered during the dataset quality assessment include peptide m/z-distribution, number of missed cleavages, last amino acid, amino acid before cleavage, and peptide charges (:ref:`Fig. 2C <report>`). In the plots created by ``mspypeline``, the properties are shown for each sample separately and average distribution across all samples, denoted by a black line, was additionally provided to facilitate sample cross-comparison within the dataset. Furthermore, intensity and retention time distribution (:ref:`Fig. 2D, 2E <report>`), peptide counts and retention length vs. retention time (:ref:`Fig. 2F <report>`), and the total ion chromatogram (:ref:`Fig. 2G <report>`) were available and can be explored for all samples. Altogether, the results obtained indicated a high quality of our benchmark dataset.
 
 .. _report:
-.. figure:: ./_static/MaxQuantReport_example.pdf
+.. figure:: ./_static/MaxQuantReport_example.png
     :width: 700
     :align: center
 
@@ -54,7 +54,7 @@ Normalization Methods
 The raw proteomics data obtained in our dataset can be normalized to produce more precise estimates of the underlying effects of the TGFβ stimulation on the proteome of NSCLC cell lines. Normalization strategies are typically applied to remove noise resulting from experimental and technical variations inherent to sample processing and mass spectrometry analysis. The ``mspypeline`` package offers different :ref:`normalization strategies <hyperparameter>`, and the opportunity to examine different aspects of the normalized dataset before proceeding with statistical analysis (:ref:`Fig. 3A<normalization>`). For example, in the Kernel density estimate (KDE) plot, one density graph per sample was created and indicates intensity on the x-axis and the density on the y-axis. By comparing the KDE plot of LFQ intensities (:ref:`Fig. 3B<normalization>`) and raw intensities (:ref:`Fig. 3C<normalization>`), the effect of the LFQ algorithm of MaxQuant (Cox et al. Mol Cell Proteomics, 2014) was evident; raw intensities showed a broader distribution than the LFQ intensities, especially in the low-intensity range. Furthermore, other normalization strategies applied to LFQ intensities were investigated. The quantile normalization appeared to be very rigorous, resulting in no variance among the samples due to the minimization of technical and biological variabilities. The median normalization, which is often applied when a constant shift of the intensity distributions between samples is be observed, did not affect the LFQ data.
 
 .. _normalization:
-.. figure:: ./_static/normalization_total.pdf
+.. figure:: ./_static/normalization_total.png
     :width: 700
     :align: center
 
@@ -87,7 +87,7 @@ To analyze cell type-specific and stimulated-induced differences in the abundanc
 
 
 .. _outliers:
-.. figure:: ./_static/outlier_detection.pdf
+.. figure:: ./_static/outlier_detection.png
     :width: 700
     :align: center
 
@@ -96,7 +96,7 @@ To analyze cell type-specific and stimulated-induced differences in the abundanc
 
 
 .. _pathways:
-.. figure:: ./_static/statistical_inference_plots.pdf
+.. figure:: ./_static/statistical_inference_plots.png
     :width: 700
     :align: center
 
