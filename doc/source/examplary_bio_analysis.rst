@@ -5,8 +5,8 @@
 Benchmark dataset analysis
 =============================
 
-| *created: 01. June 2021*
-| *version: 0.9.0*
+| *created: 19. August 2021*
+| *version: 0.10.0*
 
 
 | In the following section, a label-free whole proteome benchmark experiment is presented to introduce and exemplify the functionalities of ``mspypeline``. To demonstrate the analytical steps and statistical capabilities of our software, an experimental setup involving the stimulation of two lung cancer cell lines was designed.
