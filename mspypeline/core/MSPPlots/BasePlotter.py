@@ -27,7 +27,7 @@ def validate_input(f):
     Parameters
     ----------
     f
-        method that will be decorated
+        method that is decorated
     """
     @functools.wraps(f)
     def wrapper(self, *args, **kwargs):
@@ -136,6 +136,7 @@ class BasePlotter:
         self.normalizers = deepcopy(default_normalizers)
         self.selected_normalizer_name = self.configs.get("selected_normalizer", "None")
         self.selected_normalizer = self.normalizers.get(self.selected_normalizer_name, None)
+        self.experiment_has_techrep = self.configs.get("has_techrep", False)
         self.intensity_df = None
         if required_reader is not None:
             try:
@@ -315,10 +316,10 @@ class BasePlotter:
 
         self.all_tree_dict.update({
             f"{option_name}": DataTree.from_analysis_design(
-                self.analysis_design, intensities, self.configs.get("has_techrep", False)
+                self.analysis_design, intensities, self.experiment_has_techrep
             ),
             f"{option_name}_log2": DataTree.from_analysis_design(
-                self.analysis_design, intensities_log2, self.configs.get("has_techrep", False)
+                self.analysis_design, intensities_log2, self.experiment_has_techrep
             )
         })
 
@@ -441,8 +442,8 @@ class BasePlotter:
         .. note::
             * A venn diagram can compare a maximum of 3 samples.
             * A bar-venn diagram can compare more than 3 samples.
-            * If the selected level has more than 3 groups, only the bar-venn diagram will be created.
-            * If the selected level has more than 6 groups no diagram will be created
+            * If the selected level has more than 3 groups, only the bar-venn diagram is created.
+            * If the selected level has more than 6 groups no diagram is created
 
         .. note::
             To determine which proteins can be compared between the groups and which are unique for one group an
@@ -453,7 +454,8 @@ class BasePlotter:
             for df_to_use in dfs_to_use:
                 plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
                                    ex=f"group_level_{level}", split_files=True,
-                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
+                                   df_to_use=df_to_use, level=level, save_path=self.file_dir_venn,
+                                   exp_has_techrep=self.experiment_has_techrep)
                 plot_kwargs.update(**kwargs)
                 # create venn diagrams comparing all replicates within an experiment
                 named_sets = self.get_venn_group_data(df_to_use, level)
@@ -490,15 +492,16 @@ class BasePlotter:
         .. note::
             * A venn diagram can compare a maximum of 3 samples.
             * A bar-venn diagram can compare more than 3 samples.
-            * If a group of the selected level has more than 3 replicates, only the bar-venn diagram will be created.
-            * If the selected level has more than 6 groups no diagram will be created
+            * If a group of the selected level has more than 3 replicates, only the bar-venn diagram is created.
+            * If the selected level has more than 6 groups no diagram is created
         """
         plots = []
         for level in levels:
             for df_to_use in dfs_to_use:
                 for key in self.all_tree_dict[df_to_use].level_keys_full_name[level]:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], ex=key,
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_venn)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_venn,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     named_sets = self.get_venn_data_per_key(df_to_use, key)
                     # save the resulting venn diagram
@@ -511,7 +514,7 @@ class BasePlotter:
 
     def get_detection_counts_data(self, df_to_use: str, level: int, **kwargs) -> Dict[str, pd.DataFrame]:
         """
-        | Counts the number of intensity values greater than 0 per protein (number of samples that the protein was
+        | Counts the number of intensity values greater than 0 per protein (number of samples that the protein is
           detected in) per group of the selected level.
 
         Parameters
@@ -545,7 +548,7 @@ class BasePlotter:
     @validate_input
     def plot_detection_counts(self, dfs_to_use: Union[str, Iterable[str]], levels: Union[int, Iterable[int]], **kwargs):
         """
-        | Bar diagram showing how often proteins were detected in a number of replicates for each group.
+        | Bar diagram showing how often proteins are detected in a number of replicates for each group.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <detection-counts>`
@@ -557,7 +560,8 @@ class BasePlotter:
                 data = self.get_detection_counts_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_detection_counts_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -619,7 +623,8 @@ class BasePlotter:
                 data = self.get_detected_proteins_per_replicate_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_detected_proteins_per_replicate_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -654,7 +659,7 @@ class BasePlotter:
         | For each group of the selected level a histogram is created that counts the occurrence of the binned intensity
           values of each sample.
         | If *"show_mean"* is set to True in the :ref:`configs <default-yaml>` the mean intensity of the plotted samples
-          of a group will be shown as gray dashed line.
+          of a group is shown as gray dashed line.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <int-hist>`
@@ -665,7 +670,8 @@ class BasePlotter:
                 data = self.get_intensity_histograms_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_intensity_histogram_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -700,10 +706,10 @@ class BasePlotter:
         """
         | For all replicates per group of the selected level, pairwise comparisons of the protein intensities are
           plotted and their correlation, calculated with the the Pearson’s correlation coefficient r2, is indicated.
-        | Unique proteins per replicate are shown at the bottom and right side of the graph (substitution of na values
+        | Unique proteins per replicate are shown at the bottom and right side of the graph (replacement of NA values
           by min value of data set).
         | For a group with more than 2 replicates, each pairwise comparison of the replicates is calculated and plotted
-          together in one graph. For every group of the selected level one plot will be created.
+          together in one graph. For every group of the selected level one plot is created.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <scatter-rep>`
@@ -715,7 +721,8 @@ class BasePlotter:
                     data = self.get_scatter_replicates_data(df_to_use=df_to_use, full_name=full_name)
                     if data:
                         plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=full_name,
-                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_scatter_replicates_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -751,8 +758,8 @@ class BasePlotter:
           proteins with missing values are neglected. The median intensity of all proteins is given in the legend.
         | :ref:`Pathway analysis protein lists <pathway-proteins>` can be applied to the rank plot to provide
           information about the median intensity or rank of pathways of interest. If a protein is part of a selected
-          pathway it will be presented in color and the median rank of all proteins of a given pathway is indicated.
-          Multiple pathways can be selected and will be represented in the same graph as distinct groups.
+          pathway it is presented in color and the median rank of all proteins of a given pathway is indicated.
+          Multiple pathways can be selected and and are consequently represented in the same graph as distinct groups.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <rank>`
@@ -765,7 +772,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=level_key,
                                            df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
-                                           interesting_proteins=self.interesting_proteins)
+                                           interesting_proteins=self.interesting_proteins,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_rank_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -806,7 +814,9 @@ class BasePlotter:
         | Illustrates the relative standard deviation of the proteins between samples of a group which can help to
           understand how much fluctuation of the measured intensities is present between the replicates. Low deviation
           indicates that measured intensities are stable over multiple samples.
-        | For each group of the selected level one plot will be created.
+        | For each group of the selected level one plot is created.
+        | Lines drawn in different shades of blue indicate arbitrary chosen thresholds of 10%, 20% and 30% of the
+          relative std and the number of proteins with a relative std below these values.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <rel-std>`
@@ -825,7 +835,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
                                            experiment_name=full_name, df_to_use=df_to_use, level=level,
-                                           save_path=self.file_dir_descriptive)
+                                           save_path=self.file_dir_descriptive,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_relative_std_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -916,7 +927,8 @@ class BasePlotter:
                     data = self.get_pathway_analysis_data(level=level, df_to_use=df_to_use, pathway=pathway, **kwargs)
                     if data:
                         plot_kwargs = dict(pathway=pathway, save_path=self.file_dir_pathway, df_to_use=df_to_use,
-                                           level=level, intensity_label=self.intensity_label_names[df_to_use])
+                                           level=level, intensity_label=self.intensity_label_names[df_to_use],
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_pathway_analysis_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -1015,7 +1027,7 @@ class BasePlotter:
           plotted and their correlation, calculated with the the Pearson’s correlation coefficient r2, is indicated.
         | Unique proteins per group are shown at the bottom and right side of the graph (substitution of na values
           by min value of data set).
-        | For every pairwise comparison of the groups from the selected level, one plot will be created.
+        | For every pairwise comparison of the groups from the selected level, one plot is created.
 
         | For overview of plots see :ref:`analysis options <detection-plots>`
         | For exemplary plot see :ref:`gallery <scatter-group>`
@@ -1032,7 +1044,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], sample1=ex1,
                                            sample2=ex2, df_to_use=df_to_use, level=level,
-                                           save_path=self.file_dir_descriptive)
+                                           save_path=self.file_dir_descriptive,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_experiment_comparison_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -1137,7 +1150,8 @@ class BasePlotter:
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
                                        go_analysis_gene_names=self.go_analysis_gene_names,
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_go_analysis)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_go_analysis,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_go_analysis_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1148,13 +1162,17 @@ class BasePlotter:
         | Gets the protein intensities for all samples of the two given groups, then calculates the proteins that can be
           compared between groups and those unique for each group (see :ref:`thresholding`).
         | Hands over the protein intensities to be compared to the R package ``limma`` that outputs the logFC, p-value,
-          adjusted p value and other data which is calculated based on a `moderated t-statistic
-          <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__.
+          adjusted p value (`Benjamini + Hochberg
+          <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/p.adjust>`__) and other data which is
+          calculated based on a `moderated t-statistic
+          <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__. P-value
+          calculations are corrected for the `intensity-variance relationship
+          <https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-7-538#citeas>`__.
         | Results are converted back to python format afterwards.
 
         .. note::
-            This function uses the R package limma which will be automatically downloaded the first time this analysis
-            is performed
+            This function uses the R package limma which is automatically downloaded the first time this analysis
+            is performed.
 
         Parameters
         ----------
@@ -1232,8 +1250,12 @@ class BasePlotter:
         """
         | A volcano plot illustrates the statistical inferences from a pairwise comparison of the two groups.
         | The plot shows the log2 fold change between two different conditions against the -log10(p-value)
-          (based on protein intensities). The p-value is determined using the R limma package (`moderated t-statistic
-          <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__).
+          (based on protein intensities). The p-value and adjusted p-value ((`Benjamini + Hochberg
+          <https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/p.adjust>`__) is determined using the R
+          limma package (`moderated t-statistic
+          <https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf>`__). Additionally,
+          calculations are corrected for the `intensity-variance relationship
+          <https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-7-538#citeas>`__.
         | Dashed lines indicate the fold change cutoff (default = log2(2) and p-value cutoff (default = p < 0.05) by
           which proteins are considered significant (blue and red) or non significant (gray). Measured intensities of
           unique proteins are indicated at the sides of the volcano plot for each groups (light blue and orange).
@@ -1285,7 +1307,8 @@ class BasePlotter:
                     if data:
                         plot_kwargs = dict(g1=g1, g2=g2, save_path=self.file_dir_volcano, df_to_use=df_to_use,
                                            intensity_label=self.intensity_label_names[df_to_use],
-                                           interesting_proteins=self.interesting_proteins, split_files=True)
+                                           interesting_proteins=self.interesting_proteins, split_files=True,
+                                           exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_volcano_results(**data, **plot_kwargs)
                         plots.append(plot)
@@ -1362,7 +1385,8 @@ class BasePlotter:
                 data = self.get_pca_data(level=level, df_to_use=df_to_use, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_pca_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1412,7 +1436,8 @@ class BasePlotter:
                 data = self.get_boxplot_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(level=level, df_to_use=df_to_use, save_path=self.file_dir_descriptive,
-                                       intensity_label=self.intensity_label_names[df_to_use])
+                                       intensity_label=self.intensity_label_names[df_to_use],
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_boxplot_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1471,7 +1496,8 @@ class BasePlotter:
                 data = self.get_n_protein_vs_quantile_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_n_proteins_vs_quantile_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1518,7 +1544,8 @@ class BasePlotter:
                 data = self.get_kde_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_kde_results(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1533,12 +1560,14 @@ class BasePlotter:
     ) -> List[Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes, plt.Axes, plt.Axes]]]:
         """
         | The Normalization overview offers the opportunity to examine different aspects of the data in three distinct
-          plots. For each :ref:`normalization method <hyperparameter>` provided an additional page will be attached to
+          plots. For each :ref:`normalization method <hyperparameter>` provided an additional page is attached to
           the resulting pdf file starting with the raw or not normalized data. That way it is possible to get a better
           understanding of the effects of the normalization methods on the data, to inspect the different approaches and
           to find the best suitable normalization for the data.
-        | The normalization overview combines the plots :meth:`~mspypeline.BasePlotter.plot_kde`,
-          :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` and :meth:`~mspypeline.BasePlotter.plot_boxplot`.
+        | The normalization overview combines the plots :meth:`~mspypeline.BasePlotter.plot_kde` (see :ref:`KDE <kde>`
+          example), :meth:`~mspypeline.BasePlotter.plot_n_proteins_vs_quantile` (see
+          :ref:`proteins vs quantiles <proteins-vs-quantiles>` example) and :meth:`~mspypeline.BasePlotter.plot_boxplot`
+          (see :ref:`boxplot <boxplot>` example).
 
         | For overview of plots see :ref:`analysis options <norm-plots>`
         | For exemplary plot see :ref:`gallery <norm-overview>`
@@ -1552,7 +1581,8 @@ class BasePlotter:
 
                 if n_prot_data and kde_data and boxplot_data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_normalization_overview_results(
                         **n_prot_data, **kde_data, **boxplot_data, **plot_kwargs
@@ -1621,7 +1651,8 @@ class BasePlotter:
                 data = self.get_intensity_heatmap_data(df_to_use=df_to_use, level=level, **kwargs)
                 if data:
                     plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use],
-                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_normalization)
+                                       df_to_use=df_to_use, level=level, save_path=self.file_dir_normalization,
+                                       exp_has_techrep=self.experiment_has_techrep)
                     plot_kwargs.update(**kwargs)
                     plot = matplotlib_plots.save_intensities_heatmap_result(**data, **plot_kwargs)
                     plots.append(plot)
@@ -1643,7 +1674,7 @@ class BasePlotter:
         plot_function
             which plot should be created
         file_name
-            name of the file that will be crated and saved
+            name of the file that is crated and saved
         normalizers
             normalizers either derived from :class:`~mspypeline.module.Normalization.BaseNormalizer` or a class with a
             :func:`fit_transform`
@@ -1655,7 +1686,7 @@ class BasePlotter:
             A list of all created plots
         """
         max_depth = dict_depth(self.analysis_design)
-        if self.configs.get("has_techrep", False):
+        if self.experiment_has_techrep:
             max_depth -= 1
         plots = []
         normalizers = normalizers if normalizers is not None else {}
@@ -1675,14 +1706,15 @@ class BasePlotter:
             if save_path is not None:
                 plot_kwargs.pop("save_path")  # use the other save path instead here
                 save_path, result_name = matplotlib_plots.get_path_and_name_from_kwargs(
-                    file_name, **plot_kwargs, df_to_use=df_to_use, save_path=save_path)
+                    file_name, **plot_kwargs, df_to_use=df_to_use, save_path=save_path,
+                    exp_has_techrep=self.experiment_has_techrep)
                 matplotlib_plots.collect_plots_to_pdf(os.path.join(save_path, result_name), *df_plots)
         return plots
 
     @validate_input
     def plot_normalization_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
         """
-        | Will create the :meth:`plot_normalization_overview` for all normalization methods.
+        | Creates the :meth:`plot_normalization_overview` for all normalization methods.
 
         | For overview of plots see :ref:`analysis options <norm-plots>`
         | For exemplary plot see :ref:`gallery <norm-overview>`
@@ -1706,7 +1738,7 @@ class BasePlotter:
     @validate_input
     def plot_heatmap_overview_all_normalizers(self, dfs_to_use, levels, **kwargs):
         """
-        | Will create the :meth:`plot_intensity_heatmap` for all normalization methods.
+        | Creates the :meth:`plot_intensity_heatmap` for all normalization methods.
         | The intensity heatmap demonstrates protein intensities, where samples are given in rows on the y axis and
           proteins on the x axis. Missing values are colored in gray.
         | The heatmap can be used to spot patterns in the different :ref:`normalization methods <hyperparameter>` and to

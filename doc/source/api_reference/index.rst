@@ -4,7 +4,7 @@
 
 API reference for mspypeline
 ============================
-Some of the documentation might be incomplete, but all important features are documented.
+All important features of ``mspypeline`` are documented.
 
 .. toctree::
    :maxdepth: 4

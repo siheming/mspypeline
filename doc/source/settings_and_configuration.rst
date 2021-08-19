@@ -5,12 +5,11 @@ Settings and Configurations
 
 The configuration YAML file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| To specify the settings for the analysis a config.yml YAML file has to be provided. The YAML file stores the main
-  configurations that determine which results will be created. This configuration file also offers the specification of
-  multiple optional analysis options.
-| If no custom YAML file is generated, the :ref:`default YAML file <default-yaml>` provided by the ``mspypeline`` at the
-  start of the analysis may be used containing the default analysis settings. If the data analysis is performed via the
-  GUI, no further interaction with the YAML file is necessary.
+| The YAML file stores the main configurations that determine which results are created. This configuration file
+  also offers the specification of multiple optional analysis options.
+| A :ref:`default YAML file <default-yaml>`, containing the default analysis settings, is provided by ``mspypeline``
+  at the start of the analysis. This file can be edited to further individualize the results.
+  If the data analysis is performed via the GUI, no further interaction with the YAML file is necessary.
 | Plots can be easily reproduced by reusing the same settings/YAML file.
 
 .. _default-yaml:
@@ -27,9 +26,9 @@ Analysis settings
 
 Analysis Design
 ~~~~~~~~~~~~~~~
-| To perform comparative data analysis, the ``mspypeline`` assumes that data consists of samples that can be arranged
+| To perform comparative data analysis, ``mspypeline`` assumes that data consists of samples that can be arranged
   into a tree structure resembling the experimental setup. Different samples of an experiment are arranged
-  in groups and subgroups dependent on the samples name. This naming convention is the key principal to draw comparisons
+  in groups and subgroups dependent on the sample's name. This naming convention is the key principle to draw comparisons
   between distinct samples of different groups/at different levels. The analysis design can be of any level of depth.
 
 .. warning::
@@ -56,11 +55,11 @@ Analysis Design
   and "Control_Line2" and level 2 corresponds to the technical replicates "Cancer_Line1_Rep1", ... . Here, the "Cancer"
   group has a total of 6 children, which are then split in "Line1" and "Line2". "Line1" and "Line2" both have 3 children.
 | If a comparison between the "Cancer" and "Control" groups should be performed, the lowest level (level 0) of the Data
-  Tree must be chosen for the analysis. The results will consequently show the comparison of both level 0 groups "Cancer"
+  Tree must be chosen for the analysis. Consequently, the results show the comparison of both level 0 groups "Cancer"
   and "Control" with all their children.
 | On the other hand, if the different cancer and control cell lines should be compared, the second level (level 1) of the
   Data Tree must be selected. The results will consequently show the comparison of the four different level 1 groups
-  "Cancer_Line1", "Cancer_Line2", "Control_Line1 and "Control_Line2" each with their 3 replicates.
+  "Cancer_Line1", "Cancer_Line2", "Control_Line1 and "Control_Line2", each with their 3 replicates.
 | If all the 12 replicates should be compared to each other, the last level (level 2) must be selected in the analysis.
 
 
@@ -70,7 +69,7 @@ Sample Mapping
 ***************
 
 | Should the naming convention deviate from the expected standard, it is possible to subsequently correct the sample
-  naming with a provided sample mapping so that samples translate to a proper analysis design. Some examples for
+  naming with a provided sample mapping file so that samples translate to a proper analysis design. Some examples for
   potential reasons for naming convention violation are given in the table below.
 | If the naming convention is violated a sample mapping can be provided manually or by using the default file.
 
@@ -113,11 +112,11 @@ Technical Replicates
 ********************
 | If the :ref:`configuration setting <default-yaml>` `has_techrep` is set to True or the corresponding checkbox in the
   GUI is ticked, the highest level of the analysis design is considered technical replicates.
-| Technical replicates are averaged and cumulated to one sample of the next lowest level in the analysis design.
+| Technical replicates are averaged and averaged to one sample of the next highest level in the analysis design.
   Respectively, the mean of all samples below a node is calculated and assigned to that node. The last level of the Data
   Tree is thus omitted. Values that are 0 are replaced with missing values, which are neglected when calculating the
   mean of samples (e.g. the average of the three values 32, 30, 0 would be replaced with 32, 30 and NaN resulting in an
-  average of 30).
+  average of 31).
 
 .. ipython:: python
 
@@ -132,7 +131,7 @@ Technical Replicates
 
 | Columns of the latter output are now named "Cancer_Line1", "Cancer_Line2", etc. and the values of the replicates
   "Rep1" to "Rep3" are averaged to a mean. This procedure can help to improve data reproducibility since measurement
-  results can be quite noisy and/or protein might be missing in some of the samples by random chance.
+  results can be quite noisy and/or proteins might be missing in some of the samples by random chance.
 
 
 
@@ -140,16 +139,23 @@ Technical Replicates
 
 Thresholds and Comparisons
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-| Some plots need to determine whether a protein can be compared between two different groups.
-| Four different results are possible when comparing a protein between group A and group B.
+| Several analysis methods require the determination whether a detected protein can be compared between two groups A and B.
+| For group comparisons, the protein counts or intensities for all samples of a group are cumulated and averaged whereby
+  missing values are omitted in the calculation. In mass spectrometry data, missing values are frequently observed and
+  can be found in multiple samples for one protein. To ensure appropriate data analysis a sufficient number of samples
+  with non-missing values per group must be provided. The required number of samples per group, the threshold, is
+  thereby individually determined per group and dynamically controlled based on the number of samples in the group. The
+  MSPypeline provides an internal thresholding function (Fig. 2.6), however any other desired function may be applied.
+| Besides the determination of comparable proteins, several parts of the data analysis further distinguish proteins that
+  are unique for/ exlusively found in a group. There are four potential scenarios of categorizing the protein:
 
 * Unique in A: above threshold in A and completely absent in B
 * Unique in B: above threshold in B and completely absent in A
 * Can be compared: above threshold in A and B
 * Otherwise: not considered
 
-| The threshold is determined dynamically based on the number of samples in a group. The next two plots show the
-  thresholding for different numbers of samples.
+| Thresholding is important for the venn group diagrams, the relative standard deviation graph, the group comparison
+  scatter plot and for the volcano plot.
 
 .. ipython:: python
 
@@ -177,9 +183,9 @@ An example: Group A has 7 samples, Group B has 8 Samples.
   Group B has equals or more than 6 non missing values
 * Not considered: In all other cases
 
-This threshold criterion is quite harsh, but the results will be dependable.
+This threshold criterion is quite harsh, but the results will be reliable.
 
-The next plot shows the required **percentage** of non zero values as function of the sample number for a group.
+The next plot shows the required **percentage** of non zero values as a function of the number of samples in a group.
 
 .. ipython:: python
 

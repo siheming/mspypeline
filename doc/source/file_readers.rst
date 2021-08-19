@@ -1,9 +1,9 @@
 .. _file-readers:
 
-File readers
-============
+Data Import / File readers
+===========================
 File readers are required to translate the format of each specific file into an internal format. File readers scan
-available data and create a data dictionary with keys to the data. Data stored on system hardware, is thus only loaded
+available data and create a data dictionary with keys to the data. Data stored on system hardware is thus only loaded
 on demand.
 
 
@@ -16,9 +16,17 @@ MaxQuant Reader
 * proteinGroups.txt file.
 
 .. note::
+    The files created by MaxQuant cannot be renamed
+    A fasta header in the proteinGroups.txt is recommended
+    To make lfq and iBAQ available for downstream analysis they need to be enabled in MaxQuant
+
+.. note::
     Currently tested with MaxQuant version: 1.5+
 .. warning::
     All files to be analyzed need to be in a directory called txt
+
+
+.. _required-files:
 
 The Quality Report will use these files (if available):
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -33,7 +41,7 @@ The Quality Report will use these files (if available):
 
 If files are missing some plots of the :ref:`quality control report <plotters>` will not be created or might be empty.
 
-The Plots will use these files:
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Plots for data preprocessing, normalization and exploratory analysis will use these files:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Only the proteinGroups.txt file is required.

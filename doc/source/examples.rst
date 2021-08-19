@@ -1,11 +1,11 @@
 .. _examples:
 
-Examples
-========
+Coding examples via Python
+==========================
 
 Create a plotter from custom dataset
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-When data is available is some other format or already preprocessed it is possible to create a plotter
+When data is available in some other format or already preprocessed it is possible to create a plotter
 by providing the data in a DataFrame.
 
 .. ipython:: python

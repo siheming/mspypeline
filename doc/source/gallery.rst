@@ -5,36 +5,19 @@
 Gallery
 ========
 
-Experiment setup
-^^^^^^^^^^^^^^^^^
-| In the following section, experimental data is presented to introduce and explain the functionalities of the
-  ``mspypeline`` in a visual format and by giving a minimal code example to create the plots as would be done when
-  using the package as a :ref:`python module <python-quickstart>`. The experimental setup was specifically designed to
-  facilitate the representation of the majority of analysis options provided by the software.
-
-.. figure:: ./_static/experiment_design.png
-    :width: 400
-    :align: right
-
-| Two different non-small cell lung cancer (NSCLC) **cell lines** H1975 and H838 were cultured in six culture dishes
-  each. To simulate different **stimulation** conditions, three of a cell line’s **biological replicates** were then
-  treated with tumor growth factor (TGF-β) and three replicates remained unstimulated. For each of the twelve samples
-  that were prepared for the MS analysis, two **technical replicates** were measured resulting in a total number of 24
-  probes. With this experimental arrangement, a multilayered analysis design was established.
-| For the analysis by the ``mspypeline``, where samples are organized in a tree structure and addressed via their
-  :ref:`level of analysis depth <analysis-design>`, the two cell lines correspond to the lowest **level 0**, to which
-  six samples can be assigned each. In the next higher **level 1** of the analysis design, the two groups from level 0
-  are further subdivided by their treatment condition such that there are now four different groups "H1975_unst",
-  "H1975_TGFb", "H838_unst" and "H838_TGFb", all of which contain 3 replicates. In **level 2** these four groups are
-  again subdevided now into the individual replicates. Since the measured protein intensities of
-  :ref:`technical replicates <tech-reps>` are averaged and cumulated to the next lowest level, level 2
-  becomes the highest level of analysis.
+| In the following, all available :ref:`visualization options <Plot-Options>` are presented. Additionally, a minimal
+  code example on how to create a :class:`~MaxQuantPlotter` using python is given, that is deployed to subsequently generate
+  all following plots.
+| For every generated graphic, a short description is provided that may be used to understand the underlaying calculations.
+  A rather detailed, biological analysis is provided in :ref:`benchmark dataset analysis <bio_analysis>`, where the
+  data structure and :ref:`analysis design <analysis-design>` of the :ref:`experimental samples <bio_analysis>` can be
+  understood as well as possible evaluation approaches for the different plots.
 
 
 
 Plotter creation
 ^^^^^^^^^^^^^^^^^
-First, a plotter object has to be created too make the plots. Here, the :class:`~MaxQuantPlotter` is build from
+First, a plotter object has to be created to make the plots. Here, the :class:`~MaxQuantPlotter` is build from
 the :class:`~MSPInitializer` class which creates and reads in the :ref:`configuration file <settings>` and initiates the
 :class:`~MQReader` that loads the exemplary data set provided.
 
@@ -45,6 +28,7 @@ the :class:`~MSPInitializer` class which creates and reads in the :ref:`configur
     from mspypeline import load_example_dataset, MaxQuantPlotter
     # load the data that is provided in a submodule
     init = load_example_dataset(configs={
+        "has_techrep": True,
         "pathways": ["BIOCARTA_EGF_PATHWAY.txt", "HALLMARK_IL2_STAT5_SIGNALING.txt"],
         "go_terms": ["GO_APOPTOTIC_SIGNALING_PATHWAY.txt", "GO_INFLAMMATORY_RESPONSE.txt"]
         })
@@ -74,12 +58,12 @@ MaxQuant Report
 | Created using: :meth:`~mspypeline.MaxQuantPlotter.create_report`
 
     | The MaxQuant report was built with the intention to offer a broad insight into the different sources of information
-      from a MaxQuant output. Besides the protein intensities (from the *proteinGroups.txt* file) which are the only source
+      from a MaxQuant output tables. Besides the protein intensities (from the *proteinGroups.txt* file) which are the only source
       of data for all other parts of the analysis with the :ref:`MaxQuant Plotter <plotters>`, further information
       about experimental and technical parameters of the experiment are taken into account.
-    | The MaxQuant report can function as quality control of the data and will output a multi-page pdf document composed of
+    | The MaxQuant report can function as a data quality control tool and outputs a multi-page pdf document composed of
       a variety of information and graphics.
-    | Make sure that :ref:`all MaxQuant files <file-readers>` are provided, which are used to create the report.
+    | Make sure that :ref:`all MaxQuant files <file-readers>` which are used to create the report are provided.
 
     | For overview of plots see :ref:`analysis options <plotters>`
 
@@ -202,19 +186,15 @@ Group diagrams
     plotter.plot_venn_groups("lfq_log2", 0, close_plots=None, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/plots/venn_replicate_group_level_0_lfq_log2_level_0.png
-    :width: 440
-    :height: 400
-    :align: left
+
 
 .. image:: /savefig/plots/venn_bar_group_level_0_lfq_log2_level_0.png
-    :width: 200
-    :height: 400
-    :align: right
+
 
 .. _pca:
 
-PCA overview
-*************
+Principal Component analysis (PCA) overview
+********************************************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_pca_overview`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_pca_overview
@@ -242,8 +222,8 @@ Intensity histogram
 
 .. _rel-std:
 
-Relative std
-*************
+Relative standard deviation (std)
+**********************************
 | Created using: :meth:`~mspypeline.BasePlotter.plot_relative_std`
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_relative_std
@@ -312,7 +292,7 @@ Pathway analysis
 
 .. autodescriptiononly:: mspypeline.BasePlotter.plot_pathway_analysis
 
-| The effect of choosing different levels for the analysis upon the results can be appreciated in the pathway analyses
+| The effect of choosing different levels for the analysis on the results can be appreciated in the pathway analyses
   shown below. Both figures show the protein intensities of the :ref:`Biocarta EGF pathway <pathway-proteins>`, however
   calculation was performed for different :ref:`analysis levels <analysis-design>`. Here, the choice of the analysis
   depth determines which samples are considered a *"group"*.
@@ -362,7 +342,7 @@ Volcano plot (R)
 .. ipython:: python
 
     print("pass")
-    # plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=True, save_path=savefig_dir, fig_format=".png");
+    # plotter_with_tech_reps.plot_r_volcano("lfq_log2", 0, sample1="H1975", sample2="H838", adj_pval=False, save_path=savefig_dir, fig_format=".png");
 
 .. figure:: ./_static/volcano_H1975_H838_annotation_adjusted_p_value__lfq_log2.png
 
@@ -443,5 +423,10 @@ Intensity Heatmap
 
 .. ipython:: python
 
-    @savefig intensity_heatmap.png width=700 align=center
-    plotter.plot_intensity_heatmap("lfq_log2", 3, sort_index_by_missing=True, sort_columns_by_missing=True, save_path=None);
+    @savefig intensity_heatmap_lfq_log2.png width=700 align=center
+    plotter.plot_intensity_heatmap("lfq_log2", 2, sort_index_by_missing=True, sort_columns_by_missing=True, save_path=None);
+
+    @savefig intensity_heatmap_raw_log2.png width=700 align=center
+    plotter.plot_intensity_heatmap("raw_log2", 2, sort_index_by_missing=True, sort_columns_by_missing=True, save_path=None);
+
+

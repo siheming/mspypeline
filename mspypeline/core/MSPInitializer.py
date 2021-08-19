@@ -89,19 +89,20 @@ class MSPInitializer:
         self.file_path_yaml = "file"
         # see if any custom lists can be found
         self.list_full_gos = []
+        self.list_full_gos += MSPInitializer.possible_gos
         try:
             self.list_full_gos += [x for x in os.listdir(os.path.join(self._start_dir, "go_terms"))
                                    if os.path.isfile(os.path.join(self._start_dir, "go_terms", x))]
         except FileNotFoundError:
             pass
-        self.list_full_gos += MSPInitializer.possible_gos
+
         self.list_full_pathways = []
+        self.list_full_pathways += MSPInitializer.possible_pathways
         try:
             self.list_full_pathways += [x for x in os.listdir(os.path.join(self._start_dir, "pathways"))
                                         if os.path.isfile(os.path.join(self._start_dir, "pathways", x))]
         except FileNotFoundError:
             pass
-        self.list_full_pathways += MSPInitializer.possible_pathways
 
     @property
     def path_config(self):

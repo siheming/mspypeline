@@ -221,13 +221,12 @@ class MaxQuantPlotter(BasePlotter):
                                    for col in peptides.columns if col.startswith("Experiment")], axis=1)
             before_aa_counts = before_aa.apply(pd.Series.value_counts)
             before_aa_counts = before_aa_counts.fillna(0).rename(lambda x: x.replace("Experiment ", ""), axis=1)
-        except KeyError:
+        except (KeyError, ValueError):
             self.logger.warning("Did not find peptides")
             peptides = None
         try:
             self.logger.debug("Reading proteinGroups")
             prot_groups = self.required_reader_data["proteinGroups"]
-            contaminants = self.required_reader_data["contaminants"]
             prot_groups_prefix_columns = [x for x in prot_groups.columns if x.startswith(prefix)]
             prot_groups_colors = [x.replace(prefix, "") for x in prot_groups_prefix_columns]
             plot_colors.update({col: cmap(i/len(prot_groups_colors)) for i, col in enumerate(prot_groups_colors)})
@@ -241,9 +240,13 @@ class MaxQuantPlotter(BasePlotter):
         except KeyError:
             self.logger.warning("Did not find proteinGroups")
             prot_groups = None
-            contaminants = None
             has_lfq = "File is missing"
             has_ibaq = "File is missing"
+        try:
+            contaminants = self.required_reader_data["contaminants"]
+        except KeyError:
+            self.logger.warning("No contaminants found")
+            contaminants = None
         try:
             self.logger.debug("Reading evidence")
             evidence = self.required_reader_data["evidence"]
@@ -288,12 +291,13 @@ class MaxQuantPlotter(BasePlotter):
             fig.text(0.5, 0.85, "parameter.txt info", **text_conf)
             text_conf.pop("size")
             if parameters is not None:
-                fig.text(0.5, 0.8, f"Version: {parameters['Version']}, "
-                         f"run at: {parameters['Date of writing']}", **text_conf)
-                fig.text(0.5, 0.75, f"Fasta File: {os.path.split(parameters['Fasta file'])[1]}, "
-                         f"Match between runs: {parameters['Match between runs']}", **text_conf)
+                fig.text(0.5, 0.8, f"Version: {parameters.get('Version', 'missing')}"
+                         f"run at: {parameters.get('Date of writing', 'missing')}", **text_conf)
+                fig.text(0.5, 0.75, f"Fasta File: {os.path.split(parameters.get('Fasta file', os.path.join('missing', 'file')))[1]}, "
+                         f"Match between runs: {parameters.get('Match between runs', 'missing')}", **text_conf)
                 fig.text(0.5, 0.7, "Min. to Max. peptide length for unspecific search: "
-                         f"{parameters['Min. peptide length for unspecific search']} to {parameters['Max. peptide length for unspecific search']}", **text_conf)
+                         f"{parameters.get('Min. peptide length for unspecific search', 'missing')} to "
+                         f"{parameters.get('Max. peptide length for unspecific search', 'missing')}", **text_conf)
             else:
                 fig.text(0.5, 0.8, "Missing", **text_conf)
 
@@ -301,8 +305,8 @@ class MaxQuantPlotter(BasePlotter):
             fig.text(0.5, 0.65, "summary.txt info", **text_conf)
             text_conf.pop("size")
             if summary is not None:
-                fig.text(0.5, 0.6, f"Used Enzyme: {summary.loc[1, 'Enzyme']}", **text_conf)
-                fig.text(0.5, 0.55, f"Variable modifications: {summary.loc[1, 'Variable modifications']}", **text_conf)
+                fig.text(0.5, 0.6, f"Used Enzyme: {summary.loc[0, 'Enzyme']}", **text_conf)
+                fig.text(0.5, 0.55, f"Variable modifications: {summary.loc[0, 'Variable modifications']}", **text_conf)
                 fig.text(0.5, 0.5, f"Mass Standard Deviation: mean {summary.loc[:, 'Mass Standard Deviation [ppm]'].mean():.5f} ppm, max {summary.loc[:, 'Mass Standard Deviation [ppm]'].max():.5f} ppm", **text_conf)
             else:
                 fig.text(0.5, 0.6, "Missing", **text_conf)
@@ -468,7 +472,7 @@ class MaxQuantPlotter(BasePlotter):
             # ##############
 
             # individual comparison
-            if evidence is not None:
+            if evidence is not None and peptides is not None:
                 self.logger.debug("Creating individual experiment comparison")
                 charge_flat = charge.sum(axis=1)
                 missed_cleavages_flat = missed_cleavages.sum(axis=1)
