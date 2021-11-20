@@ -339,7 +339,7 @@ class QuantileNormalizer(BaseNormalizer):
 class TailRobustNormalizer(BaseNormalizer):
     """
     An abstracted implementation of the Tail Robust Quantile Normalization as described here:
-    https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full . Caclulates an offset factor by taking the
+    https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full . Calculates an offset factor by taking the
     column wise mean. Then before a normalization is applied the offset factor is subtracted from each column.
     Then the normalizer is applied and lastly the offset factor is added again.
     """

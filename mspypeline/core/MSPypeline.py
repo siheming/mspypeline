@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 from typing import Optional, Iterable
+import webbrowser
 
 from mspypeline import create_app
 from mspypeline.core import MSPInitializer
@@ -111,6 +112,7 @@ class MSPGUI(tk.Tk):
         dir_button = tk.Button(self, textvariable=self.dir_text,
                                command=lambda: browsefunc(filedialog.askdirectory, self.dir_text, fn_params={
                                    "title": "Please select a directory with MaxQuant result files"}))
+        create_tool_tip(dir_button, "Select a directory to analyze")
         dir_button.grid(row=1, column=0)
 
         self.yaml_text = tk.StringVar()
@@ -125,11 +127,19 @@ class MSPGUI(tk.Tk):
         replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?",
                                           variable=self.replicate_var).grid(row=2, column=0)
 
-        go_proteins_label = tk.Label(self, text="Go analysis lists").grid(row=3, column=0)
+        go_proteins_label = tk.Label(self, text="Go analysis lists")
+        create_tool_tip(go_proteins_label, "For a full list of Proteins see the Documentation."
+                                           "\nCustom Gene Lists -> GO Terms")
+        go_proteins_label.grid(row=3, column=0)
 
-        experiments_label = tk.Label(self, text="Pathway analysis lists").grid(row=3, column=1)
+        experiments_label = tk.Label(self, text="Pathway analysis lists")
+        create_tool_tip(experiments_label, "For a full list of Proteins see the Documentation."
+                                           "\nCustom Gene Lists -> Pathways")
+        experiments_label.grid(row=3, column=1)
 
-        design_label = tk.Label(self, text="Sample names").grid(row=3, column=2)
+        design_label = tk.Label(self, text="Sample names")
+        create_tool_tip(design_label, "Inferred sample names of the experiment")
+        design_label.grid(row=3, column=2)
 
         self.go_term_list = tk.Listbox(self, selectmode="multiple", height=5,
                                        width=len(max(self.mspinit.list_full_gos, key=len)))
@@ -168,8 +178,10 @@ class MSPGUI(tk.Tk):
         self.plot_row("Normalization overview", "normalization_overview_all_normalizers")
         self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers")
 
-        tk.Label(self, text="Choose a Normalization Method:", font="Helvetica 10 bold").grid(
-            row=self.heading_length + self.number_of_plots, column=1)
+        norm_method_label = tk.Label(self, text="Choose a Normalization Method:", font="Helvetica 10 bold")
+        norm_method_label.grid(row=self.heading_length + self.number_of_plots, column=1)
+        create_tool_tip(norm_method_label, "For more information about normalization visit the documentation.\n"
+                        "Can be found in Workflow -> Data Preprocessing -> Normalization options.")
         self.number_of_plots += 1
         self.plot_intermediate_row("Choose a Normalization Method")
 
@@ -198,7 +210,6 @@ class MSPGUI(tk.Tk):
         pval_button = tk.Checkbutton(self, text="Use adjusted p value", variable=self.p_val_var).grid(
             row=self.heading_length + self.number_of_plots, column=1)
 
-
         total_length = self.heading_length + self.number_of_plots
 
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
@@ -207,6 +218,12 @@ class MSPGUI(tk.Tk):
         start_button = tk.Button(self, text="Start",
                                  command=lambda: self.start_button())
         start_button.grid(row=total_length + 1, column=2)
+
+        documentation_link = tk.Label(self, text="Documentation link", font="Helvetica 10 underline",
+                                      fg="blue", cursor="hand2")
+        documentation_link.bind("<ButtonRelease-1>",
+                                lambda _: webbrowser.open_new("https://mspypeline.readthedocs.io/en/latest/"))
+        documentation_link.grid(row=total_length + 2, column=0)
 
         self.running_text = tk.StringVar(value="Please press Start")
         self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=2)
@@ -406,6 +423,34 @@ class MultiSelectOptionMenu(tk.Frame):
 
     def get_selection(self):
         return {k: v.get() for k, v in self.choices_dict.items()}
+
+
+class ToolTip:
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+
+    def showtip(self, text: str):
+        x, y, cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 57
+        y = y + cy + self.widget.winfo_rooty() + 27
+        self.tipwindow = tk.Toplevel(self.widget)
+        self.tipwindow.wm_overrideredirect(1)
+        self.tipwindow.wm_geometry("+%d+%d" % (x, y))
+        label = tk.Label(self.tipwindow, text=text, justify=tk.LEFT,
+                         background="#ffffe0", relief=tk.SOLID, borderwidth=1,
+                         font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        if self.tipwindow:
+            self.tipwindow.destroy()
+
+
+def create_tool_tip(widget, text):
+    tool_tip = ToolTip(widget)
+    widget.bind('<Enter>', lambda x: tool_tip.showtip(text))
+    widget.bind('<Leave>', lambda x: tool_tip.hidetip())
 
 
 class MSPParser(argparse.ArgumentParser):
