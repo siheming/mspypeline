@@ -163,6 +163,7 @@ class MSPGUI(tk.Tk):
         report_button = tk.Button(self, text="Create Report",
                                   command=lambda: self.report_button())
         report_button.grid(row=5, column=0)
+        create_tool_tip(replicate_button, "MaxQuant report for quality control")
 
         plot_label = tk.Label(self, text="Which plots should be created").grid(row=6, column=0)
 
@@ -175,8 +176,10 @@ class MSPGUI(tk.Tk):
         tk.Label(self, text="Normalization plots", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
-        self.plot_row("Normalization overview", "normalization_overview_all_normalizers")
-        self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers")
+        self.plot_row("Normalization overview", "normalization_overview_all_normalizers",
+                      "Displays original data and data after different normalization methods")
+        self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers",
+                      "Displays intensity heatmap of original data and after different normalization methods")
 
         norm_method_label = tk.Label(self, text="Choose a Normalization Method:", font="Helvetica 10 bold")
         norm_method_label.grid(row=self.heading_length + self.number_of_plots, column=1)
