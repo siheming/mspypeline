@@ -163,7 +163,7 @@ class MSPGUI(tk.Tk):
         report_button = tk.Button(self, text="Create Report",
                                   command=lambda: self.report_button())
         report_button.grid(row=5, column=0)
-        create_tool_tip(replicate_button, "MaxQuant report for quality control")
+        create_tool_tip(report_button, "MaxQuant report for quality control")
 
         plot_label = tk.Label(self, text="Which plots should be created").grid(row=6, column=0)
 
