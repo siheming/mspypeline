@@ -188,24 +188,37 @@ class MSPGUI(tk.Tk):
         tk.Label(self, text="Outlier detection / Comparisons", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
-        self.plot_row("Detection counts", "detection_counts")
-        self.plot_row("Number of detected proteins", "detected_proteins_per_replicate")
-        self.plot_row("Venn diagrams", "venn_results")
-        self.plot_row("Group diagrams", "venn_groups")
-        self.plot_row("PCA overview", "pca_overview")
-        self.plot_row("Intensity histogram", "intensity_histograms")
-        self.plot_row("Relative std", "relative_std")
-        self.plot_row("Scatter replicates", "scatter_replicates")
-        self.plot_row("Experiment comparison", "experiment_comparison")
-        self.plot_row("Rank", "rank")
+        self.plot_row("Detection counts", "detection_counts",
+                      "How many proteins were detected how frequently in the samples of a group?")
+        self.plot_row("Number of detected proteins", "detected_proteins_per_replicate",
+                      "How many proteins were detected in each of my samples and in total for each group?")
+        self.plot_row("Venn diagrams", "venn_results",
+                      "How large is the intersection of detected proteins of my samples in each group? How many proteins are uniquely detected in a sample?")
+        self.plot_row("Group diagrams", "venn_groups",
+                      "How large is the intersection of detected proteins between different groups? How many proteins are uniquely detected in a group?")
+        self.plot_row("PCA overview", "pca_overview",
+                      "How similar are my samples? Do samples cluster together?")
+        self.plot_row("Intensity histogram", "intensity_histograms",
+                      "How does the intensity profile of my samples look? How similar are the intensity profiles?")
+        self.plot_row("Relative std", "relative_std",
+                      "What is the relative standard deviation of the samples of a group?")
+        self.plot_row("Scatter replicates", "scatter_replicates",
+                      "How well do the overall protein intensities of the samples of each group correlate?")
+        self.plot_row("Experiment comparison", "experiment_comparison",
+                      "How well do the overall protein intensities of different groups correlate?")
+        self.plot_row("Rank", "rank",
+                      "Where do my proteins of interest rank in intensity compared to all other proteins?")
 
         tk.Label(self, text="Statistical inference", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
-        self.plot_row("Pathway Analysis", "pathway_analysis")
+        self.plot_row("Pathway Analysis", "pathway_analysis",
+                      "What is the intensity of my proteins of interest, and is it significantly different in one group versus the other?")
         #self.plot_row("Pathway Timecourse", "pathway_timecourse")
-        self.plot_row("Go analysis", "go_analysis")
-        self.plot_row("Volcano plot (R)", "r_volcano")
+        self.plot_row("Go analysis", "go_analysis",
+                      "Are the proteins of a group enriched for the selected GO terms?")
+        self.plot_row("Volcano plot (R)", "r_volcano",
+                      "Which proteins are significantly higher or lower in intensity comparing two groups? Which proteins are detected only in one group and not in the other?")
         self.p_val_var = tk.IntVar(value=1)
         pval_button = tk.Checkbutton(self, text="Use adjusted p value", variable=self.p_val_var).grid(
             row=self.heading_length + self.number_of_plots, column=1)
@@ -375,10 +388,13 @@ class MSPGUI(tk.Tk):
 
         self.number_of_plots += 1
 
-    def plot_row(self, text: str, plot_name: str):
+    def plot_row(self, text: str, plot_name: str, plot_tool_tip: str = None):
         row = self.heading_length + self.number_of_plots
         int_var = tk.IntVar(value=1)
-        tk.Checkbutton(self, text=text, variable=int_var).grid(row=row, column=0)
+        checkbutton = tk.Checkbutton(self, text=text, variable=int_var)
+        checkbutton.grid(row=row, column=0)
+        if plot_tool_tip:
+            create_tool_tip(checkbutton, plot_tool_tip)
 
         intensity_list = MultiSelectOptionMenu(self, self.intensity_options, "Select Intensities")
         intensity_list.grid(row=row, column=1)
