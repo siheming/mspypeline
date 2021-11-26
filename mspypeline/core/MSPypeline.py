@@ -117,6 +117,8 @@ class MSPGUI(tk.Tk):
 
         self.yaml_text = tk.StringVar()
         self.yaml_button = tk.OptionMenu(self, self.yaml_text, *self.yaml_options)
+        create_tool_tip(self.yaml_button, "Leave blank for first analysis"
+                                            "\nFor re-analysis, load previously created Yaml file")
         self.yaml_button.grid(row=1, column=1)
 
         self.reader_text = tk.StringVar(value="mqreader")
@@ -125,7 +127,10 @@ class MSPGUI(tk.Tk):
 
         self.replicate_var = tk.IntVar(value=1)
         replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?",
-                                          variable=self.replicate_var).grid(row=2, column=0)
+                                          variable=self.replicate_var)
+        replicate_button.grid(row=2, column=0)
+        create_tool_tip(replicate_button, "If selected, the samples of the last level are avaraged")
+        
 
         go_proteins_label = tk.Label(self, text="Go analysis lists")
         create_tool_tip(go_proteins_label, "For a full list of Proteins see the Documentation."
@@ -223,13 +228,15 @@ class MSPGUI(tk.Tk):
         self.plot_row("Volcano plot (R)", "r_volcano",
                       "Which proteins are significantly higher or lower in intensity comparing two groups? Which proteins are detected only in one group and not in the other?")
         self.p_val_var = tk.IntVar(value=1)
-        pval_button = tk.Checkbutton(self, text="Use adjusted p value", variable=self.p_val_var).grid(
-            row=self.heading_length + self.number_of_plots, column=1)
+        pval_button = tk.Checkbutton(self, text="Use adjusted p value", variable=self.p_val_var)
+        pval_button.grid(row=self.heading_length + self.number_of_plots, column=1)
+        create_tool_tip(pval_button,"Select to focus on regulated proteins, deselect to focus on affected pathways and processes")
 
         total_length = self.heading_length + self.number_of_plots
 
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
         update_button.grid(row=total_length + 1, column=1)
+        create_tool_tip(update_button, "Press if Yaml or sample_mapping.txt files were changed")
 
         start_button = tk.Button(self, text="Start",
                                  command=lambda: self.start_button())
