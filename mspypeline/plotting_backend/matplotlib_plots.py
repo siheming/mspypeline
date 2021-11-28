@@ -839,6 +839,68 @@ def save_detection_counts_results(
     return fig, axarr
 
 
+@save_plot("{source}_correlation_heatmap")
+@format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
+def save_correlation_heatmap_results(
+        correlations: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True,
+        close_plots: str = "all", exp_has_techrep: bool = False, **kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    """
+    Saves the plot with prefix: {{name}}
+
+    Parameters
+    ----------
+    correlations
+        DataFrame containing the correlations to be plotted
+    intensity_label
+        label of the dataframe
+    show_suptitle
+        should the figure title be shown
+    close_plots
+        which plots should be closed when creating the plot, if None no plots will be closed
+    exp_has_techrep
+        whether technical replicates were aggregated for the plot
+    kwargs
+        {kwargs}
+
+    """
+    # TODO save csv
+    if close_plots is not None:
+        plt.close(close_plots)
+
+    num_cols, a = correlations.shape
+    assert num_cols == a, "Dataframe needs to be quadratic"
+
+    mask = np.zeros_like(correlations).astype(bool)
+    mask[np.triu_indices_from(mask)] = True
+
+    wid_hei = 4 + 0.5 * num_cols
+    fig, ax = plt.subplots(1, 1, figsize=(wid_hei, wid_hei))
+
+    if show_suptitle:
+        fig.suptitle(f"Correlation Heatmap {intensity_label}" + (TECHREP_SUFFIX if exp_has_techrep else ""))
+
+    mesh = ax.pcolormesh(np.ma.masked_where(mask, correlations.values), cmap="coolwarm")
+
+    ax.figure.colorbar(mesh, ax=ax)
+    ax.invert_yaxis()
+
+    # set x and y ticks
+    ax.set_xticks(np.linspace(start=0.5, stop=num_cols - 0.5, num=num_cols))
+    ax.set_xticklabels(correlations.index, rotation=90)
+    ax.set_yticks(np.linspace(start=0.5, stop=num_cols - 0.5, num=num_cols))
+    ax.set_yticklabels(correlations.index)
+
+    # annotate values
+    for x, col in enumerate(correlations.columns):
+        for y, idx in enumerate(correlations.index):
+            if not mask[y, x]:
+                ax.text(x + 0.5, y + 0.5, f"{correlations.loc[idx, col]:.4f}", ha="center", va="center")
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, ax
+
+
 @save_plot("kde")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_kde_results(
@@ -1301,7 +1363,7 @@ def save_intensity_histogram_results(
     return fig, axarr
 
 
-@save_plot("scatter_{full_name}")
+@save_plot("scatter_replicates_{full_name}")
 @format_docstrings(kwargs=_get_path_and_name_kwargs_doc)
 def save_scatter_replicates_results(
         scatter_data: pd.DataFrame, intensity_label: str = "Intensity", show_suptitle: bool = True,
@@ -1335,18 +1397,18 @@ def save_scatter_replicates_results(
                      TECHREP_SUFFIX if exp_has_techrep else ""))
 
     min_counts = scatter_data.min().min()
+    df_corr = scatter_data.corr()
 
     for rep1, rep2 in combinations(scatter_data.columns, 2):
         x1 = scatter_data.loc[:, rep1]
         x2 = scatter_data.loc[:, rep2]
-        corr_mask = np.logical_and(x1.notna(), x2.notna())
+        r_2 = df_corr.loc[rep1, rep2] ** 2
         plot_mask = np.logical_or(x1.notna(), x2.notna())
         exp = r"$r^{2}$"
         rep1 = rep1.replace("_", "  ")
         rep2 = rep2.replace("_", "  ")
         ax.scatter(x1.fillna(min_counts)[plot_mask], x2.fillna(min_counts)[plot_mask],
-                   label=f"{rep1}  vs  {rep2},  "
-                         fr"{exp}: {stats.pearsonr(x1[corr_mask], x2[corr_mask])[0] ** 2:.4f}",
+                   label=f"{rep1}  vs  {rep2},  " + fr"{exp}: {r_2:.4f}",
                    alpha=0.5, s=40,  marker=".", edgecolors="none")
         ax.set_xlabel(f"{intensity_label} of x1")
         ax.set_ylabel(f"{intensity_label} of x2")
@@ -1501,11 +1563,7 @@ def save_experiment_comparison_results(
 
     """
     # calculate r
-    try:
-        r = stats.pearsonr(protein_intensities_sample1, protein_intensities_sample2)
-    except ValueError:
-        warnings.warn(f"Could not calculate pearson r for {sample1} vs {sample2}")
-        r = (np.nan,)
+    r = protein_intensities_sample1.corr(protein_intensities_sample2)
 
     if plot is not None:
         fig, ax = plot
@@ -1519,7 +1577,7 @@ def save_experiment_comparison_results(
     sample2 = sample2.replace("_", " ")
 
     ax.scatter(protein_intensities_sample1, protein_intensities_sample2, s=40, alpha=0.7, marker=".", edgecolors="none",
-               label=f"{sample1}  vs  {sample2}, {exp}: {r[0] ** 2:.4f}")
+               label=f"{sample1}  vs  {sample2}, {exp}: {r ** 2:.4f}")
     ax.scatter(exclusive_sample1, [np.min(protein_intensities_sample2) * 0.95] * exclusive_sample1.shape[0],
                s=40, alpha=0.7, marker=".", edgecolors="none", label=f"unique for  {sample1}")
     ax.scatter([np.min(protein_intensities_sample1) * 0.95] * exclusive_sample2.shape[0], exclusive_sample2,

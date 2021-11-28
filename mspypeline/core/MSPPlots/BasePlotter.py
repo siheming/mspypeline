@@ -719,7 +719,7 @@ class BasePlotter:
             Dictionary with key *"scatter_data"* to a DataFrame containing the protein intensity values per replicate
         """
         data = self.all_tree_dict[df_to_use][full_name].aggregate(None)
-        if data.empty:
+        if len(data.columns) < 2:
             return {}
         return {"scatter_data": data}
 
@@ -757,6 +757,16 @@ class BasePlotter:
                                            exp_has_techrep=self.experiment_has_techrep)
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_scatter_replicates_results(**data, **plot_kwargs)
+                        plots.append(plot)
+
+                        plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], full_name=full_name,
+                                           df_to_use=df_to_use, level=level, save_path=self.file_dir_descriptive,
+                                           exp_has_techrep=self.experiment_has_techrep,
+                                           source=f"scatter_replicates_{full_name}")
+                        plot_kwargs.update(**kwargs)
+                        plot = matplotlib_plots.save_correlation_heatmap_results(
+                            correlations=data["scatter_data"].corr().pow(2), **plot_kwargs
+                        )
                         plots.append(plot)
         return plots
 
@@ -1097,6 +1107,9 @@ class BasePlotter:
         plots = []
         for level in levels:
             for df_to_use in dfs_to_use:
+                # aggregate correlations of all pairwise comparisons
+                corr_df = pd.DataFrame(dtype=float, index=self.all_tree_dict[df_to_use].level_keys_full_name[level],
+                                       columns=self.all_tree_dict[df_to_use].level_keys_full_name[level])
                 for ex1, ex2 in combinations(self.all_tree_dict[df_to_use].level_keys_full_name[level], 2):
                     data = self.get_experiment_comparison_data(df_to_use=df_to_use, full_name1=ex1, full_name2=ex2)
                     if data:
@@ -1107,6 +1120,17 @@ class BasePlotter:
                         plot_kwargs.update(**kwargs)
                         plot = matplotlib_plots.save_experiment_comparison_results(**data, **plot_kwargs)
                         plots.append(plot)
+
+                        r = data["protein_intensities_sample1"].corr(data["protein_intensities_sample2"])
+                        corr_df.loc[ex2, ex1] = r ** 2
+                # then create correlation heatmap
+                if pd.notna(corr_df).sum().sum() > 0:
+                    plot_kwargs = dict(intensity_label=self.intensity_label_names[df_to_use], df_to_use=df_to_use,
+                                       level=level, save_path=self.file_dir_descriptive,
+                                       exp_has_techrep=self.experiment_has_techrep, source="scatter_comparison")
+                    plot_kwargs.update(**kwargs)
+                    plot = matplotlib_plots.save_correlation_heatmap_results(correlations=corr_df, **plot_kwargs)
+                    plots.append(plot)
         return plots
 
     def get_go_analysis_data(self, df_to_use: str, level: int):
