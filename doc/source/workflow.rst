@@ -90,9 +90,9 @@ Data Preprocessing
 Intensity options
 ******************
 
-* LFQ Intensity ("lfq_log2")
+* LFQ Intensity ("lfq_log2") (`extended information <https://doi.org/10.1074/mcp.M113.031591>`__)
 * raw Intensity ("raw_log2")
-* iBAQ Intensity ("ibaq_log2")
+* iBAQ Intensity ("ibaq_log2") (`extended information <https://doi.org/10.1038/nature10098>`__)
 
 | Regardless of the choice of protein intensity, the GUI handles all data in log2 format. However, it is possible to analyze
   the data without log2 scale ("lfq", "raw", "ibaq") if advanced data analysis is performed by interacting with the package programmatically.

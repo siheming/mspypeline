@@ -17,7 +17,7 @@ by providing the data in a DataFrame.
     samples = [f"Tumor_Stage{s}_Experiment{e}" for s in ["I", "II", "III", "IV"] for e in range(1, 4)] + [
         f"Control_Stage{s}_Experiment{e}" for s in ["I", "II", "III", "IV"] for e in range(1, 4)]
 
-    data = pd.DataFrame(np.exp2(np.random.normal(26, 3, (100, 24))).astype(int), columns=samples)
+    data = pd.DataFrame(np.exp2(np.random.normal(26, 3, (100, 24))).astype(np.int64), columns=samples)
     data.iloc[:, 12:] = data.iloc[:, 12:] + 1e8  # this is just for later, not required here
     analysis_design = get_analysis_design(samples)
     plotter = BasePlotter("result_dir", reader_data={"custom_reader": {"my_data": data}},

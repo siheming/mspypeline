@@ -245,7 +245,11 @@ Scatter replicates
 
     plotter.plot_scatter_replicates("lfq_log2", 1, save_path=savefig_dir, fig_format=".png");
 
-.. image:: /savefig/scatter_H838_unst_lfq_log2_level_1.png
+.. image:: /savefig/scatter_replicates_H838_unst_lfq_log2_level_1.png
+    :width: 700
+    :align: center
+
+.. image:: /savefig/scatter_replicates_H838_unst_correlation_heatmap_lfq_log2_level_1.png
     :width: 700
     :align: center
 
@@ -262,6 +266,10 @@ Experiment comparison
     plotter.plot_experiment_comparison("lfq_log2", 0, save_path=savefig_dir, fig_format=".png");
 
 .. image:: /savefig/scatter_comparison_H1975_vs_H838_lfq_log2_level_0.png
+    :width: 650
+    :align: center
+
+.. image:: /savefig/scatter_comparison_correlation_heatmap_lfq_log2_level_0.png
     :width: 650
     :align: center
 

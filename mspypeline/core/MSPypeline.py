@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 from typing import Optional, Iterable
+import webbrowser
 
 from mspypeline import create_app
 from mspypeline.core import MSPInitializer
@@ -111,10 +112,13 @@ class MSPGUI(tk.Tk):
         dir_button = tk.Button(self, textvariable=self.dir_text,
                                command=lambda: browsefunc(filedialog.askdirectory, self.dir_text, fn_params={
                                    "title": "Please select a directory with MaxQuant result files"}))
+        create_tool_tip(dir_button, "Select a directory to analyze")
         dir_button.grid(row=1, column=0)
 
         self.yaml_text = tk.StringVar()
         self.yaml_button = tk.OptionMenu(self, self.yaml_text, *self.yaml_options)
+        create_tool_tip(self.yaml_button, "Leave blank for first analysis"
+                                            "\nFor re-analysis, load previously created Yaml file")
         self.yaml_button.grid(row=1, column=1)
 
         self.reader_text = tk.StringVar(value="mqreader")
@@ -123,13 +127,24 @@ class MSPGUI(tk.Tk):
 
         self.replicate_var = tk.IntVar(value=1)
         replicate_button = tk.Checkbutton(self, text="Does the file have technical replicates?",
-                                          variable=self.replicate_var).grid(row=2, column=0)
+                                          variable=self.replicate_var)
+        replicate_button.grid(row=2, column=0)
+        create_tool_tip(replicate_button, "If selected, the samples of the last level are avaraged")
+        
 
-        go_proteins_label = tk.Label(self, text="Go analysis lists").grid(row=3, column=0)
+        go_proteins_label = tk.Label(self, text="Go analysis lists")
+        create_tool_tip(go_proteins_label, "For a full list of Proteins see the Documentation."
+                                           "\nCustom Gene Lists -> GO Terms")
+        go_proteins_label.grid(row=3, column=0)
 
-        experiments_label = tk.Label(self, text="Pathway analysis lists").grid(row=3, column=1)
+        experiments_label = tk.Label(self, text="Pathway analysis lists")
+        create_tool_tip(experiments_label, "For a full list of Proteins see the Documentation."
+                                           "\nCustom Gene Lists -> Pathways")
+        experiments_label.grid(row=3, column=1)
 
-        design_label = tk.Label(self, text="Sample names").grid(row=3, column=2)
+        design_label = tk.Label(self, text="Sample names")
+        create_tool_tip(design_label, "Inferred sample names of the experiment")
+        design_label.grid(row=3, column=2)
 
         self.go_term_list = tk.Listbox(self, selectmode="multiple", height=5,
                                        width=len(max(self.mspinit.list_full_gos, key=len)))
@@ -153,6 +168,7 @@ class MSPGUI(tk.Tk):
         report_button = tk.Button(self, text="Create Report",
                                   command=lambda: self.report_button())
         report_button.grid(row=5, column=0)
+        create_tool_tip(report_button, "MaxQuant report for quality control")
 
         plot_label = tk.Label(self, text="Which plots should be created").grid(row=6, column=0)
 
@@ -165,48 +181,72 @@ class MSPGUI(tk.Tk):
         tk.Label(self, text="Normalization plots", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
-        self.plot_row("Normalization overview", "normalization_overview_all_normalizers")
-        self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers")
+        self.plot_row("Normalization overview", "normalization_overview_all_normalizers",
+                      "Displays original data and data after different normalization methods")
+        self.plot_row("Heatmap overview", "heatmap_overview_all_normalizers",
+                      "Displays intensity heatmap of original data and after different normalization methods")
 
-        tk.Label(self, text="Choose a Normalization Method:", font="Helvetica 10 bold").grid(
-            row=self.heading_length + self.number_of_plots, column=1)
+        norm_method_label = tk.Label(self, text="Choose a Normalization Method:", font="Helvetica 10 bold")
+        norm_method_label.grid(row=self.heading_length + self.number_of_plots, column=1)
+        create_tool_tip(norm_method_label, "For more information about normalization visit the documentation.\n"
+                        "Can be found in Workflow -> Data Preprocessing -> Normalization options.")
         self.number_of_plots += 1
         self.plot_intermediate_row("Choose a Normalization Method")
 
         tk.Label(self, text="Outlier detection / Comparisons", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
-        self.plot_row("Detection counts", "detection_counts")
-        self.plot_row("Number of detected proteins", "detected_proteins_per_replicate")
-        self.plot_row("Venn diagrams", "venn_results")
-        self.plot_row("Group diagrams", "venn_groups")
-        self.plot_row("PCA overview", "pca_overview")
-        self.plot_row("Intensity histogram", "intensity_histograms")
-        self.plot_row("Relative std", "relative_std")
-        self.plot_row("Scatter replicates", "scatter_replicates")
-        self.plot_row("Experiment comparison", "experiment_comparison")
-        self.plot_row("Rank", "rank")
+        self.plot_row("Detection counts", "detection_counts",
+                      "How many proteins were detected how frequently in the samples of a group?")
+        self.plot_row("Number of detected proteins", "detected_proteins_per_replicate",
+                      "How many proteins were detected in each of my samples and in total for each group?")
+        self.plot_row("Venn diagrams", "venn_results",
+                      "How large is the intersection of detected proteins of my samples in each group? How many proteins are uniquely detected in a sample?")
+        self.plot_row("Group diagrams", "venn_groups",
+                      "How large is the intersection of detected proteins between different groups? How many proteins are uniquely detected in a group?")
+        self.plot_row("PCA overview", "pca_overview",
+                      "How similar are my samples? Do samples cluster together?")
+        self.plot_row("Intensity histogram", "intensity_histograms",
+                      "How does the intensity profile of my samples look? How similar are the intensity profiles?")
+        self.plot_row("Relative std", "relative_std",
+                      "What is the relative standard deviation of the samples of a group?")
+        self.plot_row("Scatter replicates", "scatter_replicates",
+                      "How well do the overall protein intensities of the samples of each group correlate?")
+        self.plot_row("Experiment comparison", "experiment_comparison",
+                      "How well do the overall protein intensities of different groups correlate?")
+        self.plot_row("Rank", "rank",
+                      "Where do my proteins of interest rank in intensity compared to all other proteins?")
 
         tk.Label(self, text="Statistical inference", font="Helvetica 10 bold").grid(
             row=self.heading_length + self.number_of_plots, column=0)
         self.number_of_plots += 1
-        self.plot_row("Pathway Analysis", "pathway_analysis")
+        self.plot_row("Pathway Analysis", "pathway_analysis",
+                      "What is the intensity of my proteins of interest, and is it significantly different in one group versus the other?")
         #self.plot_row("Pathway Timecourse", "pathway_timecourse")
-        self.plot_row("Go analysis", "go_analysis")
-        self.plot_row("Volcano plot (R)", "r_volcano")
+        self.plot_row("Go analysis", "go_analysis",
+                      "Are the proteins of a group enriched for the selected GO terms?")
+        self.plot_row("Volcano plot (R)", "r_volcano",
+                      "Which proteins are significantly higher or lower in intensity comparing two groups? Which proteins are detected only in one group and not in the other?")
         self.p_val_var = tk.IntVar(value=1)
-        pval_button = tk.Checkbutton(self, text="Use adjusted p value", variable=self.p_val_var).grid(
-            row=self.heading_length + self.number_of_plots, column=1)
-
+        pval_button = tk.Checkbutton(self, text="Use adjusted p value", variable=self.p_val_var)
+        pval_button.grid(row=self.heading_length + self.number_of_plots, column=1)
+        create_tool_tip(pval_button,"Select to focus on regulated proteins, deselect to focus on affected pathways and processes")
 
         total_length = self.heading_length + self.number_of_plots
 
         update_button = tk.Button(self, text="Update", command=lambda: self.update_button())
         update_button.grid(row=total_length + 1, column=1)
+        create_tool_tip(update_button, "Press if Yaml or sample_mapping.txt files were changed")
 
         start_button = tk.Button(self, text="Start",
                                  command=lambda: self.start_button())
         start_button.grid(row=total_length + 1, column=2)
+
+        documentation_link = tk.Label(self, text="Documentation link", font="Helvetica 10 underline",
+                                      fg="blue", cursor="hand2")
+        documentation_link.bind("<ButtonRelease-1>",
+                                lambda _: webbrowser.open_new("https://mspypeline.readthedocs.io/en/latest/"))
+        documentation_link.grid(row=total_length + 2, column=0)
 
         self.running_text = tk.StringVar(value="Please press Start")
         self.running_label = tk.Label(self, textvariable=self.running_text).grid(row=total_length + 2, column=2)
@@ -358,10 +398,13 @@ class MSPGUI(tk.Tk):
 
         self.number_of_plots += 1
 
-    def plot_row(self, text: str, plot_name: str):
+    def plot_row(self, text: str, plot_name: str, plot_tool_tip: str = None):
         row = self.heading_length + self.number_of_plots
         int_var = tk.IntVar(value=1)
-        tk.Checkbutton(self, text=text, variable=int_var).grid(row=row, column=0)
+        checkbutton = tk.Checkbutton(self, text=text, variable=int_var)
+        checkbutton.grid(row=row, column=0)
+        if plot_tool_tip:
+            create_tool_tip(checkbutton, plot_tool_tip)
 
         intensity_list = MultiSelectOptionMenu(self, self.intensity_options, "Select Intensities")
         intensity_list.grid(row=row, column=1)
@@ -406,6 +449,34 @@ class MultiSelectOptionMenu(tk.Frame):
 
     def get_selection(self):
         return {k: v.get() for k, v in self.choices_dict.items()}
+
+
+class ToolTip:
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+
+    def showtip(self, text: str):
+        x, y, cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 57
+        y = y + cy + self.widget.winfo_rooty() + 27
+        self.tipwindow = tk.Toplevel(self.widget)
+        self.tipwindow.wm_overrideredirect(1)
+        self.tipwindow.wm_geometry("+%d+%d" % (x, y))
+        label = tk.Label(self.tipwindow, text=text, justify=tk.LEFT,
+                         background="#ffffe0", relief=tk.SOLID, borderwidth=1,
+                         font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        if self.tipwindow:
+            self.tipwindow.destroy()
+
+
+def create_tool_tip(widget, text):
+    tool_tip = ToolTip(widget)
+    widget.bind('<Enter>', lambda x: tool_tip.showtip(text))
+    widget.bind('<Leave>', lambda x: tool_tip.hidetip())
 
 
 class MSPParser(argparse.ArgumentParser):

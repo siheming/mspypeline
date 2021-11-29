@@ -199,6 +199,7 @@ class MaxQuantPlotter(BasePlotter):
         try:
             self.logger.debug("Reading summary")
             summary = self.required_reader_data['summary']
+            summary.columns = [sum_col.upper() for sum_col in summary.columns]
         except KeyError:
             self.logger.warning("Did not find summary")
             summary = None
@@ -305,9 +306,9 @@ class MaxQuantPlotter(BasePlotter):
             fig.text(0.5, 0.65, "summary.txt info", **text_conf)
             text_conf.pop("size")
             if summary is not None:
-                fig.text(0.5, 0.6, f"Used Enzyme: {summary.loc[0, 'Enzyme']}", **text_conf)
-                fig.text(0.5, 0.55, f"Variable modifications: {summary.loc[0, 'Variable modifications']}", **text_conf)
-                fig.text(0.5, 0.5, f"Mass Standard Deviation: mean {summary.loc[:, 'Mass Standard Deviation [ppm]'].mean():.5f} ppm, max {summary.loc[:, 'Mass Standard Deviation [ppm]'].max():.5f} ppm", **text_conf)
+                fig.text(0.5, 0.6, f"Used Enzyme: {summary.loc[0, 'ENZYME']}", **text_conf)
+                fig.text(0.5, 0.55, f"Variable modifications: {summary.loc[0, 'VARIABLE MODIFICATIONS']}", **text_conf)
+                fig.text(0.5, 0.5, f"Mass Standard Deviation: mean {summary.loc[:, 'MASS STANDARD DEVIATION [PPM]'].mean():.5f} ppm, max {summary.loc[:, 'MASS STANDARD DEVIATION [PPM]'].max():.5f} ppm", **text_conf)
             else:
                 fig.text(0.5, 0.6, "Missing", **text_conf)
 
@@ -392,10 +393,10 @@ class MaxQuantPlotter(BasePlotter):
                 axarr[1].set_ylabel("Count")
 
                 axarr[2].set_title("MS/MS identified [%]")
-                axarr[2].bar(range(summary.shape[0]), summary["MS/MS Identified [%]"])
+                axarr[2].bar(range(summary.shape[0]), summary["MS/MS IDENTIFIED [%]"])
                 axarr[2].set_ylabel("Percent")
                 axarr[2].set_xticks(range(summary.shape[0]))
-                labels = [sample.replace("_", " ") for sample in summary["Experiment"]]
+                labels = [sample.replace("_", " ") for sample in summary["EXPERIMENT"]]
                 axarr[2].set_xticklabels(labels, rotation=90)
 
                 fig.tight_layout(rect=[0, 0.03, 1, 0.95])

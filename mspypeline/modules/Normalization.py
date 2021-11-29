@@ -12,8 +12,8 @@ from mspypeline.helpers import get_logger
 
 def interpolate_data(data: pd.DataFrame) -> pd.DataFrame:
     """
-    Performs interpolation on the data by sampling from the same distribution as the input distribution.
-    Adopted from https://github.com/bmbolstad/preprocessCore,
+    Performs interpolation of missing values (protein int = 0) on the data by sampling from the same distribution as the
+    input distribution. Adopted from https://github.com/bmbolstad/preprocessCore,
     more specifically: https://github.com/bmbolstad/preprocessCore/blob/master/src/qnorm.c
 
     Parameters
@@ -227,8 +227,9 @@ class BaseNormalizer(ABC):
 
 class MedianNormalizer(BaseNormalizer):
     """
-    Median normalizer, which calculates a factor for each column (sample) by taking the column wise median.
-    Then from each column wise median the mean of all medians is subtracted.
+    Median normalizer, which calculates the median protein intensity for each sample (column). The mean of all
+    sample-wise medians is calculated and subtracted from each sample median. This correction factor is then subtracted
+    from each protein intensity.
     """
     def __init__(self, input_scale: str = "log2",
                  output_scale: str = "normal",
@@ -274,7 +275,9 @@ class MedianNormalizer(BaseNormalizer):
 
 class QuantileNormalizer(BaseNormalizer):
     """
-    Quantile Normalizer as described on wikipedia
+    Quantile Normalizer, which first ranks proteins after their intensity value for each sample (column). The mean
+    protein intensity per quantile across all samples is calculated and assigned to every protein of each sample. The
+    data is rearranged to the original order of the intensity values for each sample. For more in depth description see:
     https://en.wikipedia.org/wiki/Quantile_normalization
     """
     def __init__(self, missing_value_handler: Optional[Callable] = interpolate_data,
@@ -338,10 +341,10 @@ class QuantileNormalizer(BaseNormalizer):
 
 class TailRobustNormalizer(BaseNormalizer):
     """
-    An abstracted implementation of the Tail Robust Quantile Normalization as described here:
-    https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full . Caclulates an offset factor by taking the
-    column wise mean. Then before a normalization is applied the offset factor is subtracted from each column.
-    Then the normalizer is applied and lastly the offset factor is added again.
+    Tail Robust Normalizer, which first calculates an offsetting factor by taking the sample-wise mean and is subtracted
+    from each protein of the respective sample (column). A Normalization is applied, and the respective offset value is
+    added back to each protein of the sample. The performed calculation is an abstracted implementation of the Tail
+    Robust Quantile Normalization as described here: https://www.biorxiv.org/content/10.1101/2020.04.17.046227v1.full .
     """
     def __init__(self, normalizer: Type[BaseNormalizer] = QuantileNormalizer,
                  missing_value_handler: Optional[Callable] = interpolate_data,
