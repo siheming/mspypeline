@@ -736,8 +736,11 @@ class BasePlotter:
           are plotted and their Pearson’s correlation coefficient r^2 is calculated.
         | Unique proteins per replicate are shown at the bottom and right side of the graph (replacement of NA values
           by min value of data set).
+        | The calculated Pearson’s correlation coefficient r^2 is additionally visualized in form of a correlation
+          heatmap.
         | For a group with more than 2 replicates, each pairwise comparison of the replicates is calculated and plotted
-          together in one graph. For every group of the selected level one plot is created and saved using
+          together in one graph. For every group of the selected level one scatter plot and one correlation heatmap is
+          created and saved using
           :func:`~mspypeline.plotting_backend.matplotlib_plots.save_scatter_replicates_results`.
 
 
@@ -1092,8 +1095,11 @@ class BasePlotter:
           Pearson’s correlation coefficient r^2 is calculated.
         | Unique proteins per group are shown at the bottom and right side of the graph (substitution of missing values
           by the minimum value of the data set).
-        | For every pairwise comparison of the groups from the selected level, one plot is created and saved using
-          :func:`~mspypeline.plotting_backend.matplotlib_plots.save_scatter_replicates_results`.
+        | The calculated Pearson’s correlation coefficient r^2 is additionally visualized in form of a correlation
+          heatmap.
+        | For every pairwise comparison of the groups from the selected level, one scatter plot is created and the
+          results of all pairwise comparisons together are visualized in one combined correlation heatmap
+          using :func:`~mspypeline.plotting_backend.matplotlib_plots.save_scatter_replicates_results`.
 
         | To view adjustable parameters see "plot_experiment_comparison_settings:" in the :ref:`Adjustable Options Configs
           <default-yaml>`
